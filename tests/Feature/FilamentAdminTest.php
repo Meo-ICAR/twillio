@@ -16,6 +16,7 @@ use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Models\User;
 use Database\Seeders\DocumentCatalogSeeder;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -322,5 +323,23 @@ class FilamentAdminTest extends TestCase
         $this->login();
 
         $this->relationManager($slot)->assertSee('AI')->assertSee('BIANCHI')->assertSee('Operatore')->assertSee('Confermo');
+    }
+
+    public function test_l_istruttore_elimina_una_pratica_con_i_suoi_file_e_dati(): void
+    {
+        $loan = $this->loan();
+        Storage::disk('local')->put('pratiche/FIN-2026-0001/informativa-x.pdf', 'PDF');
+        Attachment::create(['loan_request_id' => $loan->id, 'kind' => 'informativa', 'path' => 'pratiche/FIN-2026-0001/informativa-x.pdf', 'mime' => 'application/pdf', 'received_at' => now()]);
+        $conv = Conversation::create(['wa_number' => '393331112222', 'flow' => 'perfezionamento', 'node' => 'nome', 'loan_request_id' => $loan->id, 'data' => ['cognome' => 'Rossi'], 'history' => []]);
+        $this->login();
+
+        Livewire::test(EditLoanRequest::class, ['record' => $loan->getRouteKey()])
+            ->callAction(DeleteAction::class);
+
+        $this->assertSame(0, LoanRequest::count());
+        $this->assertSame(0, Attachment::count());
+        Storage::disk('local')->assertMissing('pratiche/FIN-2026-0001/informativa-x.pdf');
+        $this->assertSame([], $conv->fresh()->data);
+        $this->assertSame('annullata', $conv->fresh()->status);
     }
 }

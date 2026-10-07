@@ -19,6 +19,8 @@ Route::get('/compliance', fn () => view('compliance', ['company' => Company::cur
 
 Route::get('/privacy', fn () => view('privacy', ['company' => Company::current()]));
 
+Route::get('/cancellazione-dati', fn () => view('data-deletion', ['company' => Company::current()]));
+
 Route::get('/test-whatsapp', function () {
     $phoneNumberId = config('services.whatsapp.phone_number_id');
     $token = config('services.whatsapp.token');

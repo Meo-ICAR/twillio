@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Conversation;
 use App\Models\LoanRequest;
 use Illuminate\Console\Command;
 
@@ -25,12 +24,8 @@ class PurgeUnperfected extends Command
             return self::SUCCESS;
         }
 
-        $expired->get()->each(function (LoanRequest $loan) {
-            // Chiude le conversazioni ancora aperte sulla pratica: senza di essa non potrebbero proseguire.
-            Conversation::where('loan_request_id', $loan->id)->where('status', 'attiva')->get()
-                ->each(fn (Conversation $conv) => $conv->update(['status' => 'annullata', 'data' => []]));
-            $loan->delete();
-        });
+        // La cancellazione di una pratica chiude anche le sue conversazioni aperte (vedi LoanRequest::booted).
+        $expired->get()->each(fn (LoanRequest $loan) => $loan->delete());
 
         $this->info("Cancellate {$count} pratiche non perfezionate da oltre {$days} giorni.");
 

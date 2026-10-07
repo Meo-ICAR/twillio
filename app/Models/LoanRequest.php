@@ -20,8 +20,15 @@ class LoanRequest extends Model
 
     protected static function booted(): void
     {
-        // I file dei clienti vivono solo finché esiste la pratica.
-        static::deleting(fn (self $loan) => Storage::disk('local')->deleteDirectory("pratiche/{$loan->code}"));
+        // Eliminare una pratica (dal pannello o per scadenza) cancella tutto ciò che la riguarda:
+        // i file dei clienti e i dati ancora presenti nelle conversazioni aperte (le righe collegate a documenti,
+        // allegati e annotazioni spariscono con la pratica).
+        static::deleting(function (self $loan) {
+            Conversation::where('loan_request_id', $loan->id)->where('status', 'attiva')->get()
+                ->each(fn (Conversation $conv) => $conv->update(['status' => 'annullata', 'data' => []]));
+
+            Storage::disk('local')->deleteDirectory("pratiche/{$loan->code}");
+        });
     }
 
     protected function casts(): array

@@ -103,4 +103,22 @@ class PurgeUnperfectedTest extends TestCase
     {
         $this->artisan('schedule:list')->expectsOutputToContain('finanziamento:purge')->assertSuccessful();
     }
+
+    public function test_eliminare_una_pratica_chiude_anche_le_conversazioni_aperte_e_ne_cancella_i_dati(): void
+    {
+        $loan = $this->loan('FIN-2026-0001', 'informativa_ricevuta', 1);
+        $open = Conversation::create([
+            'wa_number' => '393331112222', 'flow' => 'perfezionamento', 'node' => 'nome', 'loan_request_id' => $loan->id,
+            'data' => ['cognome' => 'Rossi'], 'history' => [],
+        ]);
+        $other = Conversation::create(['wa_number' => '393339998888', 'flow' => 'richiesta', 'node' => 'importo', 'data' => ['prodotto' => 'mutuo'], 'history' => []]);
+
+        $loan->delete();
+
+        $this->assertSame('annullata', $open->fresh()->status);
+        $this->assertSame([], $open->fresh()->data);
+        $this->assertNull($open->fresh()->loan_request_id);
+        $this->assertSame('attiva', $other->fresh()->status, 'le conversazioni di altre pratiche non si toccano');
+        $this->assertSame(['prodotto' => 'mutuo'], $other->fresh()->data);
+    }
 }

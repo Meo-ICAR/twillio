@@ -109,7 +109,7 @@
         </ul>
 
         <h2>9. Diritti dell'interessato</h2>
-        <p>Puoi chiedere al Titolare, in qualsiasi momento, l'accesso ai tuoi dati, la rettifica, la cancellazione, la limitazione del trattamento, la portabilità e puoi opporti al trattamento (artt. 15-22 GDPR), scrivendo al contatto indicato al punto 1. Hai inoltre il diritto di proporre reclamo al Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it">www.garanteprivacy.it</a>).</p>
+        <p>Puoi chiedere al Titolare, in qualsiasi momento, l'accesso ai tuoi dati, la rettifica, la cancellazione, la limitazione del trattamento, la portabilità e puoi opporti al trattamento (artt. 15-22 GDPR), scrivendo al contatto indicato al punto 1. Le istruzioni passo per passo per la cancellazione sono in <a href="/cancellazione-dati">Come chiedere la cancellazione dei tuoi dati</a>. Hai inoltre il diritto di proporre reclamo al Garante per la protezione dei dati personali (<a href="https://www.garanteprivacy.it">www.garanteprivacy.it</a>).</p>
 
         <h2>10. Decisioni automatizzate</h2>
         <p>Il servizio raccoglie e ordina le informazioni: non prende decisioni sul finanziamento né effettua profilazione. Le valutazioni sulla pratica sono svolte da persone.</p>

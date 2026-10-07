@@ -195,6 +195,7 @@
             <h2><span class="n">09</span>Documenti</h2>
             <ul>
                 <li><a href="/privacy">Informativa privacy</a> per i clienti finali, in versione stampabile con riquadro di presa visione.</li>
+                <li><a href="/cancellazione-dati">Istruzioni per la cancellazione dei dati</a>: come un interessato chiede di eliminare i propri dati.</li>
                 <li>Atto di nomina a Responsabile del trattamento (art. 28 GDPR): disponibile su richiesta a {{ $ph($company?->email) }}.</li>
             </ul>
         </section>
