@@ -90,4 +90,28 @@ class ImportiOttenibiliTest extends ConversationTestCase
         $this->assertStringContainsString('contatta telefonicamente il customer care', $body);
         $this->assertStringNotContainsString('📞', $body);
     }
+
+    public function test_il_benvenuto_saluta_il_produttore_per_nome(): void
+    {
+        Fornitore::create(['name' => 'Agenzia Bianchi', 'nome' => 'Luca', 'tel' => '+39 333 111 2222', 'is_active' => true]);
+
+        $replies = $this->say('ciao');
+
+        $this->assertStringStartsWith('Ciao Luca!', $replies[0]->body);
+        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
+    }
+
+    public function test_senza_referente_si_usa_la_denominazione(): void
+    {
+        Fornitore::create(['name' => 'Agenzia Bianchi', 'tel' => '3331112222', 'is_active' => true]);
+
+        $this->assertStringStartsWith('Ciao Agenzia Bianchi!', $this->say('ciao')[0]->body);
+    }
+
+    public function test_chi_non_e_riconosciuto_riceve_il_benvenuto_generico(): void
+    {
+        Fornitore::create(['name' => 'Ex agente', 'nome' => 'Mara', 'tel' => '3331112222', 'is_active' => false]);
+
+        $this->assertSame(config('finanziamento.menu.body'), $this->say('ciao')[0]->body);
+    }
 }

@@ -58,6 +58,8 @@ return [
 
     'menu' => [
         'body' => 'Ciao! Benvenuto nel servizio agenti. Cosa vuoi fare?',
+        // Se il numero è di un produttore riconosciuto ({nome} = il suo nome).
+        'body_named' => 'Ciao {nome}! Benvenuto nel servizio agenti. Cosa vuoi fare?',
         'options' => [
             'menu_richiedi' => 'Richiedi Finanziamento',
             'menu_perfeziona' => 'Perfeziona Finanziamento',

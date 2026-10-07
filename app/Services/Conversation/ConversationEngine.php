@@ -141,7 +141,11 @@ class ConversationEngine
             }
         }
 
-        return Reply::choice(config('finanziamento.menu.body'), $options);
+        // Un produttore riconosciuto dal numero è salutato per nome.
+        $name = $waNumber !== null ? trim((string) (Fornitore::findByWhatsApp($waNumber)?->nome ?: Fornitore::findByWhatsApp($waNumber)?->display_name)) : '';
+        $body = $name !== '' ? str_replace('{nome}', $name, config('finanziamento.menu.body_named')) : config('finanziamento.menu.body');
+
+        return Reply::choice($body, $options);
     }
 
     private function fromMenu(IncomingMessage $m): array
