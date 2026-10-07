@@ -99,7 +99,7 @@ class FlowValidatorTest extends TestCase
         $this->assertNotEmpty(app(FlowValidator::class)->flowErrors($flow->fresh()));
 
         $flow->update(['restart' => 'prodotto']);
-        FlowNode::where('flow_id', $flow->id)->where('code', 'importo')->update(['next_to' => 'domanda_fantasma']);
+        FlowNode::where('flow_id', $flow->id)->where('code', 'importo')->first()->jumps()->update(['go_to' => 'domanda_fantasma']);
         $errors = app(FlowValidator::class)->flowErrors($flow->fresh());
         $this->assertNotEmpty($errors);
         $this->assertStringContainsString('domanda_fantasma', implode(' ', $errors));
@@ -137,5 +137,65 @@ class FlowValidatorTest extends TestCase
             $this->assertSame([], $this->errors($node), "{$node->flow->code}.{$node->code}");
         }
         $this->assertGreaterThanOrEqual(2, FlowNode::whereNotNull('checks')->count());
+    }
+
+    private function jumpErrors(FlowNode $node, array $jumps, ?string $jumpBy = null, bool $skippable = false): array
+    {
+        return app(FlowValidator::class)->nodeErrors($node, $node->prompt, $this->titles($node), $skippable, $node->checks ?? [], $jumps, $jumpBy);
+    }
+
+    public function test_i_salti_devono_portare_a_domande_che_esistono(): void
+    {
+        $importo = $this->node('richiesta', 'importo');
+
+        $this->assertSame([], $this->jumpErrors($importo, [['when' => '*', 'go_to' => 'riepilogo']]));
+
+        $errors = $this->jumpErrors($importo, [['when' => '*', 'go_to' => 'domanda_fantasma']]);
+        $this->assertNotEmpty($errors);
+        $this->assertStringContainsString('domanda_fantasma', implode(' ', $errors));
+    }
+
+    public function test_una_domanda_deve_avere_almeno_un_salto_tranne_il_riepilogo(): void
+    {
+        $this->assertNotEmpty($this->jumpErrors($this->node('richiesta', 'importo'), []));
+        $this->assertSame([], $this->jumpErrors($this->node('richiesta', 'riepilogo'), []));
+    }
+
+    public function test_non_si_ripete_la_stessa_condizione_due_volte(): void
+    {
+        $errors = $this->jumpErrors($this->node('richiesta', 'crif'), [['when' => 'no', 'go_to' => 'riepilogo'], ['when' => 'no', 'go_to' => 'bene'], ['when' => '*', 'go_to' => 'riepilogo']], 'answer');
+
+        $this->assertStringContainsString('no', implode(' ', $errors));
+        $this->assertNotEmpty($errors);
+    }
+
+    public function test_con_i_salti_per_risposta_ogni_opzione_ha_un_salto_o_c_e_quello_predefinito(): void
+    {
+        $impegni = $this->node('richiesta', 'impegni'); // si / no
+
+        $this->assertSame([], $this->jumpErrors($impegni, [['when' => 'si', 'go_to' => 'rata'], ['when' => 'no', 'go_to' => 'crif']]));
+        $this->assertNotEmpty($this->jumpErrors($impegni, [['when' => 'si', 'go_to' => 'rata']]), 'manca il no');
+        $this->assertSame([], $this->jumpErrors($impegni, [['when' => 'si', 'go_to' => 'rata'], ['when' => '*', 'go_to' => 'crif']]));
+    }
+
+    public function test_il_dato_da_cui_dipendono_i_salti_deve_essere_una_domanda_del_percorso(): void
+    {
+        $durata = $this->node('richiesta', 'durata');
+        $jumps = [['when' => '*', 'go_to' => 'riepilogo']];
+
+        $this->assertSame([], $this->jumpErrors($durata, $jumps, 'prodotto'));
+        $this->assertSame([], $this->jumpErrors($durata, $jumps, 'answer'));
+        $errors = $this->jumpErrors($durata, $jumps, 'dato_che_non_esiste');
+        $this->assertNotEmpty($errors);
+        $this->assertStringContainsString('dato_che_non_esiste', implode(' ', $errors));
+    }
+
+    public function test_per_saltare_serve_il_salto_predefinito_tra_quelli_proposti(): void
+    {
+        $impegni = $this->node('richiesta', 'impegni');
+        $both = [['when' => 'si', 'go_to' => 'rata'], ['when' => 'no', 'go_to' => 'crif']];
+
+        $this->assertNotEmpty($this->jumpErrors($impegni, $both, null, true));
+        $this->assertSame([], $this->jumpErrors($impegni, [...$both, ['when' => '*', 'go_to' => 'crif']], null, true));
     }
 }

@@ -48,7 +48,7 @@ class FlowRepository
         }
 
         $result = [];
-        $flows = Flow::query()->where('is_active', true)->with('nodes.options')->orderBy('id')->get();
+        $flows = Flow::query()->where('is_active', true)->with(['nodes.options', 'nodes.jumps'])->orderBy('id')->get();
 
         foreach ($flows as $flow) {
             $def = ['start' => $flow->start, 'restart' => $flow->restart];
@@ -81,10 +81,14 @@ class FlowRepository
         if ($node->options->isNotEmpty()) {
             $def['options'] = $node->options->mapWithKeys(fn ($o) => [$o->code => $o->title])->all();
         }
-        if ($node->next_map !== null) {
-            $def['next'] = $node->next_map;
-        } elseif ($node->next_to !== null) {
-            $def['next'] = $node->next_to;
+        if ($node->jumps->isNotEmpty()) {
+            // Un solo salto predefinito equivale a un salto fisso.
+            $def['next'] = $node->jumps->count() === 1 && $node->jumps->first()->when_value === '*'
+                ? $node->jumps->first()->go_to
+                : $node->jumps->mapWithKeys(fn ($j) => [$j->when_value => $j->go_to])->all();
+        }
+        if ($node->jump_by !== 'answer') {
+            $def['next_by'] = $node->jump_by;
         }
         if (filled($node->checks)) {
             $def['checks'] = $node->checks;

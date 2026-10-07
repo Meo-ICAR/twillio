@@ -15,7 +15,7 @@ class FlowImporter
     ];
 
     /** Colonne della domanda: tutto il resto va in `params`. */
-    private const COLUMNS = ['type', 'label', 'prompt', 'options', 'next', 'save', 'skippable', 'checks'];
+    private const COLUMNS = ['type', 'label', 'prompt', 'options', 'next', 'next_by', 'save', 'skippable', 'checks'];
 
     /**
      * @param  bool  $force  se vero ripristina i percorsi già presenti, perdendo le modifiche fatte a mano
@@ -52,11 +52,14 @@ class FlowImporter
                         'sort_order' => ++$order,
                         'skippable' => $node['skippable'] ?? false,
                         'save' => $node['save'] ?? true,
-                        'next_to' => is_string($next) ? $next : null,
-                        'next_map' => is_array($next) ? $next : null,
+                        'jump_by' => $node['next_by'] ?? 'answer',
                         'params' => array_diff_key($node, array_flip(self::COLUMNS)) ?: null,
                         'checks' => $node['checks'] ?? null,
                     ]);
+
+                    foreach (LegacyJumps::fromColumns(is_string($next) ? $next : null, is_array($next) ? $next : null) as $i => $jump) {
+                        $created->jumps()->create(['when_value' => $jump['when'], 'go_to' => $jump['go_to'], 'sort_order' => $i + 1]);
+                    }
 
                     $position = 0;
                     foreach ($node['options'] ?? [] as $optionCode => $title) {

@@ -8,6 +8,7 @@ use App\Models\Flow;
 use App\Models\FlowNode;
 use App\Models\User;
 use App\Services\Flows\FlowRepository;
+use App\Services\Flows\FlowValidator;
 use Database\Seeders\FlowSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -214,5 +215,120 @@ class FlowAdminTest extends TestCase
         $this->manager('perfezionamento')->mountTableAction('edit', $node)
             ->assertMountedActionModalSee('Testo della domanda')
             ->assertMountedActionModalDontSee('Controlli sulla risposta');
+    }
+
+    private function jumpsOf(string $code, string $flow = 'richiesta'): array
+    {
+        return $this->node($code, $flow)->jumps()->get()->map(fn ($j) => [$j->when_value, $j->go_to])->all();
+    }
+
+    private function formJumps(FlowNode $node): array
+    {
+        return $node->jumps()->get()->map(fn ($j) => ['when' => $j->when_value, 'go_to' => $j->go_to])->all();
+    }
+
+    public function test_si_cambiano_i_salti_di_una_domanda_dal_pannello(): void
+    {
+        $node = $this->node('importo');
+
+        $this->manager()->callTableAction('edit', $node, data: [
+            'prompt' => $node->prompt, 'options' => $this->formOptions($node), 'jump_by' => 'answer',
+            'jumps' => [['when' => '*', 'go_to' => 'riepilogo']],
+        ])->assertHasNoTableActionErrors();
+
+        $this->assertSame([['*', 'riepilogo']], $this->jumpsOf('importo'));
+        $this->assertSame('riepilogo', app(FlowRepository::class)->node('richiesta', 'importo')['next']);
+    }
+
+    public function test_si_aggiungono_salti_per_singola_risposta_e_si_riordinano(): void
+    {
+        $node = $this->node('importo');
+
+        $this->manager()->callTableAction('edit', $node, data: [
+            'prompt' => $node->prompt, 'options' => $this->formOptions($node), 'jump_by' => 'answer',
+            'jumps' => [['when' => 'imp_oltre', 'go_to' => 'riepilogo'], ['when' => '*', 'go_to' => 'durata']],
+        ]);
+
+        $this->assertSame([['imp_oltre', 'riepilogo'], ['*', 'durata']], $this->jumpsOf('importo'));
+        $this->assertSame(['imp_oltre' => 'riepilogo', '*' => 'durata'], app(FlowRepository::class)->node('richiesta', 'importo')['next']);
+    }
+
+    public function test_i_salti_dipendenti_dal_prodotto_si_modificano(): void
+    {
+        $node = $this->node('durata');
+        $jumps = [...$this->formJumps($node), ['when' => '*', 'go_to' => 'riepilogo']]; // uscita per qualunque altro prodotto
+
+        $this->manager()->callTableAction('edit', $node, data: ['prompt' => $node->prompt, 'options' => $this->formOptions($node), 'jump_by' => 'prodotto', 'jumps' => $jumps])
+            ->assertHasNoTableActionErrors();
+
+        $def = app(FlowRepository::class)->node('richiesta', 'durata');
+        $this->assertSame('riepilogo', $def['next']['*']);
+        $this->assertSame('leasing_anticipo', $def['next']['leasing'], 'gli altri salti restano');
+        $this->assertSame('prodotto', $def['next_by']);
+    }
+
+    public function test_modificare_solo_il_testo_non_tocca_i_salti(): void
+    {
+        $node = $this->node('lavoro');
+        $before = $this->jumpsOf('lavoro');
+
+        $this->manager()->callTableAction('edit', $node, data: ['prompt' => 'Che lavoro fa il cliente?']);
+
+        $this->assertSame($before, $this->jumpsOf('lavoro'));
+        $this->assertSame('Che lavoro fa il cliente?', $node->fresh()->prompt);
+    }
+
+    public function test_un_salto_verso_una_domanda_inesistente_non_si_salva(): void
+    {
+        $node = $this->node('importo');
+        $before = $this->jumpsOf('importo');
+
+        $this->manager()->callTableAction('edit', $node, data: ['prompt' => $node->prompt, 'options' => $this->formOptions($node), 'jump_by' => 'answer', 'jumps' => [['when' => '*', 'go_to' => 'non_esiste']]]);
+
+        $this->assertSame($before, $this->jumpsOf('importo'));
+    }
+
+    public function test_una_condizione_ripetuta_non_si_salva(): void
+    {
+        $node = $this->node('crif');
+        $before = $this->jumpsOf('crif');
+
+        $this->manager()->callTableAction('edit', $node, data: [
+            'prompt' => $node->prompt, 'options' => $this->formOptions($node), 'jump_by' => 'prodotto',
+            'jumps' => [['when' => 'quinto', 'go_to' => 'riepilogo'], ['when' => 'quinto', 'go_to' => 'bene'], ['when' => '*', 'go_to' => 'riepilogo']],
+        ]);
+
+        $this->assertSame($before, $this->jumpsOf('crif'));
+    }
+
+    public function test_una_modifica_che_lascia_domande_irraggiungibili_viene_annullata(): void
+    {
+        $node = $this->node('lavoro'); // solo da qui si arriva a «contratto» e, da lì, a «anzianita»
+        $before = $this->jumpsOf('lavoro');
+
+        $this->manager()->callTableAction('edit', $node, data: [
+            'prompt' => $node->prompt, 'options' => $this->formOptions($node), 'jump_by' => 'answer',
+            'jumps' => [['when' => 'pensionato', 'go_to' => 'ente_pensione'], ['when' => 'autonomo', 'go_to' => 'anni_attivita'], ['when' => '*', 'go_to' => 'impegni']],
+        ]);
+
+        $this->assertSame($before, $this->jumpsOf('lavoro'), 'il database resta com\'era');
+        $this->assertSame([], app(FlowValidator::class)->flowErrors($this->flow()));
+    }
+
+    public function test_la_scheda_della_domanda_mostra_la_sezione_dei_salti(): void
+    {
+        $this->manager()->mountTableAction('edit', $this->node('impegni'))
+            ->assertMountedActionModalSee(['Salti', 'I salti dipendono da']);
+    }
+
+    public function test_il_riepilogo_non_ha_salti_da_modificare(): void
+    {
+        $this->manager()->mountTableAction('edit', $this->node('riepilogo'))
+            ->assertMountedActionModalDontSee('I salti dipendono da');
+    }
+
+    public function test_la_tabella_riassume_i_salti_di_ogni_domanda(): void
+    {
+        $this->manager()->assertTableColumnExists('salti')->assertTableColumnStateSet('salti', 'durata', record: $this->node('importo'));
     }
 }

@@ -20,12 +20,17 @@ class FlowNode extends Model
 
     protected function casts(): array
     {
-        return ['skippable' => 'boolean', 'save' => 'boolean', 'next_map' => 'array', 'params' => 'array', 'checks' => 'array'];
+        return ['skippable' => 'boolean', 'save' => 'boolean', 'params' => 'array', 'checks' => 'array'];
     }
 
     public function flow(): BelongsTo
     {
         return $this->belongsTo(Flow::class);
+    }
+
+    public function jumps(): HasMany
+    {
+        return $this->hasMany(FlowNodeJump::class)->orderBy('sort_order')->orderBy('id');
     }
 
     public function options(): HasMany

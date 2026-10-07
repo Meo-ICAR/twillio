@@ -22,11 +22,15 @@ class FlowValidator
      *
      * @param  array<string,string>  $options  codice => titolo
      * @param  array<int,string|array<string,mixed>>  $checks  controlli agganciati: nome, oppure ['name' => ..., ...parametri]
+     * @param  list<array{when: string, go_to: string}>|null  $jumps  salti proposti (null = quelli attuali)
+     * @param  string|null  $jumpBy  da cosa dipendono i salti (null = valore attuale)
      * @return list<string>
      */
-    public function nodeErrors(FlowNode $node, string $prompt, array $options, bool $skippable, array $checks = []): array
+    public function nodeErrors(FlowNode $node, string $prompt, array $options, bool $skippable, array $checks = [], ?array $jumps = null, ?string $jumpBy = null): array
     {
         $errors = [];
+        $jumps ??= $node->jumps->map(fn ($j) => ['when' => $j->when_value, 'go_to' => $j->go_to])->all();
+        $jumpBy ??= $node->jump_by;
 
         if (trim($prompt) === '') {
             $errors[] = 'Il testo della domanda non può essere vuoto.';
@@ -49,16 +53,9 @@ class FlowValidator
                     $errors[] = "L'opzione «{$code}» ha un titolo oltre ".self::MAX_OPTION_TITLE.' caratteri (limite di WhatsApp).';
                 }
             }
-
-            // I salti per risposta vanno tenuti allineati alle opzioni (quelli per prodotto non dipendono da esse).
-            $byAnswer = ($node->params['next_by'] ?? 'answer') === 'answer';
-            if ($byAnswer && $node->next_map !== null && ! isset($node->next_map['*'])) {
-                $missing = array_diff(array_map('strval', array_keys($options)), array_map('strval', array_keys($node->next_map)));
-                if ($missing) {
-                    $errors[] = 'Queste opzioni non hanno un salto configurato: '.implode(', ', $missing).'. Aggiungile anche ai salti della domanda.';
-                }
-            }
         }
+
+        $errors = array_merge($errors, $this->jumpErrors($node, $options, $jumps, $jumpBy));
 
         if ($checks) {
             if (! in_array($node->type, ['text', 'choice'], true)) {
@@ -74,8 +71,8 @@ class FlowValidator
             }
         }
 
-        if ($skippable && ! $this->canBeSkipped($node)) {
-            $errors[] = 'Questa domanda non si può rendere saltabile: manca un\'uscita predefinita (un salto fisso oppure il salto «*»).';
+        if ($skippable && ! $this->canBeSkipped($node, $jumps)) {
+            $errors[] = 'Questa domanda non si può rendere saltabile: manca un\'uscita predefinita (il salto «*»).';
         }
 
         return $errors;
@@ -85,7 +82,7 @@ class FlowValidator
     public function flowErrors(Flow $flow): array
     {
         $errors = [];
-        $nodes = $flow->nodes()->get()->keyBy('code');
+        $nodes = $flow->nodes()->with('jumps')->get()->keyBy('code');
 
         if (mb_strlen((string) $flow->header) > self::MAX_HEADER) {
             $errors[] = 'L\'intestazione supera '.self::MAX_HEADER.' caratteri.';
@@ -98,9 +95,8 @@ class FlowValidator
 
         $targets = [];
         foreach ($nodes as $code => $node) {
-            $to = $node->next_map !== null ? array_values($node->next_map) : array_filter([$node->next_to]);
-            $targets[$code] = $to;
-            foreach ($to as $target) {
+            $targets[$code] = $node->jumps->pluck('go_to')->all();
+            foreach ($targets[$code] as $target) {
                 if (! $nodes->has($target)) {
                     $errors[] = "La domanda «{$code}» rimanda a «{$target}», che non esiste.";
                 }
@@ -125,12 +121,64 @@ class FlowValidator
         return array_values(array_unique($errors));
     }
 
-    private function canBeSkipped(FlowNode $node): bool
+    /**
+     * @param  array<string,string>  $options
+     * @param  list<array{when: string, go_to: string}>  $jumps
+     * @return list<string>
+     */
+    private function jumpErrors(FlowNode $node, array $options, array $jumps, string $jumpBy): array
+    {
+        if ($node->type === 'summary') {
+            return [];
+        }
+
+        if ($jumps === []) {
+            return ['Una domanda deve avere almeno un salto, altrimenti il dialogo si ferma qui.'];
+        }
+
+        $errors = [];
+        $codes = $node->flow->nodes()->pluck('code')->all();
+
+        $seen = [];
+        foreach ($jumps as $jump) {
+            $when = (string) ($jump['when'] ?? '');
+            $goTo = (string) ($jump['go_to'] ?? '');
+
+            if ($when === '') {
+                $errors[] = 'Un salto non ha la condizione.';
+            } elseif (isset($seen[$when])) {
+                $errors[] = "La condizione «{$when}» compare più di una volta.";
+            }
+            $seen[$when] = true;
+
+            if (! in_array($goTo, $codes, true)) {
+                $errors[] = "Il salto «{$when}» porta a «{$goTo}», che non è una domanda di questo percorso.";
+            }
+        }
+
+        // Il dato può venire da una domanda di questo percorso o della richiesta (il perfezionamento salta in base al prodotto scelto lì).
+        if ($jumpBy !== 'answer' && ! FlowNode::where('code', $jumpBy)->exists()) {
+            $errors[] = "I salti dipendono da «{$jumpBy}», che non è una domanda dei percorsi.";
+        }
+
+        // Con i salti per risposta, ogni opzione deve avere il suo salto oppure esserci l'uscita predefinita.
+        if ($jumpBy === 'answer' && ! isset($seen['*'])) {
+            $missing = array_diff(array_map('strval', array_keys($options)), array_keys($seen));
+            if ($missing) {
+                $errors[] = 'Queste opzioni non hanno un salto: '.implode(', ', $missing).'. Aggiungi il salto oppure l\'uscita predefinita «*».';
+            }
+        }
+
+        return $errors;
+    }
+
+    /** @param list<array{when: string, go_to: string}> $jumps */
+    private function canBeSkipped(FlowNode $node, array $jumps): bool
     {
         if (! in_array($node->type, ['choice', 'text', 'file'], true)) {
             return false;
         }
 
-        return $node->next_to !== null || isset($node->next_map['*']);
+        return collect($jumps)->contains(fn ($j) => ($j['when'] ?? null) === '*');
     }
 }
