@@ -112,7 +112,7 @@ class FlowGraph
 <main>
   <p class="legend"><a href="/">← Torna alla home</a></p>
   <h1>Grafo delle domande del bot</h1>
-  <p class="legend">Rettangolo = scelta · parallelogramma = testo libero · doppio bordo = file o codice · ovale = riepilogo e conferma. Generato da <code>config/finanziamento.php</code> con <code>php artisan finanziamento:graph</code>.</p>
+  <p class="legend">Rettangolo = scelta · parallelogramma = testo libero · doppio bordo = file o codice · ovale = riepilogo, conferma dei dati letti dai documenti o conferma finale · esagono = attesa dei controlli sui documenti. Generato da <code>config/finanziamento.php</code> con <code>php artisan finanziamento:graph</code>.</p>
   {$sections}
 </main>
 <script type="module">

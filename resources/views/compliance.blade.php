@@ -131,7 +131,7 @@
 
         <section>
             <h2><span class="n">04</span>Intelligenza artificiale e decisioni</h2>
-            <p>L'intelligenza artificiale {{ $aiActive ? 'è usata' : 'è prevista' }} soltanto per leggere i documenti inviati (ad esempio documento d'identità o certificati), ricavarne i dati e confrontarli con quelli dichiarati. Ogni dato estratto viene mostrato all'agente, che lo conferma o lo corregge.</p>
+            <p>L'intelligenza artificiale {{ $aiActive ? 'è usata' : 'è prevista' }} soltanto per leggere i documenti inviati (ad esempio documento d'identità o certificati), ricavarne i dati e confrontarli con quelli dichiarati. Ogni dato estratto viene mostrato all'agente, che lo conferma o lo corregge. I documenti non vengono inviati all'intelligenza artificiale finché l'informativa firmata dal cliente non è stata verificata: quelli ricevuti prima restano in attesa e vengono letti solo dopo che l'informativa firmata è stata verificata, dal sistema o da un operatore. L'informativa stessa è controllata soltanto per accertare che sia il nostro modulo e che sia firmata.</p>
             <ul>
                 <li>Il servizio non valuta il merito creditizio, non calcola punteggi e non decide sull'esito del finanziamento.</li>
                 <li>L'esito è sempre dato da un istruttore, agente abilitato OAM: la decisione resta sempre di una persona.</li>

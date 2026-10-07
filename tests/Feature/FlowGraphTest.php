@@ -37,6 +37,27 @@ class FlowGraphTest extends TestCase
         }
     }
 
+    public function test_attesa_e_conferma_dei_dati_letti_hanno_una_forma_e_un_colore_propri(): void
+    {
+        $mermaid = (new FlowGraph)->mermaid('perfezionamento');
+
+        $this->assertMatchesRegularExpression('/^\s+attesa_documenti\{\{"/m', $mermaid);
+        $this->assertMatchesRegularExpression('/^\s+rivedi_dati\(\["/m', $mermaid);
+        $this->assertStringContainsString('classDef wait', $mermaid);
+        $this->assertStringContainsString('class attesa_documenti wait', $mermaid);
+        $this->assertStringContainsString('class rivedi_dati review', $mermaid);
+        $this->assertStringContainsString('attesa_documenti --> rivedi_dati', $mermaid);
+        $this->assertStringContainsString('doc_reddito --> attesa_documenti', $mermaid);
+    }
+
+    public function test_la_legenda_spiega_le_forme_nuove(): void
+    {
+        $html = (new FlowGraph)->html();
+
+        $this->assertStringContainsString('esagono = attesa dei controlli', $html);
+        $this->assertStringContainsString('conferma dei dati letti', $html);
+    }
+
     public function test_le_etichette_non_rompono_la_sintassi(): void
     {
         $mermaid = (new FlowGraph)->mermaid('richiesta');

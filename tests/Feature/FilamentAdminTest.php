@@ -9,17 +9,22 @@ use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
 use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
 use App\Filament\Resources\LoanRequests\RelationManagers\AttachmentsRelationManager;
 use App\Filament\Resources\LoanRequests\RelationManagers\PraticaDocumentsRelationManager;
+use App\Filament\Resources\LoanRequests\RelationManagers\PraticaFieldsRelationManager;
+use App\Jobs\AnalyzeAttachment;
 use App\Models\Attachment;
 use App\Models\Company;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
+use App\Models\PraticaField;
 use App\Models\User;
 use Database\Seeders\DocumentCatalogSeeder;
+use Database\Seeders\FlowSeeder;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -230,6 +235,65 @@ class FilamentAdminTest extends TestCase
         $this->get('/admin/attachments')->assertOk()->assertSee('In attesa informativa');
         Livewire::test(AttachmentsRelationManager::class, ['ownerRecord' => $loan, 'pageClass' => ViewLoanRequest::class])
             ->assertTableColumnFormattedStateSet('status', 'In attesa informativa', record: $a);
+    }
+
+    public function test_la_scheda_della_pratica_mostra_quando_l_informativa_e_stata_verificata(): void
+    {
+        $loan = $this->loan();
+        $this->login();
+
+        $this->get("/admin/loan-requests/{$loan->id}")->assertOk()->assertSee('Informativa verificata il');
+
+        $loan->update(['privacy_verified_at' => '2026-10-07 10:30:00']);
+        $this->get("/admin/loan-requests/{$loan->id}")->assertOk()->assertSee('10:30:00');
+    }
+
+    public function test_l_operatore_vede_i_dati_letti_dai_documenti_con_lo_stato_e_la_fonte(): void
+    {
+        $this->seed(FlowSeeder::class);
+        $this->seed(DocumentCatalogSeeder::class);
+        $loan = $this->loan();
+        $file = Attachment::create(['loan_request_id' => $loan->id, 'pratica_document_id' => PraticaDocument::populate($loan)->firstWhere('code', 'documento_identita')->id,
+            'kind' => 'documento_identita', 'path' => 'x.jpg', 'mime' => 'image/jpeg', 'received_at' => now()]);
+        PraticaField::propose($loan, ['cognome' => 'ROSSI', 'codice_fiscale' => 'RSSMRA80A01H501U'], $file);
+        $loan->fields()->where('key', 'cognome')->first()->confirm();
+        $this->login();
+
+        Livewire::test(PraticaFieldsRelationManager::class, ['ownerRecord' => $loan, 'pageClass' => ViewLoanRequest::class])
+            ->assertCanSeeTableRecords($loan->fields)
+            ->assertSee('ROSSI')
+            ->assertSee('RSSMRA80A01H501U')
+            ->assertSee('Codice fiscale')
+            ->assertSee('Documento d\'identità')
+            ->assertTableColumnFormattedStateSet('status', 'Confermato', record: $loan->fields()->where('key', 'cognome')->first())
+            ->assertTableColumnFormattedStateSet('status', 'Proposto', record: $loan->fields()->where('key', 'codice_fiscale')->first());
+    }
+
+    public function test_i_dati_letti_non_si_modificano_dal_pannello(): void
+    {
+        $this->seed(FlowSeeder::class);
+        $loan = $this->loan();
+        $this->login();
+
+        Livewire::test(PraticaFieldsRelationManager::class, ['ownerRecord' => $loan, 'pageClass' => ViewLoanRequest::class])
+            ->assertTableActionDoesNotExist('edit')
+            ->assertTableActionDoesNotExist('delete');
+    }
+
+    public function test_approvando_l_informativa_dal_pannello_partono_i_documenti_in_attesa(): void
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        Bus::fake();
+        $loan = $this->loan();
+        $slots = PraticaDocument::populate($loan);
+        $waiting = Attachment::create(['loan_request_id' => $loan->id, 'pratica_document_id' => $slots->firstWhere('code', 'documento_identita')->id,
+            'kind' => 'documento_identita', 'path' => 'x.jpg', 'mime' => 'image/jpeg', 'status' => 'in_attesa_informativa', 'received_at' => now()]);
+        $this->login();
+
+        $this->relationManager($loan)->callTableAction('approva', $slots->firstWhere('code', 'informativa'));
+
+        $this->assertNotNull($loan->fresh()->privacy_verified_at);
+        Bus::assertDispatchedAfterResponse(AnalyzeAttachment::class, fn (AnalyzeAttachment $job) => $job->attachmentId === $waiting->id);
     }
 
     public function test_il_catalogo_dei_documenti_si_gestisce_dal_pannello(): void

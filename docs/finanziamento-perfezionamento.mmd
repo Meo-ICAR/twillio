@@ -3,6 +3,11 @@ flowchart TD
     conferma_pratica["È la pratica giusta?"]
     riepilogo_documenti[("📄 *Documenti per perfezionare la pratica {codice}* ({prodotto})  {d…")]
     informativa[["Per procedere invia l#39;informativa privacy firmata dal cliente (foto…"]]
+    doc_identita[["Invia il documento d#39;identità del cliente (foto o PDF)."]]
+    doc_cf[["Invia il codice fiscale del cliente (foto o PDF)."]]
+    doc_reddito[["Invia il documento di reddito (busta paga, CUD, cedolino pensione,…"]]
+    attesa_documenti{{"⏳ Sto controllando i documenti: ti scrivo appena ho finito. Se non…"}}
+    rivedi_dati(["I dati letti dai documenti sono corretti?"])
     codice_fiscale[/"Codice fiscale del cliente (da qui ricavo data e luogo di nascita):"/]
     cognome[/"Cognome del cliente:"/]
     nome[/"Nome del cliente:"/]
@@ -21,15 +26,17 @@ flowchart TD
     data_assunzione[/"Data di inizio rapporto o attività (gg/mm/aaaa):"/]
     ragione_sociale[/"Ragione sociale:"/]
     partita_iva[/"Partita IVA (11 cifre):"/]
-    doc_identita[["Invia il documento d#39;identità del cliente (foto o PDF)."]]
-    doc_cf[["Invia il codice fiscale del cliente (foto o PDF)."]]
-    doc_reddito[["Invia il documento di reddito (busta paga, CUD, cedolino pensione,…"]]
     riepilogo_p(["Riepilogo e conferma"])
     codice --> conferma_pratica
     conferma_pratica -->|"No"| codice
     conferma_pratica -->|"Sì"| riepilogo_documenti
     riepilogo_documenti --> informativa
-    informativa --> codice_fiscale
+    informativa --> doc_identita
+    doc_identita --> doc_cf
+    doc_cf --> doc_reddito
+    doc_reddito --> attesa_documenti
+    attesa_documenti --> rivedi_dati
+    rivedi_dati --> codice_fiscale
     codice_fiscale --> cognome
     cognome --> nome
     nome --> verifica_cf
@@ -48,12 +55,9 @@ flowchart TD
     iban -->|"Altre risposte"| datore_lavoro
     iban -->|"Leasing / Finanziamento aziendale"| ragione_sociale
     datore_lavoro --> data_assunzione
-    data_assunzione --> doc_identita
+    data_assunzione --> riepilogo_p
     ragione_sociale --> partita_iva
-    partita_iva --> doc_identita
-    doc_identita --> doc_cf
-    doc_cf --> doc_reddito
-    doc_reddito --> riepilogo_p
+    partita_iva --> riepilogo_p
     classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
     classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600
     classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
@@ -61,10 +65,14 @@ flowchart TD
     classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
     classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
     classDef message fill:#e6f3f7,stroke:#2c7a8c,color:#0c2a33
+    classDef wait fill:#fff9db,stroke:#b7791f,color:#3b2a05
+    classDef review fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
     class codice code
     class conferma_pratica,conferma_cf,stato_civile,documento_tipo choice
     class riepilogo_documenti message
     class informativa,doc_identita,doc_cf,doc_reddito file
+    class attesa_documenti wait
+    class rivedi_dati review
     class codice_fiscale,cognome,nome,luogo_nascita,residenza,documento_numero,documento_scadenza,telefono,email,iban,datore_lavoro,data_assunzione,ragione_sociale,partita_iva text
     class verifica_cf check
     class riepilogo_p summary

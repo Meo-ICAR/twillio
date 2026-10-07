@@ -99,6 +99,13 @@ class CompliancePageTest extends TestCase
         $this->get('/compliance')->assertOk()->assertSee('CSA STAR')->assertSee('Ottenuta')->assertDontSee('Prevista');
     }
 
+    public function test_dice_che_i_documenti_vanno_all_ai_solo_dopo_l_informativa_verificata(): void
+    {
+        $this->get('/compliance')->assertOk()
+            ->assertSee('solo dopo che l\'informativa firmata è stata verificata', false)
+            ->assertSee('non vengono inviati all\'intelligenza artificiale', false);
+    }
+
     public function test_non_usa_formule_assolute(): void
     {
         // Solo il testo visibile: il CSS contiene legittimamente valori come width:100%.
