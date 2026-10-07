@@ -79,6 +79,36 @@ class PraticaDocument extends Model
         $this->update(['annotations' => $notes]);
     }
 
+    /** L'operatore dà il documento per buono. */
+    public function approve(int $userId): void
+    {
+        $this->update(['status' => 'ok', 'reviewed_at' => now()]);
+        $this->addAnnotation('operatore', 'Approvato dall\'operatore.', $userId);
+    }
+
+    /** L'operatore rifiuta il documento: la nota dice all'agente cosa non va. */
+    public function reject(string $note, int $userId): void
+    {
+        $this->review('rejected', $note, $userId);
+    }
+
+    /** L'operatore chiede un approfondimento su questo documento. */
+    public function requestIntegration(string $note, int $userId): void
+    {
+        $this->review('integrazione_richiesta', $note, $userId);
+    }
+
+    private function review(string $status, string $note, int $userId): void
+    {
+        $note = trim($note);
+        if ($note === '') {
+            throw new \InvalidArgumentException('Serve una nota per spiegare cosa manca o cosa non va.');
+        }
+
+        $this->update(['status' => $status, 'reviewed_at' => now()]);
+        $this->addAnnotation('operatore', $note, $userId);
+    }
+
     public function lastAnnotation(): ?string
     {
         $notes = $this->annotations ?? [];

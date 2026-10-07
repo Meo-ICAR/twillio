@@ -4,16 +4,22 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\Attachments\Pages\ListAttachments;
 use App\Filament\Resources\Companies\Pages\EditCompany;
+use App\Filament\Resources\FinanziamentoDocuments\Pages\CreateFinanziamentoDocument;
 use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
 use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
 use App\Filament\Resources\LoanRequests\RelationManagers\AttachmentsRelationManager;
+use App\Filament\Resources\LoanRequests\RelationManagers\PraticaDocumentsRelationManager;
 use App\Models\Attachment;
 use App\Models\Company;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
+use App\Models\PraticaDocument;
 use App\Models\User;
+use Database\Seeders\DocumentCatalogSeeder;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -209,5 +215,112 @@ class FilamentAdminTest extends TestCase
         Livewire::test(AttachmentsRelationManager::class, [
             'ownerRecord' => $loan, 'pageClass' => ViewLoanRequest::class,
         ])->assertCanSeeTableRecords([$a])->assertTableColumnFormattedStateSet('status', 'Difforme', record: $a);
+    }
+
+    public function test_il_catalogo_dei_documenti_si_gestisce_dal_pannello(): void
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        $this->login();
+        $this->get('/admin/finanziamento-documents')->assertOk()->assertSee('Documento d\'identità')->assertSee('Obbligatorio');
+
+        $valid = ['product' => 'mutuo', 'code' => 'garanzia', 'name' => 'Garanzia', 'requirement' => 'facoltativo', 'is_active' => true, 'sort_order' => 9];
+        Livewire::test(CreateFinanziamentoDocument::class)->fillForm($valid)->call('create')->assertHasNoFormErrors();
+        $this->assertDatabaseHas('finanziamento_documents', ['product' => 'mutuo', 'code' => 'garanzia', 'requirement' => 'facoltativo']);
+
+        Livewire::test(CreateFinanziamentoDocument::class)->fillForm(['name' => str_repeat('x', 25), 'code' => 'altro'] + $valid)->call('create')->assertHasFormErrors(['name']);
+        Livewire::test(CreateFinanziamentoDocument::class)->fillForm($valid)->call('create')->assertHasFormErrors(['code']);
+        Livewire::test(CreateFinanziamentoDocument::class)->fillForm(['code' => 'Con Spazi'] + $valid)->call('create')->assertHasFormErrors(['code']);
+        Livewire::test(CreateFinanziamentoDocument::class)->fillForm(['requirement' => 'boh', 'code' => 'nuovo'] + $valid)->call('create')->assertHasFormErrors(['requirement']);
+    }
+
+    private function relationManager(PraticaDocument|LoanRequest $of)
+    {
+        $loan = $of instanceof PraticaDocument ? $of->loanRequest : $of;
+
+        return Livewire::test(PraticaDocumentsRelationManager::class, ['ownerRecord' => $loan, 'pageClass' => ViewLoanRequest::class]);
+    }
+
+    private function slots(): PraticaDocument
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        Http::fake(['graph.facebook.com/*' => Http::response(['messages' => [['id' => 'x']]])]);
+
+        return PraticaDocument::populate($this->loan())->firstWhere('code', 'codice_fiscale');
+    }
+
+    public function test_l_operatore_vede_e_approva_i_documenti_della_pratica(): void
+    {
+        $slot = $this->slots();
+        $user = $this->login();
+
+        $this->relationManager($slot)
+            ->assertCanSeeTableRecords($slot->loanRequest->praticaDocuments)
+            ->assertTableColumnFormattedStateSet('status', 'Da ricevere', record: $slot)
+            ->callTableAction('approva', $slot);
+
+        $this->assertSame('ok', $slot->fresh()->status);
+        $this->assertSame($user->id, $slot->fresh()->annotations[0]['user_id']);
+    }
+
+    public function test_il_rifiuto_richiede_una_nota_e_avvisa_l_agente(): void
+    {
+        $slot = $this->slots();
+        $this->login();
+
+        $this->relationManager($slot)->callTableAction('rifiuta', $slot, data: ['note' => ''])->assertHasTableActionErrors(['note' => 'required']);
+        $this->assertSame('da_ricevere', $slot->fresh()->status);
+
+        $this->relationManager($slot)->callTableAction('rifiuta', $slot, data: ['note' => 'La foto è tagliata'])->assertHasNoTableActionErrors();
+
+        $this->assertSame('rejected', $slot->fresh()->status);
+        $this->assertSame('La foto è tagliata', $slot->fresh()->lastAnnotation());
+        Http::assertSent(fn ($r) => ($r['to'] ?? null) === '393331112222' && str_contains($r['text']['body'] ?? '', 'La foto è tagliata'));
+    }
+
+    public function test_la_richiesta_di_integrazione_su_un_documento(): void
+    {
+        $slot = $this->slots();
+        $this->login();
+
+        $this->relationManager($slot)->callTableAction('integrazione', $slot, data: ['note' => 'Serve la pagina con la firma']);
+
+        $this->assertSame('integrazione_richiesta', $slot->fresh()->status);
+        Http::assertSent(fn ($r) => str_contains($r['text']['body'] ?? '', 'integrazione'));
+    }
+
+    public function test_si_richiede_un_documento_integrativo_dal_catalogo_o_libero(): void
+    {
+        $slot = $this->slots();
+        $loan = $slot->loanRequest;
+        $this->login();
+
+        $this->relationManager($loan)->callAction(TestAction::make('richiediIntegrativo')->table(), data: ['document' => 'contratto_lavoro', 'note' => 'Serve il contratto firmato']);
+        $this->relationManager($loan)->callAction(TestAction::make('richiediIntegrativo')->table(), data: ['document' => '__altro', 'name' => 'Estratto conto cointestato', 'note' => 'Verifica il secondo intestatario']);
+
+        $this->assertSame(['integrativo', 'integrazione_richiesta'], [
+            $loan->praticaDocuments()->where('code', 'contratto_lavoro')->value('requirement'),
+            $loan->praticaDocuments()->where('code', 'contratto_lavoro')->value('status'),
+        ]);
+        $this->assertSame('Estratto conto cointestato', $loan->praticaDocuments()->where('code', 'estratto-conto-cointestato')->value('name'));
+        Http::assertSentCount(2);
+    }
+
+    public function test_il_nome_del_documento_libero_e_obbligatorio(): void
+    {
+        $slot = $this->slots();
+        $this->login();
+
+        $this->relationManager($slot)->callAction(TestAction::make('richiediIntegrativo')->table(), data: ['document' => '__altro', 'name' => '', 'note' => 'x'])
+            ->assertHasActionErrors(['name' => 'required']);
+    }
+
+    public function test_la_cronologia_delle_annotazioni_e_visibile_con_l_autore(): void
+    {
+        $slot = $this->slots();
+        $slot->addAnnotation('ai', 'Cognome: sul documento «BIANCHI»');
+        $slot->addAnnotation('operatore', 'Confermo, serve un nuovo documento', 1);
+        $this->login();
+
+        $this->relationManager($slot)->assertSee('AI')->assertSee('BIANCHI')->assertSee('Operatore')->assertSee('Confermo');
     }
 }

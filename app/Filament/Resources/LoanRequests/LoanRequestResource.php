@@ -6,6 +6,7 @@ use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
 use App\Filament\Resources\LoanRequests\Pages\ListLoanRequests;
 use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
 use App\Filament\Resources\LoanRequests\RelationManagers\AttachmentsRelationManager;
+use App\Filament\Resources\LoanRequests\RelationManagers\PraticaDocumentsRelationManager;
 use App\Filament\Resources\LoanRequests\Schemas\LoanRequestForm;
 use App\Filament\Resources\LoanRequests\Schemas\LoanRequestInfolist;
 use App\Filament\Resources\LoanRequests\Tables\LoanRequestsTable;
@@ -53,7 +54,7 @@ class LoanRequestResource extends Resource
 
     public static function getRelations(): array
     {
-        return [AttachmentsRelationManager::class];
+        return [PraticaDocumentsRelationManager::class, AttachmentsRelationManager::class];
     }
 
     public static function getPages(): array

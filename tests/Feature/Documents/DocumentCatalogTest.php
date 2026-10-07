@@ -180,4 +180,73 @@ class DocumentCatalogTest extends TestCase
         $this->assertNull($slot->fresh()->finanziamento_document_id);
         $this->assertSame('Documento d\'identità', $slot->fresh()->name);
     }
+
+    public function test_l_operatore_approva_rifiuta_e_chiede_integrazioni(): void
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        $slot = PraticaDocument::populate($this->loan())->first();
+        $user = User::factory()->create();
+
+        $slot->approve($user->id);
+        $this->assertSame('ok', $slot->fresh()->status);
+        $this->assertNotNull($slot->fresh()->reviewed_at);
+        $this->assertSame('operatore', $slot->fresh()->annotations[0]['by']);
+
+        $slot->reject('Documento scaduto', $user->id);
+        $this->assertSame('rejected', $slot->fresh()->status);
+        $this->assertSame('Documento scaduto', $slot->fresh()->lastAnnotation());
+        $this->assertSame($user->id, $slot->fresh()->annotations[1]['user_id']);
+
+        $slot->requestIntegration('Serve la pagina con la firma', $user->id);
+        $this->assertSame('integrazione_richiesta', $slot->fresh()->status);
+        $this->assertSame('Serve la pagina con la firma', $slot->fresh()->lastAnnotation());
+    }
+
+    public function test_rifiuto_e_integrazione_richiedono_una_nota(): void
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        $slot = PraticaDocument::populate($this->loan())->first();
+
+        foreach (['reject', 'requestIntegration'] as $method) {
+            try {
+                $slot->{$method}('   ', 1);
+                $this->fail("$method senza nota deve fallire");
+            } catch (\InvalidArgumentException) {
+                $this->assertSame('da_ricevere', $slot->fresh()->status);
+            }
+        }
+    }
+
+    public function test_si_richiede_un_documento_integrativo_dal_catalogo_o_libero(): void
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        $loan = $this->loan();
+        PraticaDocument::populate($loan);
+        $user = User::factory()->create();
+
+        $fromCatalog = $loan->requestIntegrativeDocument('contratto_lavoro', 'Contratto di lavoro', 'Serve il contratto firmato', $user->id);
+        $free = $loan->requestIntegrativeDocument(null, 'Estratto conto cointestato', 'Verifica il secondo intestatario', $user->id);
+
+        $this->assertSame(['integrativo', 'integrazione_richiesta', 'contratto_lavoro'], [$fromCatalog->requirement, $fromCatalog->status, $fromCatalog->code]);
+        $this->assertNotNull($fromCatalog->finanziamento_document_id);
+        $this->assertSame('Serve il contratto firmato', $fromCatalog->lastAnnotation());
+        $this->assertSame('integrativo', $free->requirement);
+        $this->assertNull($free->finanziamento_document_id);
+        $this->assertSame('estratto-conto-cointestato', $free->code);
+        $this->assertFalse($loan->documentsComplete());
+    }
+
+    public function test_richiedere_di_nuovo_lo_stesso_integrativo_riusa_il_documento(): void
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        $loan = $this->loan();
+        PraticaDocument::populate($loan);
+
+        $loan->requestIntegrativeDocument('contratto_lavoro', 'Contratto di lavoro', 'Prima richiesta', 1);
+        $again = $loan->requestIntegrativeDocument('contratto_lavoro', 'Contratto di lavoro', 'Seconda richiesta', 1);
+
+        $this->assertSame(1, $loan->praticaDocuments()->where('code', 'contratto_lavoro')->count());
+        $this->assertSame('Seconda richiesta', $again->lastAnnotation());
+        $this->assertCount(2, $again->annotations);
+    }
 }

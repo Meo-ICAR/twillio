@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class LoanRequest extends Model
 {
@@ -41,6 +42,30 @@ class LoanRequest extends Model
     public function praticaDocuments(): HasMany
     {
         return $this->hasMany(PraticaDocument::class);
+    }
+
+    /**
+     * L'istruttore chiede un documento integrativo: dal catalogo (indicando il codice) o libero (solo il nome).
+     * Se il documento c'è già sulla pratica lo si riusa: la nuova nota si aggiunge alle precedenti.
+     */
+    public function requestIntegrativeDocument(?string $catalogCode, string $name, string $note, int $userId): PraticaDocument
+    {
+        $template = $catalogCode
+            ? FinanziamentoDocument::where('product', $this->product)->where('code', $catalogCode)->first()
+            : null;
+
+        $slot = $this->praticaDocuments()->firstOrCreate(
+            ['code' => $template?->code ?? Str::slug($name)],
+            [
+                'name' => $template?->name ?? $name,
+                'requirement' => 'integrativo',
+                'finanziamento_document_id' => $template?->id,
+                'sort_order' => 900,
+            ],
+        );
+        $slot->requestIntegration($note, $userId);
+
+        return $slot->fresh();
     }
 
     /** Tutti i documenti obbligatori sono OK e non c'è nessuna integrazione richiesta e non ancora ricevuta. */
