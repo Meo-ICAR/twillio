@@ -43,7 +43,7 @@ Resta anche la scelta testuale `1`, `2`, `3` e le parole chiave già presenti.
 **conversations**
 - `id`, `wa_number` (agente), `flow` (`richiesta`|`perfezionamento`), `node` (nodo corrente),
   `loan_request_id` (nullable), `status` (`attiva`|`completata`|`annullata`),
-  `last_message_id` (deduplica dei retry di Meta), timestamp.
+  timestamp.
 - Una sola conversazione `attiva` per `wa_number`.
 
 **loan_requests**
@@ -127,14 +127,12 @@ non produce documenti legali.
 - Risposta non valida: stessa domanda con un messaggio d'aiuto, lo stato non avanza.
 - Lo stato avanza solo dopo l'invio riuscito della domanda successiva; ogni errore verso Meta
   è registrato nel log e il webhook risponde comunque 200 per evitare i retry a catena.
-- Deduplica: se `message.id` coincide con `last_message_id` il messaggio è ignorato.
 - Conversazione ferma oltre 24 ore: alla ripresa, "continua" o "ricomincia".
 
 ## 10. Sicurezza e privacy
 
 - Dati personali cifrati a riposo (cast) e file sul disco privato.
 - Fase 1: `SensitiveDataGuard` blocca testo con pattern di CF, telefono, email, P.IVA.
-- Verifica della firma `X-Hub-Signature-256` del webhook con l'app secret (oggi assente).
 - I log non riportano i campi in `personal` né i media.
 
 ## 11. Test
@@ -148,6 +146,7 @@ Test automatici (`php artisan test`):
 
 ## 12. Fuori ambito (per ora)
 
-Notifiche al backoffice, integrazione con gestionale/CRM, pannello web, validazione
+Verifica della firma `X-Hub-Signature-256` del webhook, deduplica dei messaggi reinviati da
+Meta, notifiche al backoffice, integrazione con gestionale/CRM, pannello web, validazione
 automatica della firma, calcolo di preventivi reali, comando "Stato Pratiche" oltre
 all'elenco di base delle pratiche dell'agente.
