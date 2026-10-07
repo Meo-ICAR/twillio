@@ -35,4 +35,15 @@ class WelcomePageTest extends TestCase
         $this->assertStringNotContainsString('@vite', $html);
         $this->assertStringNotContainsString('http://', $html);
     }
+
+    public function test_il_footer_rimanda_al_sito_hassisto_dopo_la_descrizione_del_prodotto(): void
+    {
+        $html = $this->get('/')->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '#UnicoAgent · assistente WhatsApp per pratiche di finanziamento\.\s*Un prodotto\s*<a href="https://www\.hassisto\.com/it/"[^>]*>Hassisto</a>#u',
+            $html
+        );
+        $this->assertStringContainsString('rel="noopener"', $html);
+    }
 }

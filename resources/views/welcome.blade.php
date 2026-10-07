@@ -183,7 +183,7 @@
     </section>
 
     <footer>
-        <div>UnicoAgent · assistente WhatsApp per pratiche di finanziamento.</div>
+        <div>UnicoAgent · assistente WhatsApp per pratiche di finanziamento. Un prodotto <a href="https://www.hassisto.com/it/" rel="noopener">Hassisto</a>.</div>
         <div><a href="/grafo-domande">Grafo delle domande</a> · <a href="/compliance">Trasparenza e conformità</a> · <a href="/privacy">Informativa privacy</a></div>
         <div>Il servizio non sostituisce gli obblighi informativi e contrattuali del mediatore: i testi dell'informativa e dei consensi restano quelli forniti dal tuo ufficio legale.</div>
     </footer>
