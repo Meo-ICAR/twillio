@@ -270,4 +270,33 @@ class PerfezionamentoFlowTest extends ConversationTestCase
         $this->say('#menu_richiedi', '#mutuo', 'annulla');
         $this->assertSame([], Conversation::latest('id')->first()->data);
     }
+
+    public function test_il_cliente_deve_essere_maggiorenne(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'Mario', 'Rossi', 'RSSMRA80A01H501U');
+
+        foreach ([now()->subYears(17)->format('d/m/Y'), now()->addDay()->format('d/m/Y')] as $date) {
+            $this->assertStringContainsString('maggiorenne', $this->bodies($this->say($date)), $date);
+            $this->assertSame('data_nascita', Conversation::first()->node);
+        }
+
+        $this->say(now()->subYears(18)->format('d/m/Y'));
+        $this->assertSame('luogo_nascita', Conversation::first()->node);
+    }
+
+    public function test_iban_con_checksum_errato_e_rifiutato(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->say(...[
+            '#menu_perfeziona', 'FIN-2026-0007', '#si', 'Mario', 'Rossi', 'RSSMRA80A01H501U', '01/01/1980', 'Roma',
+            'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com',
+        ]);
+
+        $this->assertStringContainsString('IBAN non valido', $this->bodies($this->say('IT61X0542811101000000123456')));
+        $this->assertSame('iban', Conversation::first()->node);
+
+        $this->say('IT60 X054 2811 1010 0000 0123 456');
+        $this->assertSame('datore_lavoro', Conversation::first()->node);
+    }
 }

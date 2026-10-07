@@ -5,6 +5,7 @@ namespace App\Services\Conversation;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Services\Whatsapp\WhatsAppClient;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -161,9 +162,18 @@ class ConversationEngine
             $value = Str::upper($value);
         }
 
-        return Validator::make(['v' => $value], ['v' => $def['rules']])->passes()
-            ? [$value, null]
-            : [null, $def['error'] ?? 'Risposta non valida, riprova.'];
+        $error = $def['error'] ?? 'Risposta non valida, riprova.';
+        if (! Validator::make(['v' => $value], ['v' => $def['rules']])->passes()) {
+            return [null, $error];
+        }
+        if (($def['checksum'] ?? null) === 'iban' && ! Iban::isValid($value)) {
+            return [null, $error];
+        }
+        if (isset($def['min_age']) && Carbon::createFromFormat('!d/m/Y', $value)->gt(today()->subYears($def['min_age']))) {
+            return [null, $def['age_error'] ?? 'Il cliente non ha l\'età richiesta.'];
+        }
+
+        return [$value, null];
     }
 
     private function matchOption(array $options, string $text): ?string

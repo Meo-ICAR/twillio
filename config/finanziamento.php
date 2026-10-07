@@ -128,7 +128,7 @@ return [
                 'nome' => $text('Nome', 'Nome del cliente:', ['required', 'string', 'max:60'], 'cognome'),
                 'cognome' => $text('Cognome', 'Cognome del cliente:', ['required', 'string', 'max:60'], 'codice_fiscale'),
                 'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale:', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'data_nascita', ['upper' => true, 'strip_spaces' => true, 'error' => 'Codice fiscale non valido (16 caratteri), riprova.']),
-                'data_nascita' => $text('Data di nascita', 'Data di nascita (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'luogo_nascita', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
+                'data_nascita' => $text('Data di nascita', 'Data di nascita (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'luogo_nascita', ['min_age' => 18, 'error' => 'Data non valida: usa il formato gg/mm/aaaa.', 'age_error' => 'Il cliente deve essere maggiorenne: controlla la data di nascita.']),
                 'luogo_nascita' => $text('Luogo di nascita', 'Luogo di nascita:', ['required', 'string', 'max:80'], 'residenza'),
                 'residenza' => $text('Residenza', 'Indirizzo di residenza (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'stato_civile'),
                 'stato_civile' => $choice('Stato civile', 'Stato civile:', ['celibe' => 'Celibe/Nubile', 'coniugato' => 'Coniugato/a', 'separato' => 'Separato/a', 'vedovo' => 'Vedovo/a'], 'documento_tipo'),
@@ -137,7 +137,7 @@ return [
                 'documento_scadenza' => $text('Scadenza documento', 'Scadenza del documento (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'telefono', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
                 'telefono' => $text('Telefono', 'Telefono del cliente:', ['required', 'regex:/^\+?\d{8,15}$/'], 'email', ['strip_spaces' => true, 'error' => 'Numero non valido, riprova.']),
                 'email' => $text('Email', 'Email del cliente:', ['required', 'email'], 'iban', ['error' => 'Email non valida, riprova.']),
-                'iban' => $text('IBAN', 'IBAN per l\'erogazione:', ['required', 'regex:/^IT\d{2}[A-Z0-9]{23}$/'], ['aziendale' => 'ragione_sociale', 'leasing' => 'ragione_sociale', '*' => 'datore_lavoro'], ['upper' => true, 'strip_spaces' => true, 'next_by' => 'prodotto', 'error' => 'IBAN non valido (formato IT + 25 caratteri), riprova.']),
+                'iban' => $text('IBAN', 'IBAN per l\'erogazione:', ['required', 'regex:/^IT\d{2}[A-Z0-9]{23}$/'], ['aziendale' => 'ragione_sociale', 'leasing' => 'ragione_sociale', '*' => 'datore_lavoro'], ['upper' => true, 'strip_spaces' => true, 'checksum' => 'iban', 'next_by' => 'prodotto', 'error' => 'IBAN non valido (formato o checksum errati), riprova.']),
 
                 'datore_lavoro' => $text('Datore di lavoro / ente', 'Datore di lavoro, ente pensionistico o attività svolta:', ['required', 'string', 'max:120'], 'data_assunzione'),
                 'data_assunzione' => $text('Inizio rapporto', 'Data di inizio rapporto o attività (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'doc_identita', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
