@@ -23,6 +23,8 @@ class CompanyForm
                     TextInput::make('customer_care_phone')->label('Telefono del customer care')->tel()->maxLength(40)
                         ->helperText('Indicato a chi non è un produttore convenzionato (segnalatore occasionale).'),
                     TextInput::make('customer_care_email')->label('Email del customer care')->email()->maxLength(255),
+                    TextInput::make('istruttoria_email')->label('Email dell\'istruttoria')->email()->maxLength(255)
+                        ->helperText('Riceve i dati della pratica e gli allegati quando viene inviata in istruttoria.'),
                     Textarea::make('retention_perfected')
                         ->label('Conservazione delle pratiche perfezionate')
                         ->helperText('Per quanto tempo e perché vengono conservati i dati delle pratiche perfezionate.')

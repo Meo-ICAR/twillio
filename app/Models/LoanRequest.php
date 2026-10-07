@@ -45,6 +45,7 @@ class LoanRequest extends Model
             'privacy_received_at' => 'datetime',
             'privacy_verified_at' => 'datetime',
             'perfected_at' => 'datetime',
+            'emailed_at' => 'datetime',
         ];
     }
 

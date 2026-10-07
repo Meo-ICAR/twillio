@@ -13,6 +13,7 @@ use App\Services\Checks\CheckContext;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Checks\NodeCheck;
 use App\Services\Crm\CrmGateway;
+use App\Services\Crm\LoanEmailSender;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Loans\LoanEstimator;
@@ -44,6 +45,7 @@ class ConversationEngine
         private CheckRegistry $checks,
         private LoanEstimator $estimator,
         private CrmGateway $crm,
+        private LoanEmailSender $mailer,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -722,6 +724,8 @@ class ConversationEngine
 
         $loan->update(['personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now()]);
         $this->close($conv, 'completata');
+        // L'esito della mail non cambia ciò che vede l'agente: se non parte, si può forzare dal pannello.
+        $this->mailer->send($loan->fresh());
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
     }
