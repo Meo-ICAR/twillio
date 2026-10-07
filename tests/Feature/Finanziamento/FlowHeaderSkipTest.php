@@ -6,6 +6,8 @@ use App\Models\Conversation;
 use App\Models\Flow;
 use App\Models\FlowNode;
 use App\Models\LoanRequest;
+use App\Models\PraticaDocument;
+use Database\Seeders\DocumentCatalogSeeder;
 
 class FlowHeaderSkipTest extends ConversationTestCase
 {
@@ -94,8 +96,10 @@ class FlowHeaderSkipTest extends ConversationTestCase
 
     public function test_un_testo_libero_saltabile_passa_al_nodo_successivo(): void
     {
+        $this->seed(DocumentCatalogSeeder::class);
         $this->node('perfezionamento', 'residenza')->update(['skippable' => true]);
-        LoanRequest::create(['code' => 'FIN-2026-0007', 'agent_wa_number' => $this->agent, 'product' => 'personale', 'status' => 'informativa_ricevuta', 'privacy_received_at' => now(), 'answers' => ['prodotto' => 'personale']]);
+        $loan = LoanRequest::create(['code' => 'FIN-2026-0007', 'agent_wa_number' => $this->agent, 'product' => 'personale', 'status' => 'informativa_ricevuta', 'privacy_received_at' => now(), 'answers' => ['prodotto' => 'personale']]);
+        PraticaDocument::populate($loan)->each->update(['status' => 'ricevuto']);
 
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario');
         $this->assertSame('residenza', Conversation::first()->node);

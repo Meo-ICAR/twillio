@@ -18,6 +18,9 @@ class LoanRequest extends Model
         'perfezionata' => 'Perfezionata',
     ];
 
+    /** Dopo quanti minuti un documento ancora in analisi smette di far aspettare il dialogo (lavoro perso o AI lenta). */
+    public const ANALYSIS_WAIT_MINUTES = 15;
+
     protected $guarded = [];
 
     protected static function booted(): void
@@ -53,6 +56,26 @@ class LoanRequest extends Model
     public function praticaDocuments(): HasMany
     {
         return $this->hasMany(PraticaDocument::class);
+    }
+
+    /**
+     * Ci sono documenti caricati da poco e non ancora controllati dall'AI (o in attesa dell'informativa verificata).
+     *
+     * @param  bool  $analysisActive  la lettura dei documenti è attiva: senza, nessuno li controlla e non si aspetta nulla
+     */
+    public function hasPendingAnalyses(bool $analysisActive): bool
+    {
+        if (! $analysisActive) {
+            return false;
+        }
+
+        return $this->attachments()
+            ->whereIn('status', ['ricevuto', 'in_attesa_informativa'])
+            ->where('received_at', '>=', now()->subMinutes(self::ANALYSIS_WAIT_MINUTES))
+            ->where(fn ($q) => $q
+                ->whereHas('praticaDocument.template', fn ($t) => $t->whereNotNull('ai_kind'))
+                ->orWhere(fn ($q) => $q->whereNull('pratica_document_id')->whereIn('kind', ['informativa', 'documento_identita', 'codice_fiscale', 'reddito'])))
+            ->exists();
     }
 
     /** L'informativa è stata inviata e non è stata rifiutata: non serve chiederla di nuovo. */

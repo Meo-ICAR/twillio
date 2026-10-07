@@ -30,11 +30,11 @@ class FinanziamentoConfigTest extends TestCase
 
             $targets = [];
             foreach ($nodes as $name => $node) {
-                $this->assertContains($node['type'], ['choice', 'text', 'code', 'file', 'summary', 'check', 'message'], "$flow.$name tipo");
+                $this->assertContains($node['type'], ['choice', 'text', 'code', 'file', 'summary', 'check', 'message', 'wait', 'review'], "$flow.$name tipo");
                 $this->assertNotEmpty($node['prompt'] ?? null, "$flow.$name senza prompt");
                 $this->assertLessThanOrEqual(900, mb_strlen($node['prompt']), "$flow.$name prompt troppo lungo");
 
-                if (in_array($node['type'], ['choice', 'summary'], true) && ! isset($node['options_from'])) {
+                if (in_array($node['type'], ['choice', 'summary', 'review'], true) && ! isset($node['options_from'])) {
                     $this->assertLessThanOrEqual(10, count($node['options']), "$flow.$name troppe opzioni");
                     foreach ($node['options'] as $id => $title) {
                         $this->assertLessThanOrEqual(24, mb_strlen($title), "$flow.$name.$id titolo troppo lungo");

@@ -4,12 +4,29 @@ namespace Tests\Feature\Finanziamento;
 
 use App\Models\Conversation;
 use App\Models\LoanRequest;
+use App\Models\PraticaDocument;
+use Database\Seeders\DocumentCatalogSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class PerfezionamentoFlowTest extends ConversationTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DocumentCatalogSeeder::class);
+    }
+
+    /** Pratica con informativa e documenti già ricevuti: il dialogo parte dalle domande sui dati. */
+    private function loanWithDocuments(array $overrides = []): LoanRequest
+    {
+        $loan = $this->loan($overrides + ['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        PraticaDocument::populate($loan)->each->update(['status' => 'ricevuto']);
+
+        return $loan;
+    }
+
     private function loan(array $overrides = []): LoanRequest
     {
         return LoanRequest::create($overrides + [
@@ -34,7 +51,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
     private function untilSummary(array $start): array
     {
         return [...$start, 'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com',
-            'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015', 'media:D1:image/jpeg', 'media:D2:image/jpeg', 'salta'];
+            'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015'];
     }
 
     public function test_percorso_completo_con_informativa_e_dati_cifrati(): void
@@ -44,11 +61,11 @@ class PerfezionamentoFlowTest extends ConversationTestCase
         $replies = $this->say('#si');
         $this->assertStringContainsString('informativa privacy firmata', $this->bodies($replies));
 
-        $this->say('media:M1:application/pdf', ...$this->personal());
-        $this->say('ACME Srl', '01/03/2015', 'media:D1:image/jpeg', 'media:D2:image/jpeg');
-        $summary = $this->say('salta');
+        // Prima i documenti (informativa, identità, codice fiscale; il reddito si salta), poi i dati.
+        $this->say('media:M1:application/pdf', 'media:D1:image/jpeg', 'media:D2:image/jpeg', 'salta', ...$this->personal());
+        $summary = $this->say('ACME Srl', '01/03/2015');
 
-        $this->assertStringContainsString('✅ Documento d\'identità', $summary[0]->body);
+        $this->assertStringContainsString('📎 Documento d\'identità', $summary[0]->body, 'ricevuto, ancora da verificare');
         $this->assertStringContainsString('➖ Documento di reddito', $summary[0]->body);
 
         $replies = $this->say('#conferma');
@@ -90,7 +107,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
         $replies = $this->say('media:M1:image/jpeg');
 
-        $this->assertStringContainsString('Codice fiscale del cliente', $this->bodies($replies));
+        $this->assertStringContainsString('documento d\'identità', $this->bodies($replies), 'dopo l\'informativa si chiedono i documenti');
         $loan = LoanRequest::first();
         $this->assertSame('informativa_ricevuta', $loan->status);
         $this->assertNotNull($loan->privacy_received_at);
@@ -103,7 +120,8 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
         $replies = $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
 
-        $this->assertStringContainsString('Codice fiscale del cliente', $this->bodies($replies));
+        $this->assertStringContainsString('documento d\'identità', $this->bodies($replies));
+        $this->assertSame('doc_identita', Conversation::first()->node);
     }
 
     public function test_formato_file_non_accettato(): void
@@ -153,7 +171,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_il_codice_fiscale_non_interpretabile_viene_rifiutato_e_poi_ricava_i_dati(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
         $this->assertSame('codice_fiscale', Conversation::first()->node);
 
@@ -177,7 +195,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_se_il_luogo_non_si_ricava_lo_chiede(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
 
         $replies = $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01Z404U', 'Rossi', 'Mario');
 
@@ -189,7 +207,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_indietro_dal_cognome_azzera_i_dati_ricavati(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U');
 
         $this->say('indietro');
@@ -203,7 +221,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_cognome_difforme_chiede_di_confermare_il_codice_fiscale(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
 
         $replies = $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Bianchi', 'Mario');
 
@@ -216,7 +234,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_reinserire_il_codice_fiscale_riverifica_senza_richiedere_i_nomi(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Bianchi', 'Mario', '#cf_no');
         $this->assertSame('codice_fiscale', Conversation::first()->node);
 
@@ -231,7 +249,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_difformita_confermate_compaiono_in_fondo_prima_dell_invio_in_istruttoria(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
 
         $replies = $this->say(...[
             '#menu_perfeziona', 'FIN-2026-0007', '#si',
@@ -254,7 +272,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_senza_difformita_il_riepilogo_non_mostra_la_sezione(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
 
         $replies = $this->say(...[
             '#menu_perfeziona', 'FIN-2026-0007', '#si',
@@ -271,26 +289,26 @@ class PerfezionamentoFlowTest extends ConversationTestCase
     {
         $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
-        Conversation::first()->update(['node' => 'doc_identita', 'data' => []]);
+        $this->assertSame('doc_identita', Conversation::first()->node);
 
         $this->assertStringContainsString('Invia una foto o un PDF', $this->bodies($this->say('ecco')));
         $this->say('media:D1:image/png', 'media:D2:image/png');
         $this->assertSame('doc_reddito', Conversation::first()->node);
         $this->say('salta');
-        $this->assertSame('riepilogo_p', Conversation::first()->node);
+        $this->assertSame('codice_fiscale', Conversation::first()->node, 'senza controlli in corso e senza dati letti si passa alle domande');
     }
 
     public function test_prodotti_aziendali_chiedono_ragione_sociale_e_partita_iva(): void
     {
-        $this->loan(['product' => 'aziendale', 'answers' => ['prodotto' => 'aziendale'],
-            'status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments(['product' => 'aziendale', 'answers' => ['prodotto' => 'aziendale']]);
 
-        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', ...$this->personal());
+        // Per le aziende il catalogo non prevede il documento di reddito: si salta.
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'salta', ...$this->personal());
         $this->assertSame('ragione_sociale', Conversation::first()->node);
 
         $this->assertStringContainsString('11 cifre', $this->bodies($this->say('Acme Srl', '123')));
         $this->say('123 4567 8901');
-        $this->assertSame('doc_identita', Conversation::first()->node);
+        $this->assertSame('riepilogo_p', Conversation::first()->node);
     }
 
     public function test_dopo_24_ore_chiede_se_continuare(): void
@@ -327,7 +345,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_codice_fiscale_omocodico_e_accettato(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
 
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA8LT01H501U');
 
@@ -363,10 +381,10 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_i_dati_della_conversazione_vengono_cancellati_alla_chiusura(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
         $this->say(...[
             '#menu_perfeziona', 'FIN-2026-0007', '#si', ...$this->personal(),
-            'ACME Srl', '01/03/2015', 'media:D1:image/jpeg', 'media:D2:image/jpeg', 'salta', '#conferma',
+            'ACME Srl', '01/03/2015', '#conferma',
         ]);
 
         $this->assertSame('completata', Conversation::first()->status);
@@ -379,7 +397,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_il_cliente_deve_essere_maggiorenne(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
 
         $minor = $this->cfBorn(now()->subYears(18)->addDay());
@@ -392,7 +410,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     public function test_iban_con_checksum_errato_e_rifiutato(): void
     {
-        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->loanWithDocuments();
         $this->say(...[
             '#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario',
             'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com',

@@ -31,7 +31,7 @@ class NodesRelationManager extends RelationManager
 
     protected static ?string $title = 'Domande';
 
-    private const TYPES = ['choice' => 'Scelta', 'text' => 'Testo libero', 'file' => 'File', 'code' => 'Codice pratica', 'summary' => 'Riepilogo', 'check' => 'Controllo automatico', 'message' => 'Messaggio'];
+    private const TYPES = ['choice' => 'Scelta', 'text' => 'Testo libero', 'file' => 'File', 'code' => 'Codice pratica', 'summary' => 'Riepilogo', 'check' => 'Controllo automatico', 'message' => 'Messaggio', 'wait' => 'Attesa dei controlli', 'review' => 'Conferma dei dati letti'];
 
     public function isReadOnly(): bool
     {
@@ -94,7 +94,7 @@ class NodesRelationManager extends RelationManager
                 ));
         }
 
-        if (in_array($record->type, ['choice', 'summary'], true)) {
+        if (in_array($record->type, ['choice', 'summary', 'review'], true)) {
             $fields[] = Repeater::make('options')->label('Opzioni di risposta')->reorderable()->maxItems(FlowValidator::MAX_OPTIONS)
                 ->addActionLabel('Aggiungi un\'opzione')->columns(2)
                 ->schema([
@@ -202,7 +202,7 @@ class NodesRelationManager extends RelationManager
                 'skippable' => (bool) ($data['skippable'] ?? false),
             ] + ($checks !== null ? ['checks' => $checks ?: null] : []) + ($jumpBy !== null ? ['jump_by' => $jumpBy] : []));
 
-            if (in_array($record->type, ['choice', 'summary'], true)) {
+            if (in_array($record->type, ['choice', 'summary', 'review'], true)) {
                 $existing = $record->options()->get()->keyBy('code');
                 $position = 0;
                 foreach ($options as $code => $title) {

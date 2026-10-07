@@ -70,15 +70,15 @@ class PerfezionamentoIntroTest extends ConversationTestCase
         $this->assertStringNotContainsString('}', $body);
     }
 
-    public function test_il_riepilogo_si_mostra_anche_se_l_informativa_e_gia_arrivata_e_si_prosegue_dal_codice_fiscale(): void
+    public function test_il_riepilogo_si_mostra_anche_se_l_informativa_e_gia_arrivata_e_si_prosegue_dai_documenti(): void
     {
         $this->loan('personale', ['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
 
         $replies = $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
 
         $this->assertStringContainsString('Obbligatori', $this->bodies($replies));
-        $this->assertStringContainsString('Codice fiscale del cliente', end($replies)->body);
-        $this->assertSame('codice_fiscale', Conversation::first()->node);
+        $this->assertStringContainsString('documento d\'identità', end($replies)->body);
+        $this->assertSame('doc_identita', Conversation::first()->node);
     }
 
     public function test_il_testo_si_personalizza_dalla_tabella_e_usa_i_segnaposto(): void

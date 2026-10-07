@@ -223,14 +223,15 @@ class DocumentiFlowTest extends ConversationTestCase
         Bus::assertNotDispatched(AnalyzeAttachment::class);
     }
 
-    public function test_i_documenti_di_perfeziona_non_avviano_l_analisi(): void
+    public function test_l_informativa_e_i_documenti_di_perfeziona_avviano_l_analisi(): void
     {
         Bus::fake([AnalyzeAttachment::class]);
         $loan = $this->loan('FIN-2026-0007', ['status' => 'in_attesa_informativa', 'privacy_received_at' => null]);
 
-        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'media:M1:application/pdf');
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'media:M1:application/pdf', 'media:M2:image/jpeg');
 
-        $this->assertSame(1, $loan->attachments()->count());
-        Bus::assertNotDispatched(AnalyzeAttachment::class);
+        $this->assertSame(2, $loan->attachments()->count());
+        Bus::assertDispatchedAfterResponse(AnalyzeAttachment::class, 2);
+        $this->assertCount(2, Bus::dispatchedAfterResponse(AnalyzeAttachment::class)->filter(fn (AnalyzeAttachment $job) => $job->checks === null), 'si usano i controlli predefiniti del tipo di documento');
     }
 }

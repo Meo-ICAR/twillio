@@ -43,7 +43,7 @@ class InformativaDocumentTest extends ConversationTestCase
         $this->assertSame($slot->id, $loan->attachments()->where('kind', 'informativa')->value('pratica_document_id'));
         $this->assertNotNull($loan->fresh()->privacy_received_at);
         $this->assertNull($loan->fresh()->privacy_verified_at, 'la verifica la fa l\'AI o l\'operatore, non l\'invio');
-        $this->assertSame('codice_fiscale', Conversation::first()->node, 'il dialogo prosegue senza aspettare');
+        $this->assertSame('doc_identita', Conversation::first()->node, 'il dialogo prosegue senza aspettare');
     }
 
     public function test_un_informativa_rifiutata_viene_richiesta_di_nuovo(): void
@@ -64,6 +64,6 @@ class InformativaDocumentTest extends ConversationTestCase
 
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
 
-        $this->assertSame('codice_fiscale', Conversation::first()->node);
+        $this->assertSame('doc_identita', Conversation::first()->node);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Attachment;
+use App\Services\Conversation\ConversationEngine;
 use App\Services\Conversation\Reply;
 use App\Services\Documents\AnalysisOutcome;
 use App\Services\Documents\DocumentPipeline;
@@ -23,7 +24,7 @@ class AnalyzeAttachment
      */
     public function __construct(public readonly int $attachmentId, public readonly ?array $checks = null) {}
 
-    public function handle(DocumentPipeline $pipeline, DocumentReader $reader, WhatsAppClient $client): void
+    public function handle(DocumentPipeline $pipeline, DocumentReader $reader, WhatsAppClient $client, ConversationEngine $engine): void
     {
         // Parte dopo la risposta al webhook: il limite di 30 secondi del web non basta per leggere un documento.
         @set_time_limit(150);
@@ -43,7 +44,13 @@ class AnalyzeAttachment
             $attachment->loanRequest->verifyPrivacy();
         }
 
-        $client->send($attachment->loanRequest->agent_wa_number, Reply::text($this->message($outcome)));
+        $loan = $attachment->loanRequest;
+        $client->send($loan->agent_wa_number, Reply::text($this->message($outcome)));
+
+        // Se il dialogo aspettava proprio questo controllo, riparte da solo.
+        foreach ($engine->resumeAfterAnalysis($loan) as $reply) {
+            $client->send($loan->agent_wa_number, $reply);
+        }
     }
 
     private function message(AnalysisOutcome $outcome): string

@@ -41,7 +41,7 @@ class FlowValidator
             $errors[] = 'Il testo della domanda supera '.self::MAX_PROMPT.' caratteri.';
         }
 
-        if (in_array($node->type, ['choice', 'summary'], true)) {
+        if (in_array($node->type, ['choice', 'summary', 'review'], true)) {
             if ($options === [] && ! ($node->params['options_from'] ?? null)) {
                 $errors[] = 'Serve almeno un\'opzione di risposta.';
             }

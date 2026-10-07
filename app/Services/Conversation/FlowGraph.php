@@ -21,6 +21,8 @@ class FlowGraph
         'summary' => ['([', '])'],
         'check' => ['{', '}'],
         'message' => ['[(', ')]'],
+        'wait' => ['{{', '}}'],
+        'review' => ['([', '])'],
     ];
 
     public function __construct(private ?FlowRepository $flows = null)
@@ -56,6 +58,8 @@ class FlowGraph
         $lines[] = '    classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a';
         $lines[] = '    classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52';
         $lines[] = '    classDef message fill:#e6f3f7,stroke:#2c7a8c,color:#0c2a33';
+        $lines[] = '    classDef wait fill:#fff9db,stroke:#b7791f,color:#3b2a05';
+        $lines[] = '    classDef review fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a';
         foreach ($byType as $type => $names) {
             $lines[] = '    class '.implode(',', $names).' '.$type;
         }

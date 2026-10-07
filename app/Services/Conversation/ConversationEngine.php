@@ -14,6 +14,7 @@ use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Whatsapp\WhatsAppClient;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -44,6 +45,35 @@ class ConversationEngine
     {
         Storage::disk('local')->delete($this->storedPaths);
         $this->storedPaths = [];
+    }
+
+    /**
+     * Chiamato quando finisce l'analisi di un documento: se il dialogo di quella pratica aspetta i controlli e non ne
+     * restano, prosegue da solo e restituisce i messaggi da mandare all'agente (vuoto se non c'è nulla da fare).
+     *
+     * @return Reply[]
+     */
+    public function resumeAfterAnalysis(LoanRequest $loan): array
+    {
+        return DB::transaction(function () use ($loan) {
+            // Lo stesso agente può scrivere nel frattempo: si lavora sulla conversazione bloccata e si ricontrolla dove si trova.
+            $conv = Conversation::where('loan_request_id', $loan->id)->where('status', 'attiva')->latest('id')->lockForUpdate()->first();
+            if (! $conv) {
+                return [];
+            }
+
+            $conv->setRelation('loanRequest', $loan->fresh());
+            $this->flows->setTest((bool) $conv->is_test);
+            $this->notices = [];
+
+            try {
+                $def = $this->flows->node($conv->flow, $conv->node);
+
+                return ($def['type'] ?? null) === 'wait' && ! $this->hasPending($conv) ? $this->advance($conv, $def) : [];
+            } finally {
+                $this->flows->setTest(false);
+            }
+        });
     }
 
     /** @return Reply[] */
@@ -162,6 +192,9 @@ class ConversationEngine
         if ($m->type === 'text' && $this->canSkip($def) && $this->normalize($m->text) === 'salta') {
             return $this->skip($conv, $def);
         }
+        if ($def['type'] === 'wait') {
+            return $this->answerWait($conv, $def, $m);
+        }
 
         $result = $this->read($conv, $def, $m);
         [$value, $error] = $result;
@@ -177,6 +210,11 @@ class ConversationEngine
             $extra = $checked['derived'];
         }
         if ($def['type'] === 'summary') {
+            // I controlli sui documenti girano dopo il caricamento: si invia solo a controlli finiti.
+            if ($value === 'conferma' && $this->hasPending($conv)) {
+                return [Reply::text('⏳ Sto ancora controllando alcuni documenti: aspetta il mio messaggio con l\'esito e poi invia la pratica.'), ...$this->prompt($conv)];
+            }
+
             return $this->finish($conv, $value);
         }
 
@@ -188,6 +226,9 @@ class ConversationEngine
             $data[$conv->node] = $value;
         }
         $data = array_merge($data, $extra);
+        if ($def['type'] === 'review') {
+            $data = $this->applyReview($conv, (string) $value, $data);
+        }
         $history = $conv->history ?? [];
         $history[] = $conv->node;
 
@@ -209,6 +250,72 @@ class ConversationEngine
         return $replies;
     }
 
+    /** Ci sono documenti dell'agente ancora in controllo (e il controllo è attivo). */
+    private function hasPending(Conversation $conv): bool
+    {
+        return $conv->loanRequest?->hasPendingAnalyses($this->reader->enabled()) ?? false;
+    }
+
+    /** Il dialogo aspetta i controlli sui documenti: riparte se sono finiti o se l'agente scrive «avanti». */
+    private function answerWait(Conversation $conv, array $def, IncomingMessage $m): array
+    {
+        $goOn = $m->type === 'text' && in_array($this->normalize($m->text), ['avanti', 'continua'], true);
+
+        if (! $goOn && $this->hasPending($conv)) {
+            return [Reply::text('⏳ Sto ancora controllando i documenti: ti scrivo appena ho finito. Se non vuoi aspettare scrivi «avanti».')];
+        }
+
+        return $this->advance($conv, $def);
+    }
+
+    /**
+     * L'agente risponde sui dati letti dai documenti. Confermandoli diventano risposte (come se li avesse scritti, con gli
+     * stessi controlli: se uno non regge viene richiesto); altrimenti si inseriscono tutti a mano.
+     *
+     * @param  array<string,mixed>  $data
+     * @return array<string,mixed>
+     */
+    private function applyReview(Conversation $conv, string $answer, array $data): array
+    {
+        $proposed = $conv->loanRequest->fields()->where('status', 'proposto')->orderBy('id')->get();
+
+        if ($answer !== 'conferma') {
+            $proposed->each->reject();
+
+            return $data;
+        }
+
+        foreach ($proposed as $field) {
+            $node = $this->flows->node($conv->flow, $field->key);
+            $label = $node['label'] ?? $field->key;
+            $value = $node ? $this->cleanText($node, (string) $field->value) : '';
+            $derived = [];
+
+            $problem = match (true) {
+                $node === null => 'non è un dato di questo percorso',
+                ! $this->validText($node, $value) => 'non è nel formato atteso',
+                default => null,
+            };
+            if ($problem === null && ! empty($node['checks'])) {
+                $checked = $this->runChecks($node, $value, $data);
+                $problem = $checked['error'];
+                $derived = $checked['derived'];
+            }
+
+            if ($problem !== null) {
+                $field->reject();
+                $this->notices[] = Reply::text("⚠️ {$label} letto dai documenti: {$problem}\nTi chiederò di inserirlo.");
+
+                continue;
+            }
+
+            $field->confirm($value);
+            $data = array_merge($data, [$field->key => $value], $derived);
+        }
+
+        return $data;
+    }
+
     /** Una domanda si salta solo se è marcata saltabile e ha un'uscita predefinita (nodo fisso oppure '*' nei salti). */
     private function canSkip(array $def): bool
     {
@@ -224,6 +331,12 @@ class ConversationEngine
     /** Salta la domanda: non salva nulla e prosegue dall'uscita predefinita. */
     private function skip(Conversation $conv, array $def): array
     {
+        return $this->advance($conv, $def);
+    }
+
+    /** Prosegue dal nodo senza salvare risposte (salto di una domanda, fine di un'attesa). */
+    private function advance(Conversation $conv, array $def): array
+    {
         $data = $conv->data ?? [];
         $history = $conv->history ?? [];
         $history[] = $conv->node;
@@ -238,7 +351,7 @@ class ConversationEngine
     private function read(Conversation $conv, array $def, IncomingMessage $m): array
     {
         return match ($def['type']) {
-            'choice', 'summary' => $this->readChoice($conv, $def, $m),
+            'choice', 'summary', 'review' => $this->readChoice($conv, $def, $m),
             'text' => $this->readText($def, $m),
             'code' => $this->readCode($conv, $m),
             'file' => $this->readFile($conv, $def, $m),
@@ -288,7 +401,19 @@ class ConversationEngine
             return [null, 'Rispondimi con un messaggio di testo.'];
         }
 
-        $value = trim($m->text);
+        $value = $this->cleanText($def, $m->text);
+
+        if (! $this->validText($def, $value)) {
+            return [null, $def['error'] ?? 'Risposta non valida, riprova.'];
+        }
+
+        return [$value, null];
+    }
+
+    /** Il testo come lo si salva: senza spazi inutili e, se la domanda lo chiede, senza spazi interni e in maiuscolo. */
+    private function cleanText(array $def, string $text): string
+    {
+        $value = trim($text);
         if ($def['strip_spaces'] ?? false) {
             $value = preg_replace('/\s+/', '', $value);
         }
@@ -296,12 +421,12 @@ class ConversationEngine
             $value = Str::upper($value);
         }
 
-        $error = $def['error'] ?? 'Risposta non valida, riprova.';
-        if (! Validator::make(['v' => $value], ['v' => $def['rules']])->passes()) {
-            return [null, $error];
-        }
+        return $value;
+    }
 
-        return [$value, null];
+    private function validText(array $def, string $value): bool
+    {
+        return Validator::make(['v' => $value], ['v' => $def['rules'] ?? []])->passes();
     }
 
     private function matchOption(array $options, string $text): ?string
@@ -332,6 +457,8 @@ class ConversationEngine
                 $node = $this->target($next, $conv, $data, $this->runCheck($next, $data));
             } elseif ($next['type'] === 'message') {
                 $this->notices[] = Reply::text($this->renderMessage($next, $conv));
+                $node = $this->target($next, $conv, $data, '');
+            } elseif ($next['type'] === 'wait' && ! $this->hasPending($conv)) {
                 $node = $this->target($next, $conv, $data, '');
             } elseif ($this->shouldSkip($next, $conv, $data)) {
                 $node = $this->target($next, $conv, $data, '');
@@ -364,6 +491,11 @@ class ConversationEngine
         return match (true) {
             $condition === 'privacy_received' => (bool) $conv->loanRequest?->hasInformativa(),
             is_string($condition) && str_starts_with($condition, 'filled:') => filled($data[substr($condition, 7)] ?? null),
+            // Documento già inviato (e non respinto): non si richiede.
+            is_string($condition) && str_starts_with($condition, 'received:') => (bool) $conv->loanRequest?->praticaDocuments()
+                ->where('code', substr($condition, 9))->whereIn('status', ['ricevuto', 'ok'])->exists(),
+            // Nessun dato letto dai documenti da far confermare.
+            $condition === 'no_proposals' => ! $conv->loanRequest?->fields()->where('status', 'proposto')->exists(),
             default => false,
         };
     }
@@ -592,8 +724,18 @@ class ConversationEngine
         return match ($def['type']) {
             'choice' => [...$before, Reply::choice($body, $this->optionsFor($conv, $def))],
             'summary' => [Reply::text($this->summary($conv, $def)), Reply::choice($def['prompt'], $def['options'])],
+            'review' => [Reply::text($this->proposalsText($conv)), Reply::choice($def['prompt'], $def['options'])],
             default => [Reply::text($body)],
         };
+    }
+
+    /** I dati letti dall'AI dai documenti, uno per riga, da far confermare. */
+    private function proposalsText(Conversation $conv): string
+    {
+        $lines = $conv->loanRequest->fields()->where('status', 'proposto')->orderBy('id')->get()
+            ->map(fn ($f) => '• '.($this->flows->node($conv->flow, $f->key)['label'] ?? $f->key).': '.$f->value)->all();
+
+        return "🔎 *Dati letti dai documenti*\n\n".implode("\n", $lines);
     }
 
     private function summary(Conversation $conv, array $def): string
@@ -601,10 +743,15 @@ class ConversationEngine
         $text = "📋 *Riepilogo*\n\n".$this->describe($conv->data ?? [], $conv->flow);
 
         if (! empty($def['docs'])) {
-            $have = $conv->loanRequest->attachments()->pluck('kind')->all();
+            $slots = PraticaDocument::populate($conv->loanRequest)->keyBy('code');
             $text .= "\n\n*Documenti*\n";
             foreach ($def['docs'] as $kind => $label) {
-                $text .= (in_array($kind, $have, true) ? '✅ ' : '➖ ').$label."\n";
+                $text .= match ($slots[$kind]->status ?? 'da_ricevere') {
+                    'ok' => "✅ {$label}\n",
+                    'ricevuto' => "📎 {$label} — ricevuto, in verifica\n",
+                    'rejected' => "⚠️ {$label} — da correggere\n",
+                    default => "➖ {$label}\n",
+                };
             }
         }
 
