@@ -86,6 +86,7 @@
             <p class="lead">I tuoi agenti scrivono dal telefono che già usano ogni giorno. Un assistente li guida con le domande giuste, assegna un codice pratica e raccoglie i dati personali del cliente solo dopo che l'informativa privacy firmata è arrivata.</p>
             <div class="cta">
                 <a class="btn primary" href="#come-funziona">Come funziona</a>
+                <a class="btn ghost" href="/brochure">Scarica la brochure</a>
                 <a class="btn ghost" href="/admin">Accedi al pannello</a>
             </div>
             <p class="note">Si collega al tuo numero WhatsApp Business. Gli agenti non installano nulla.</p>
@@ -184,7 +185,7 @@
 
     <footer>
         <div>UnicoAgent · assistente WhatsApp per pratiche di finanziamento. Un prodotto <a href="https://www.hassisto.com/it/" rel="noopener">Hassisto</a>.</div>
-        <div><a href="/grafo-domande">Grafo delle domande</a> · <a href="/compliance">Trasparenza e conformità</a> · <a href="/privacy">Informativa privacy</a> · <a href="/cancellazione-dati">Cancellazione dei dati</a></div>
+        <div><a href="/brochure">Brochure</a> · <a href="/grafo-domande">Grafo delle domande</a> · <a href="/compliance">Trasparenza e conformità</a> · <a href="/privacy">Informativa privacy</a> · <a href="/cancellazione-dati">Cancellazione dei dati</a></div>
         <div>Il servizio non sostituisce gli obblighi informativi e contrattuali del mediatore: i testi dell'informativa e dei consensi restano quelli forniti dal tuo ufficio legale.</div>
     </footer>
 </div>
