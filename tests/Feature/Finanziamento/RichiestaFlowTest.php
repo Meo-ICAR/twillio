@@ -4,6 +4,7 @@ namespace Tests\Feature\Finanziamento;
 
 use App\Models\Conversation;
 use App\Models\LoanRequest;
+use App\Services\Conversation\ConversationEngine;
 use App\Services\Conversation\IncomingMessage;
 
 class RichiestaFlowTest extends ConversationTestCase
@@ -176,7 +177,7 @@ class RichiestaFlowTest extends ConversationTestCase
     public function test_messaggio_non_supportato_non_rompe_la_conversazione(): void
     {
         $this->say('#menu_richiedi');
-        $engine = app(\App\Services\Conversation\ConversationEngine::class);
+        $engine = app(ConversationEngine::class);
 
         $replies = $engine->handle(new IncomingMessage($this->agent, 'unsupported'));
 
@@ -189,7 +190,7 @@ class RichiestaFlowTest extends ConversationTestCase
     {
         $this->say('#menu_richiedi', '#mutuo');
         $other = new IncomingMessage('393339998888', 'interactive', '#menu_richiedi', 'menu_richiedi');
-        app(\App\Services\Conversation\ConversationEngine::class)->handle($other);
+        app(ConversationEngine::class)->handle($other);
 
         $this->assertSame(2, Conversation::count());
         $this->assertSame('mutuo_scopo', Conversation::where('wa_number', $this->agent)->first()->node);
