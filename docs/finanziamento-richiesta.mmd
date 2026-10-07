@@ -1,0 +1,94 @@
+flowchart TD
+    prodotto["Che tipo di finanziamento vuoi richiedere?"]
+    importo["Quale importo ti serve?"]
+    durata["Su quale durata?"]
+    lavoro["Qual è la situazione lavorativa del cliente?"]
+    contratto["Che tipo di contratto ha?"]
+    anzianita["Da quanto lavora presso l#39;attuale datore?"]
+    reddito["Qual è il reddito netto mensile?"]
+    dimensione_azienda["Quanti dipendenti ha l#39;azienda?"]
+    ente_pensione["Da quale ente riceve la pensione?"]
+    pensione_netta["Qual è la pensione netta mensile?"]
+    anni_attivita["Da quanti anni svolge l#39;attività?"]
+    reddito_autonomo["Qual è il reddito dell#39;ultima dichiarazione (mensile netto)?"]
+    impegni["Ci sono finanziamenti in corso?"]
+    rata["A quanto ammonta la rata mensile totale?"]
+    crif["Ci sono segnalazioni in CRIF o protesti?"]
+    quote_cedute["Ci sono quote dello stipendio già cedute?"]
+    bene["Quale bene si vuole acquistare?"]
+    prezzo_bene["Qual è il prezzo del bene?"]
+    anticipo["È previsto un anticipo?"]
+    mutuo_scopo["Qual è lo scopo del mutuo?"]
+    mutuo_valore["Qual è il valore dell#39;immobile?"]
+    mutuo_ltv["Quale quota del valore vuoi finanziare?"]
+    durata_mutuo["Su quale durata?"]
+    mutuo_reddito["Qual è il reddito netto mensile familiare?"]
+    mutuo_intestatari["Quanti saranno gli intestatari?"]
+    mutuo_tasso["Che tipo di tasso preferisce?"]
+    leasing_bene["Che tipo di bene è in leasing?"]
+    leasing_valore["Qual è il valore del bene?"]
+    leasing_anticipo["È previsto un anticipo o maxicanone?"]
+    leasing_riscatto["È previsto il riscatto finale?"]
+    az_forma["Qual è la forma giuridica?"]
+    az_anzianita["Da quanti anni è attiva?"]
+    az_fatturato["Qual è il fatturato dell#39;ultimo anno?"]
+    az_importo["Quale importo serve?"]
+    az_finalita["Qual è la finalità?"]
+    az_garanzie["Quali garanzie sono disponibili?"]
+    riepilogo(["Riepilogo e conferma"])
+    prodotto -->|"Prestito personale / Cessione del quinto / Finalizzato (beni)"| importo
+    prodotto -->|"Mutuo"| mutuo_scopo
+    prodotto -->|"Leasing"| leasing_bene
+    prodotto -->|"Finanziamento aziendale"| az_forma
+    importo --> durata
+    durata -->|"Prestito personale / Cessione del quinto / Finalizzato (beni)"| lavoro
+    durata -->|"Leasing"| leasing_anticipo
+    durata -->|"Finanziamento aziendale"| az_finalita
+    lavoro -->|"Dipendente privato / Dipendente pubblico"| contratto
+    lavoro -->|"Pensionato"| ente_pensione
+    lavoro -->|"Autonomo"| anni_attivita
+    lavoro -->|"Altre risposte"| impegni
+    contratto --> anzianita
+    anzianita --> reddito
+    reddito -->|"Cessione del quinto"| dimensione_azienda
+    reddito -->|"Altre risposte"| impegni
+    dimensione_azienda --> impegni
+    ente_pensione --> pensione_netta
+    pensione_netta --> impegni
+    anni_attivita --> reddito_autonomo
+    reddito_autonomo --> impegni
+    impegni -->|"Sì"| rata
+    impegni -->|"No"| crif
+    rata --> crif
+    crif -->|"Cessione del quinto"| quote_cedute
+    crif -->|"Finalizzato (beni)"| bene
+    crif -->|"Altre risposte"| riepilogo
+    quote_cedute --> riepilogo
+    bene --> prezzo_bene
+    prezzo_bene --> anticipo
+    anticipo --> riepilogo
+    mutuo_scopo --> mutuo_valore
+    mutuo_valore --> mutuo_ltv
+    mutuo_ltv --> durata_mutuo
+    durata_mutuo --> mutuo_reddito
+    mutuo_reddito --> mutuo_intestatari
+    mutuo_intestatari --> mutuo_tasso
+    mutuo_tasso --> riepilogo
+    leasing_bene --> leasing_valore
+    leasing_valore --> durata
+    leasing_anticipo --> leasing_riscatto
+    leasing_riscatto --> az_forma
+    az_forma --> az_anzianita
+    az_anzianita --> az_fatturato
+    az_fatturato -->|"Finanziamento aziendale"| az_importo
+    az_fatturato -->|"Leasing"| riepilogo
+    az_importo --> durata
+    az_finalita --> az_garanzie
+    az_garanzie --> riepilogo
+    classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
+    classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600
+    classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
+    class prodotto,importo,durata,lavoro,contratto,anzianita,reddito,dimensione_azienda,ente_pensione,pensione_netta,anni_attivita,reddito_autonomo,impegni,rata,crif,quote_cedute,bene,prezzo_bene,anticipo,mutuo_scopo,mutuo_valore,mutuo_ltv,durata_mutuo,mutuo_reddito,mutuo_intestatari,mutuo_tasso,leasing_bene,leasing_valore,leasing_anticipo,leasing_riscatto,az_forma,az_anzianita,az_fatturato,az_importo,az_finalita,az_garanzie choice
+    class riepilogo summary
