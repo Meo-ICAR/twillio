@@ -32,6 +32,7 @@ class WhatsAppController extends Controller
     public function handleWebhook(Request $request)
     {
         $data = $request->all();
+        Log::info('WhatsApp webhook ricevuto', $data);
         $entry = $data['entry'][0]['changes'][0]['value'] ?? null;
 
         if (isset($entry['messages'][0])) {
@@ -149,7 +150,7 @@ class WhatsAppController extends Controller
         $response = Http::withToken($token)->post($url, $payload);
 
         if ($response->failed()) {
-            Log::error('Errore invio menu interattivo:', $response->json());
+            Log::error('Errore invio menu interattivo:', (array) $response->json());
         }
     }
 
@@ -163,7 +164,7 @@ class WhatsAppController extends Controller
 
         $url = "https://graph.facebook.com/v20.0/{$phoneNumberId}/messages";
 
-        Http::withToken($token)->post($url, [
+        $response = Http::withToken($token)->post($url, [
             'messaging_product' => 'whatsapp',
             'recipient_type' => 'individual',
             'to' => $to,
@@ -173,5 +174,9 @@ class WhatsAppController extends Controller
                 'body' => $text,
             ],
         ]);
+
+        if ($response->failed()) {
+            Log::error('Errore invio messaggio di testo:', (array) $response->json());
+        }
     }
 }
