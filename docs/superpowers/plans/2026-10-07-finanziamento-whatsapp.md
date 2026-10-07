@@ -992,7 +992,7 @@ class FinanziamentoConfigTest extends TestCase
                 }
                 $this->assertArrayHasKey($name, $nodes, "$flow: il nodo '$name' non esiste");
                 $seen[$name] = true;
-                array_push($queue, ...($targets[$name] ?? []));
+                array_push($queue, ...array_values($targets[$name] ?? []));
             }
             $this->assertSame([], array_values(array_diff(array_keys($nodes), array_keys($seen))), "$flow: nodi irraggiungibili");
         }
