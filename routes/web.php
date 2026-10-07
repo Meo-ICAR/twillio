@@ -1,10 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\WhatsAppController;
 use Illuminate\Support\Facades\Http;
-
-
+use Illuminate\Support\Facades\Route;
 
 Route::get('/api/whatsapp/webhook', [WhatsAppController::class, 'verifyWebhook']);
 Route::post('/api/whatsapp/webhook', [WhatsAppController::class, 'handleWebhook']);
@@ -13,15 +11,14 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-
-
+Route::view('/privacy', 'privacy');
 
 Route::get('/test-whatsapp', function () {
     $phoneNumberId = config('services.whatsapp.phone_number_id');
     $token = config('services.whatsapp.token');
-    
+
     // Inserisci il tuo numero di telefono reale con prefisso (senza il +)
-    $recipient = '393927968199'; 
+    $recipient = '393927968199';
 
     $response = Http::withToken($token)->post("https://graph.facebook.com/v20.0/{$phoneNumberId}/messages", [
         'messaging_product' => 'whatsapp',

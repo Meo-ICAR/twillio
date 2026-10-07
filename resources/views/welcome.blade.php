@@ -183,6 +183,7 @@
 
     <footer>
         <div>UnicoAgent · assistente WhatsApp per pratiche di finanziamento.</div>
+        <div><a href="/privacy">Informativa privacy</a></div>
         <div>Il servizio non sostituisce gli obblighi informativi e contrattuali del mediatore: i testi dell'informativa e dei consensi restano quelli forniti dal tuo ufficio legale.</div>
     </footer>
 </div>
