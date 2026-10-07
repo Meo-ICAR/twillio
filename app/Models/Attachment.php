@@ -11,7 +11,7 @@ class Attachment extends Model
 
     protected function casts(): array
     {
-        return ['received_at' => 'datetime'];
+        return ['received_at' => 'datetime', 'analysis' => 'encrypted:array'];
     }
 
     public function loanRequest(): BelongsTo

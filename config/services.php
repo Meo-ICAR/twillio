@@ -34,10 +34,15 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'anthropic' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+    ],
+
     'whatsapp' => [
-    'verify_token' => env('META_WA_VERIFY_TOKEN'),
-    'token' => env('META_WA_TOKEN'),
-    'phone_number_id' => env('META_WA_PHONE_NUMBER_ID'),
-],
+        'verify_token' => env('META_WA_VERIFY_TOKEN'),
+        'token' => env('META_WA_TOKEN'),
+        'phone_number_id' => env('META_WA_PHONE_NUMBER_ID'),
+    ],
 
 ];
