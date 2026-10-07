@@ -6,7 +6,7 @@ class SensitiveDataGuard
 {
     public function containsIdentifyingData(string $text): bool
     {
-        if (preg_match('/[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]/i', $text)) {
+        if (preg_match('/[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]/i', $text)) {
             return true;
         }
 

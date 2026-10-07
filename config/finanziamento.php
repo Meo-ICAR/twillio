@@ -127,7 +127,7 @@ return [
 
                 'nome' => $text('Nome', 'Nome del cliente:', ['required', 'string', 'max:60'], 'cognome'),
                 'cognome' => $text('Cognome', 'Cognome del cliente:', ['required', 'string', 'max:60'], 'codice_fiscale'),
-                'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale:', ['required', 'regex:/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/'], 'data_nascita', ['upper' => true, 'strip_spaces' => true, 'error' => 'Codice fiscale non valido (16 caratteri), riprova.']),
+                'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale:', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'data_nascita', ['upper' => true, 'strip_spaces' => true, 'error' => 'Codice fiscale non valido (16 caratteri), riprova.']),
                 'data_nascita' => $text('Data di nascita', 'Data di nascita (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'luogo_nascita', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
                 'luogo_nascita' => $text('Luogo di nascita', 'Luogo di nascita:', ['required', 'string', 'max:80'], 'residenza'),
                 'residenza' => $text('Residenza', 'Indirizzo di residenza (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'stato_civile'),

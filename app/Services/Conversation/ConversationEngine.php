@@ -15,10 +15,20 @@ class ConversationEngine
 
     private const ALLOWED_MIME = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'];
 
+    /** @var string[] file salvati in questa richiesta, da eliminare se l'invio fallisce */
+    private array $storedPaths = [];
+
     public function __construct(
         private SensitiveDataGuard $guard,
         private WhatsAppClient $client,
     ) {}
+
+    /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
+    public function discardStoredFiles(): void
+    {
+        Storage::disk('local')->delete($this->storedPaths);
+        $this->storedPaths = [];
+    }
 
     /** @return Reply[] */
     public function handle(IncomingMessage $m): array
@@ -28,12 +38,17 @@ class ConversationEngine
         $command = $m->type === 'text' ? $this->normalize($m->text) : null;
 
         if (in_array($command, ['annulla', 'menu'], true)) {
-            $conv?->update(['status' => 'annullata']);
+            $conv && $this->close($conv, 'annullata');
 
             return $command === 'annulla' ? [Reply::text('Operazione annullata.'), $this->menu()] : [$this->menu()];
         }
         if (! $conv) {
             return $this->fromMenu($m);
+        }
+        if (! config("finanziamento.flows.{$conv->flow}.nodes.{$conv->node}")) {
+            $this->close($conv, 'annullata');
+
+            return [Reply::text('La conversazione non è più valida: ricominciamo dal menu.'), $this->menu()];
         }
         if ($this->isStale($conv)) {
             return $this->resume($conv, $m);
@@ -230,7 +245,8 @@ class ConversationEngine
             'status' => 'richiesta',
             'answers' => $data,
         ]);
-        $conv->update(['status' => 'completata', 'loan_request_id' => $loan->id]);
+        $conv->loan_request_id = $loan->id;
+        $this->close($conv, 'completata');
 
         return [Reply::text("✅ Richiesta registrata.\n\nCodice pratica: *{$loan->code}*\n\nConservalo: ti servirà per perfezionare il finanziamento con i dati del cliente.")];
     }
@@ -239,9 +255,15 @@ class ConversationEngine
     {
         $loan = $conv->loanRequest;
         $loan->update(['personal' => $conv->data ?? [], 'status' => 'perfezionata', 'perfected_at' => now()]);
-        $conv->update(['status' => 'completata']);
+        $this->close($conv, 'completata');
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata.")];
+    }
+
+    /** Chiude la conversazione e cancella i dati in corso (i dati definitivi stanno nella pratica). */
+    private function close(Conversation $conv, string $status): void
+    {
+        $conv->update(['status' => $status, 'data' => []]);
     }
 
     private function restart(Conversation $conv): array
@@ -256,7 +278,7 @@ class ConversationEngine
 
     private function cancel(Conversation $conv): array
     {
-        $conv->update(['status' => 'annullata']);
+        $this->close($conv, 'annullata');
 
         return [Reply::text('Operazione annullata.'), $this->menu()];
     }
@@ -361,6 +383,7 @@ class ConversationEngine
         $loan = $conv->loanRequest;
         $path = "pratiche/{$loan->code}/{$def['kind']}-".Str::random(8).'.'.self::ALLOWED_MIME[$m->mime];
         Storage::disk('local')->put($path, $file['body']);
+        $this->storedPaths[] = $path;
         $loan->attachments()->create([
             'kind' => $def['kind'], 'path' => $path, 'mime' => $m->mime,
             'wa_media_id' => $m->mediaId, 'received_at' => now(),
@@ -395,14 +418,15 @@ class ConversationEngine
         $data = $conv->data ?? [];
 
         if (! empty($data['_resume'])) {
-            if ($m->replyId === 'resume_si') {
+            $choice = $m->replyId ?? $this->matchOption(['resume_si' => 'Continua', 'resume_no' => 'Ricomincia'], (string) $m->text);
+            if ($choice === 'resume_si') {
                 unset($data['_resume']);
                 $conv->update(['data' => $data]);
 
                 return $this->prompt($conv);
             }
-            if ($m->replyId === 'resume_no') {
-                $conv->update(['status' => 'annullata']);
+            if ($choice === 'resume_no') {
+                $this->close($conv, 'annullata');
 
                 return [$this->menu()];
             }

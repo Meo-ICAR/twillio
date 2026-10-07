@@ -79,4 +79,23 @@ class WhatsAppClientTest extends TestCase
 
         $this->assertNull((new WhatsAppClient)->downloadMedia('M1'));
     }
+
+    public function test_le_chiamate_a_meta_hanno_timeout_espliciti(): void
+    {
+        $options = [];
+        Http::fake(function ($request, $opts) use (&$options) {
+            $options[] = $opts;
+
+            return Http::response(['url' => 'https://lookaside.fbsbx.com/f', 'mime_type' => 'image/jpeg']);
+        });
+
+        (new WhatsAppClient)->send('3933', Reply::text('Ciao'));
+        (new WhatsAppClient)->downloadMedia('M1');
+
+        $this->assertNotEmpty($options);
+        foreach ($options as $o) {
+            $this->assertSame(10, $o['timeout']);
+            $this->assertSame(5, $o['connect_timeout']);
+        }
+    }
 }

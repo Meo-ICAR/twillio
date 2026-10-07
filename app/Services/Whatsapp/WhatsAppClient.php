@@ -12,7 +12,7 @@ class WhatsAppClient
 
     public function send(string $to, Reply $reply): bool
     {
-        $response = Http::withToken(config('services.whatsapp.token'))
+        $response = Http::withToken(config('services.whatsapp.token'))->timeout(10)->connectTimeout(5)
             ->post(self::BASE.'/'.config('services.whatsapp.phone_number_id').'/messages', $this->payload($to, $reply));
 
         if ($response->failed()) {
@@ -29,14 +29,14 @@ class WhatsAppClient
     {
         $token = config('services.whatsapp.token');
 
-        $meta = Http::withToken($token)->get(self::BASE.'/'.$mediaId);
+        $meta = Http::withToken($token)->timeout(10)->connectTimeout(5)->get(self::BASE.'/'.$mediaId);
         if ($meta->failed() || ! $meta->json('url')) {
             Log::error('Errore recupero media WhatsApp', ['media' => $mediaId]);
 
             return null;
         }
 
-        $file = Http::withToken($token)->get($meta->json('url'));
+        $file = Http::withToken($token)->timeout(10)->connectTimeout(5)->get($meta->json('url'));
         if ($file->failed()) {
             Log::error('Errore download media WhatsApp', ['media' => $mediaId]);
 

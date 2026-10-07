@@ -12,6 +12,7 @@ class SensitiveDataGuardTest extends TestCase
     {
         return [
             'codice fiscale' => ['RSSMRA80A01H501U'],
+            'codice fiscale omocodico' => ['RSSMRA8LT01H501U'],
             'codice fiscale minuscolo' => ['rssmra80a01h501u'],
             'codice fiscale in frase' => ['il cliente è rssmra80a01h501u ok'],
             'email' => ['mario.rossi@example.com'],

@@ -219,4 +219,55 @@ class PerfezionamentoFlowTest extends ConversationTestCase
         $this->assertSame('list', $replies[0]->kind);
         $this->assertSame('annullata', Conversation::first()->status);
     }
+
+    public function test_codice_fiscale_omocodico_e_accettato(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'Mario', 'Rossi', 'RSSMRA8LT01H501U');
+
+        $this->assertSame('data_nascita', Conversation::first()->node);
+    }
+
+    public function test_risposta_digitata_alla_ripresa_dopo_24_ore(): void
+    {
+        $this->say('#menu_richiedi', '#mutuo');
+        $conv = Conversation::first();
+        $conv->updated_at = now()->subDays(2);
+        $conv->saveQuietly();
+        $this->say('ciao');
+
+        $replies = $this->say('Continua');
+
+        $this->assertStringContainsString('scopo del mutuo', $this->bodies($replies));
+        $this->say('#prima');
+        $this->assertSame('mutuo_valore', Conversation::first()->node);
+    }
+
+    public function test_un_nodo_rimosso_dalla_config_non_blocca_l_agente(): void
+    {
+        $this->say('#menu_richiedi');
+        Conversation::first()->update(['node' => 'nodo_rimosso']);
+
+        $replies = $this->say('ciao');
+
+        $this->assertSame('list', end($replies)->kind);
+        $this->assertSame('annullata', Conversation::first()->status);
+    }
+
+    public function test_i_dati_della_conversazione_vengono_cancellati_alla_chiusura(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->say(...[
+            '#menu_perfeziona', 'FIN-2026-0007', '#si', ...$this->personal(),
+            'ACME Srl', '01/03/2015', 'media:D1:image/jpeg', 'media:D2:image/jpeg', 'salta', '#conferma',
+        ]);
+
+        $this->assertSame('completata', Conversation::first()->status);
+        $this->assertSame([], Conversation::first()->data);
+        $this->assertSame('Mario', LoanRequest::first()->personal['nome']);
+
+        $this->say('#menu_richiedi', '#mutuo', 'annulla');
+        $this->assertSame([], Conversation::latest('id')->first()->data);
+    }
 }

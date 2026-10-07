@@ -47,6 +47,7 @@ class WhatsAppController extends Controller
                     }
                 });
             } catch (\Throwable $e) {
+                $engine->discardStoredFiles();
                 Log::error('Errore gestione webhook WhatsApp: '.$e->getMessage());
             }
         }

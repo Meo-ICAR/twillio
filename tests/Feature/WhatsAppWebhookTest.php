@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attachment;
 use App\Models\Conversation;
+use App\Models\LoanRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WhatsAppWebhookTest extends TestCase
@@ -82,5 +85,32 @@ class WhatsAppWebhookTest extends TestCase
         $this->get('/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=UnicoAgent&hub.challenge=abc')
             ->assertOk()->assertSee('abc');
         $this->get('/api/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=x&hub.challenge=abc')->assertForbidden();
+    }
+
+    public function test_un_invio_fallito_non_lascia_file_orfani(): void
+    {
+        Storage::fake('local');
+        Http::fake([
+            'graph.facebook.com/v20.0/555/messages' => Http::response(['error' => ['message' => 'no']], 500),
+            'graph.facebook.com/v20.0/M1' => Http::response(['url' => 'https://lookaside.fbsbx.com/f', 'mime_type' => 'application/pdf']),
+            'lookaside.fbsbx.com/*' => Http::response('BYTES'),
+        ]);
+        $loan = LoanRequest::create([
+            'code' => 'FIN-2026-0001', 'agent_wa_number' => '393331112222', 'product' => 'personale',
+            'status' => 'in_attesa_informativa', 'answers' => ['prodotto' => 'personale'],
+        ]);
+        Conversation::create([
+            'wa_number' => '393331112222', 'flow' => 'perfezionamento', 'node' => 'informativa',
+            'loan_request_id' => $loan->id, 'data' => [], 'history' => [],
+        ]);
+        $payload = ['entry' => [['changes' => [['value' => ['messages' => [
+            ['from' => '393331112222', 'type' => 'document', 'document' => ['id' => 'M1', 'mime_type' => 'application/pdf']],
+        ]]]]]]];
+
+        $this->postJson('/api/whatsapp/webhook', $payload)->assertOk();
+
+        $this->assertSame([], Storage::disk('local')->allFiles());
+        $this->assertSame(0, Attachment::count());
+        $this->assertNull($loan->fresh()->privacy_received_at);
     }
 }
