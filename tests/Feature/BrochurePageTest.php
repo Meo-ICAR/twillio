@@ -57,4 +57,24 @@ class BrochurePageTest extends TestCase
         $this->assertStringNotContainsString('importi ottenibili se avete', $html);
         $this->assertStringContainsString('preventivatore collegato', $html);
     }
+
+    public function test_giustifica_con_le_norme_perche_non_decide_senza_dire_che_e_vietato(): void
+    {
+        $html = $this->get('/brochure')->getContent();
+
+        $this->assertStringContainsString('art. 22', $html);
+        $this->assertStringContainsString('UE 2024/1689', $html);
+        $this->assertStringContainsString('senza intervento umano', $html);
+        $this->assertStringNotContainsString('vietat', strtolower($html));
+    }
+
+    public function test_non_parla_di_multiazienda(): void
+    {
+        foreach (['/brochure', '/', '/manuale', '/compliance'] as $url) {
+            $html = strtolower($this->get($url)->getContent());
+            foreach (['multitenant', 'multi-tenant', 'multiazienda', 'più aziende', 'più società'] as $word) {
+                $this->assertStringNotContainsString($word, $html, "$url: $word");
+            }
+        }
+    }
 }

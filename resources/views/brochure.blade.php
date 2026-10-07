@@ -69,7 +69,7 @@
         <p class="lead" style="margin-bottom:14px">Il vostro CRM, il vostro preventivatore e il vostro modo di istruire le pratiche restano quelli di oggi. UnicoAgent sta davanti: raccoglie e controlla, poi consegna.</p>
         <div class="grid">
             <div><h3>🔌 Si collega a ciò che avete</h3><p>Preventivo e pratica vanno ai vostri sistemi, fase per fase. Dove non c'è un CRM, arrivano per email all'istruttoria con dati e allegati.</p></div>
-            <div><h3>🧭 Non decide e non scarta</h3><p>Nessun punteggio, nessuna pre-qualifica, nessun rifiuto automatico. Ogni richiesta arriva all'istruttoria, che decide come ha sempre fatto.</p></div>
+            <div><h3>🧭 Non decide e non scarta, per norma</h3><p>Nessun punteggio, nessuna pre-qualifica, nessun rifiuto automatico. Valutare il merito creditizio e decidere spetta all'istruttore abilitato, e la normativa non consente di affidarlo a un sistema automatico senza intervento umano. Ogni richiesta arriva all'istruttoria, che decide come ha sempre fatto.</p></div>
             <div><h3>🛡️ L'investimento resta valido</h3><p>Niente migrazioni, niente formazione sul vostro gestionale da rifare. Cambia solo il modo in cui le pratiche vi arrivano: complete e controllate.</p></div>
         </div>
     </section>
@@ -121,7 +121,7 @@
             <li>Prima dell'invio il sistema attende i controlli ancora in corso</li>
         </ol>
         <ul class="check">
-            <li><strong>La decisione resta alle persone.</strong> L'AI non valuta il merito creditizio, non calcola punteggi e non scarta nessuna richiesta: legge e controlla i documenti, l'esito lo dà sempre un istruttore abilitato.</li>
+            <li><strong>La decisione resta alle persone.</strong> L'AI non valuta il merito creditizio, non calcola punteggi e non scarta nessuna richiesta: legge e controlla i documenti, l'esito lo dà sempre un istruttore abilitato. È una scelta di progetto che discende dalle regole del settore: il GDPR limita le decisioni interamente automatiche (art. 22) e il Regolamento europeo sull'intelligenza artificiale (UE 2024/1689) tratta come ad alto rischio i sistemi che valutano l'affidabilità creditizia.</li>
             <li><strong>Privacy per progetto.</strong> La richiesta iniziale è anonima, i dati personali si raccolgono dopo l'informativa firmata e i documenti vanno all'AI solo dopo la sua verifica. I dati sono cifrati.</li>
             <li><strong>Sotto controllo.</strong> Dal pannello l'operatore può approvare o rifiutare ogni documento e vedere cosa ha letto l'AI e quando.</li>
         </ul>
@@ -157,7 +157,6 @@
     <div class="grid">
         <div class="card"><h3>Il vostro CRM, fase per fase</h3><p>Un collegamento per il preventivo e uno per l'istruttoria. Dove non c'è un sistema, la fase viaggia per email all'istruttoria, con tutti gli allegati. Se l'invio non riesce, l'agente lo sa e può riprovare: la pratica non risulta inviata finché non è arrivata.</p></div>
         <div class="card"><h3>Pannello di controllo</h3><p>Pratiche, documenti, conversazioni, produttori e configurazione in un unico pannello, con una dashboard che dice cosa fare adesso.</p></div>
-        <div class="card"><h3>Pronto per più aziende</h3><p>L'architettura è predisposta per servire più società dalla stessa installazione.</p></div>
     </div>
 
     <section class="cta">
