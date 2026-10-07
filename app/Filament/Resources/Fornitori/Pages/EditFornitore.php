@@ -3,15 +3,15 @@
 namespace App\Filament\Resources\Fornitori\Pages;
 
 use App\Filament\Resources\Fornitori\FornitoreResource;
-use Filament\Actions\EditAction;
-use Filament\Resources\Pages\ViewRecord;
+use Filament\Actions\ViewAction;
+use Filament\Resources\Pages\EditRecord;
 
-class ViewFornitore extends ViewRecord
+class EditFornitore extends EditRecord
 {
     protected static string $resource = FornitoreResource::class;
 
     protected function getHeaderActions(): array
     {
-        return [EditAction::make()];
+        return [ViewAction::make()];
     }
 }

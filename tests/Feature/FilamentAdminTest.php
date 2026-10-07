@@ -6,6 +6,7 @@ use App\Filament\Resources\Attachments\Pages\ListAttachments;
 use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\FinanziamentoDocuments\Pages\CreateFinanziamentoDocument;
 use App\Filament\Resources\Fornitori\FornitoreResource;
+use App\Filament\Resources\Fornitori\Pages\EditFornitore;
 use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
 use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
 use App\Filament\Resources\LoanRequests\RelationManagers\AttachmentsRelationManager;
@@ -101,7 +102,7 @@ class FilamentAdminTest extends TestCase
         $this->get('/admin/conversations')->assertOk()->assertSee('Produttore')->assertSee('Agenzia Bianchi')->assertSee('393339999999');
     }
 
-    public function test_i_produttori_sono_in_anagrafiche_in_sola_lettura(): void
+    public function test_i_produttori_sono_in_anagrafiche_e_si_modificano_ma_non_si_creano(): void
     {
         $f = Fornitore::create(['name' => 'Agenzia Bianchi', 'nome' => 'Luca', 'tel' => '3331112222', 'is_active' => true]);
         $this->login();
@@ -109,9 +110,32 @@ class FilamentAdminTest extends TestCase
         $this->get('/admin/produttori')->assertOk()->assertSee('Agenzia Bianchi')->assertSee('Cellulare');
         $this->get("/admin/produttori/{$f->id}")->assertOk()->assertSee('Luca');
         $this->get('/admin/produttori/create')->assertNotFound();
-        $this->get("/admin/produttori/{$f->id}/edit")->assertNotFound();
+        $this->get("/admin/produttori/{$f->id}/edit")->assertOk()->assertSee('Cellulare');
         $this->assertSame('Produttori', FornitoreResource::getNavigationLabel());
         $this->assertSame('Anagrafiche', FornitoreResource::getNavigationGroup());
+    }
+
+    public function test_si_modifica_un_produttore_e_il_cellulare_lo_rende_riconoscibile(): void
+    {
+        $f = Fornitore::registerOccasional('393331112222');
+        $this->assertNull(Fornitore::findByWhatsApp('393331112222'));
+        $this->login();
+
+        Livewire::test(EditFornitore::class, ['record' => $f->getRouteKey()])
+            ->fillForm(['name' => 'Agenzia Verdi', 'nome' => 'Anna', 'type' => 'Agente', 'is_active' => true, 'email' => 'anna@example.com'])
+            ->call('save')->assertHasNoFormErrors();
+
+        $this->assertSame('Anna', Fornitore::findByWhatsApp('393331112222')->nome);
+    }
+
+    public function test_la_modifica_del_produttore_valida_i_campi(): void
+    {
+        $f = Fornitore::create(['name' => 'X', 'is_active' => true]);
+        $this->login();
+
+        Livewire::test(EditFornitore::class, ['record' => $f->getRouteKey()])
+            ->fillForm(['email' => 'non-una-email', 'cf' => str_repeat('A', 17)])
+            ->call('save')->assertHasFormErrors(['email', 'cf']);
     }
 
     public function test_la_conversazione_non_mostra_i_dati_in_corso(): void

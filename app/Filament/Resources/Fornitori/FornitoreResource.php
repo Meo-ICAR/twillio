@@ -2,11 +2,16 @@
 
 namespace App\Filament\Resources\Fornitori;
 
+use App\Filament\Resources\Fornitori\Pages\EditFornitore;
 use App\Filament\Resources\Fornitori\Pages\ListFornitori;
 use App\Filament\Resources\Fornitori\Pages\ViewFornitore;
 use App\Models\Fornitore;
 use BackedEnum;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
@@ -19,7 +24,7 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use UnitEnum;
 
-/** Produttori (agenti e collaboratori): anagrafica in sola lettura, arriva dal gestionale. */
+/** Produttori (agenti e collaboratori): anagrafica modificabile; non si creano da qui (arrivano dal gestionale o come segnalatori occasionali). */
 class FornitoreResource extends Resource
 {
     protected static ?string $model = Fornitore::class;
@@ -47,7 +52,33 @@ class FornitoreResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->components([]);
+        return $schema->components([
+            Section::make('Produttore')->columns(2)->schema([
+                TextInput::make('name')->label('Denominazione')->maxLength(255),
+                TextInput::make('nome')->label('Referente')->maxLength(255),
+                TextInput::make('type')->label('Tipo')->maxLength(30)->helperText('Per esempio Agente, Mediatore, Consulente, Segnalatore occasionale.'),
+                TextInput::make('tel')->label('Cellulare')->tel()->maxLength(255)
+                    ->helperText('Serve a riconoscere chi scrive su WhatsApp: con il prefisso (+39) o senza, ma solo cifre.'),
+                TextInput::make('email')->label('Email')->email()->maxLength(255),
+                TextInput::make('pec')->label('PEC')->email()->maxLength(255),
+                TextInput::make('piva')->label('Partita IVA')->maxLength(20),
+                TextInput::make('cf')->label('Codice fiscale')->maxLength(16),
+                TextInput::make('indirizzo')->label('Indirizzo')->maxLength(255),
+                TextInput::make('comune')->label('Comune')->maxLength(255),
+                TextInput::make('cap')->label('CAP')->maxLength(10),
+                TextInput::make('prov')->label('Provincia')->maxLength(5),
+                Toggle::make('is_active')->label('Attivo')
+                    ->helperText('Solo i produttori attivi sono riconosciuti: gli altri sono trattati come segnalatori occasionali.'),
+            ]),
+            Section::make('Iscrizioni')->columns(2)->schema([
+                TextInput::make('oam')->label('OAM')->maxLength(30),
+                DatePicker::make('oam_at')->label('OAM dal'),
+                TextInput::make('numero_iscrizione_rui')->label('RUI')->maxLength(50),
+                TextInput::make('ivass')->label('IVASS')->maxLength(30),
+                DatePicker::make('stipulated_at')->label('Convenzione dal'),
+                DatePicker::make('dismissed_at')->label('Cessato il'),
+            ]),
+        ]);
     }
 
     public static function infolist(Schema $schema): Schema
@@ -88,7 +119,7 @@ class FornitoreResource extends Resource
                 IconColumn::make('is_active')->label('Attivo')->boolean(),
             ])
             ->filters([TernaryFilter::make('is_active')->label('Attivo')])
-            ->recordActions([ViewAction::make()]);
+            ->recordActions([ViewAction::make(), EditAction::make()]);
     }
 
     public static function getPages(): array
@@ -96,6 +127,7 @@ class FornitoreResource extends Resource
         return [
             'index' => ListFornitori::route('/'),
             'view' => ViewFornitore::route('/{record}'),
+            'edit' => EditFornitore::route('/{record}/edit'),
         ];
     }
 }

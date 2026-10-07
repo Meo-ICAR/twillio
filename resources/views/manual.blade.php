@@ -175,7 +175,7 @@
         <tr><td>Conservazione pratiche perfezionate</td><td>Testo mostrato nell'informativa.</td></tr>
     </table>
     <h3>Produttori</h3>
-    <p>Agenti e collaboratori, in sola lettura (l'anagrafica arriva dal gestionale). Il numero di cellulare serve a riconoscere chi scrive su WhatsApp. I numeri sconosciuti compaiono qui come <em>Segnalatore occasionale</em>, non attivi.</p>
+    <p>Agenti e collaboratori. Si modificano con <em>Modifica</em> (non si creano da qui: arrivano dal gestionale o come segnalatori occasionali). Il numero di cellulare serve a riconoscere chi scrive su WhatsApp. I numeri sconosciuti compaiono qui come <em>Segnalatore occasionale</em>, non attivi: per convenzionarne uno, correggi i dati, imposta il tipo e spunta <em>Attivo</em>.</p>
     <h3>Utenti</h3>
     <p>Chi accede al pannello. Il campo <em>Numero WhatsApp</em> associa l'utente al suo telefono e abilita le voci di prova nel menu del bot.</p>
 
