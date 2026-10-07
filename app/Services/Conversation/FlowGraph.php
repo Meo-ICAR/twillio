@@ -54,9 +54,15 @@ class FlowGraph
     public function html(): string
     {
         $sections = '';
+        $first = true;
         foreach (self::TITLES as $flow => $title) {
             $count = count(config("finanziamento.flows.{$flow}.nodes"));
-            $sections .= '<section><h2>'.htmlspecialchars($title)."</h2><p class=\"meta\">{$count} domande</p>"
+            // Il primo diagramma è molto grande: parte al 30% per mostrarlo intero.
+            $zoom = $first ? '0.3' : '1';
+            $first = false;
+            $sections .= '<section data-zoom="'.$zoom.'"><h2>'.htmlspecialchars($title)."</h2><p class=\"meta\">{$count} domande</p>"
+                .'<div class="tools"><button type="button" data-zoom-out>−</button><button type="button" data-zoom-in>+</button>'
+                .'<button type="button" data-zoom-reset>100%</button><span class="level"></span></div>'
                 .'<div class="scroll"><pre class="mermaid">'.htmlspecialchars($this->mermaid($flow)).'</pre></div></section>';
         }
 
@@ -77,6 +83,9 @@ class FlowGraph
   .meta, .legend { color:var(--muted); margin:0 0 12px; font-size:.9rem; }
   .scroll { overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
   pre.mermaid { margin:0; text-align:center; }
+  .tools { display:flex; align-items:center; gap:6px; margin:0 0 8px; }
+  .tools button { border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:8px; padding:4px 12px; font:inherit; cursor:pointer; }
+  .tools .level { color:var(--muted); font-size:.9rem; margin-left:8px; }
   a { color:#2b6cb0; }
 </style>
 </head>
@@ -90,7 +99,18 @@ class FlowGraph
 <script type="module">
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
-  mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', flowchart: { useMaxWidth: false, htmlLabels: true } });
+  mermaid.initialize({ startOnLoad: false, theme: dark ? 'dark' : 'default', flowchart: { useMaxWidth: false, htmlLabels: true } });
+  await mermaid.run();
+  document.querySelectorAll('section[data-zoom]').forEach((section) => {
+    const el = section.querySelector('pre.mermaid');
+    const level = section.querySelector('.level');
+    let zoom = parseFloat(section.dataset.zoom);
+    const apply = () => { el.style.zoom = zoom; level.textContent = Math.round(zoom * 100) + '%'; };
+    section.querySelector('[data-zoom-in]').addEventListener('click', () => { zoom = Math.min(zoom * 1.25, 3); apply(); });
+    section.querySelector('[data-zoom-out]').addEventListener('click', () => { zoom = Math.max(zoom / 1.25, 0.1); apply(); });
+    section.querySelector('[data-zoom-reset]').addEventListener('click', () => { zoom = 1; apply(); });
+    apply();
+  });
 </script>
 </body>
 </html>

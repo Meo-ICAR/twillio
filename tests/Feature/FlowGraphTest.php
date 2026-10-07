@@ -78,4 +78,17 @@ class FlowGraphTest extends TestCase
         $this->assertFileExists("$dir/finanziamento-perfezionamento.mmd");
         $this->assertStringStartsWith('flowchart TD', file_get_contents("$dir/finanziamento-richiesta.mmd"));
     }
+
+    public function test_il_primo_riquadro_parte_al_30_per_cento_e_ha_i_comandi_di_zoom(): void
+    {
+        $html = (new FlowGraph)->html();
+
+        $this->assertSame(1, substr_count($html, 'data-zoom="0.3"'));
+        $this->assertSame(1, substr_count($html, 'data-zoom="1"'));
+        $this->assertLessThan(strpos($html, 'data-zoom="1"'), strpos($html, 'data-zoom="0.3"'));
+        foreach (['data-zoom-in', 'data-zoom-out', 'data-zoom-reset'] as $control) {
+            $this->assertSame(2, substr_count($html, '<button type="button" '.$control.'>'), $control);
+        }
+        $this->assertStringContainsString('el.style.zoom', $html);
+    }
 }
