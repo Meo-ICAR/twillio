@@ -35,6 +35,9 @@ class ConversationEngine
         if (! $conv) {
             return $this->fromMenu($m);
         }
+        if ($this->isStale($conv)) {
+            return $this->resume($conv, $m);
+        }
         if ($command === 'indietro') {
             return $this->back($conv);
         }
@@ -59,6 +62,7 @@ class ConversationEngine
         return match ($choice) {
             'menu_richiedi' => $this->start($m->from, 'richiesta'),
             'menu_perfeziona' => $this->start($m->from, 'perfezionamento'),
+            'menu_stato' => $this->stato($m->from),
             default => [$this->menu()],
         };
     }
@@ -213,6 +217,11 @@ class ConversationEngine
 
     private function complete(Conversation $conv): array
     {
+        return $conv->flow === 'richiesta' ? $this->completeRichiesta($conv) : $this->completePerfezionamento($conv);
+    }
+
+    private function completeRichiesta(Conversation $conv): array
+    {
         $data = $conv->data ?? [];
         $loan = LoanRequest::create([
             'code' => LoanRequestCode::next(),
@@ -224,6 +233,15 @@ class ConversationEngine
         $conv->update(['status' => 'completata', 'loan_request_id' => $loan->id]);
 
         return [Reply::text("✅ Richiesta registrata.\n\nCodice pratica: *{$loan->code}*\n\nConservalo: ti servirà per perfezionare il finanziamento con i dati del cliente.")];
+    }
+
+    private function completePerfezionamento(Conversation $conv): array
+    {
+        $loan = $conv->loanRequest;
+        $loan->update(['personal' => $conv->data ?? [], 'status' => 'perfezionata', 'perfected_at' => now()]);
+        $conv->update(['status' => 'completata']);
+
+        return [Reply::text("✅ Pratica *{$loan->code}* perfezionata.")];
     }
 
     private function restart(Conversation $conv): array
@@ -297,5 +315,104 @@ class ConversationEngine
     private function normalize(string $text): string
     {
         return Str::lower(Str::ascii(trim(preg_replace('/\s+/', ' ', $text))));
+    }
+
+    private function readCode(Conversation $conv, IncomingMessage $m): array
+    {
+        if ($m->type !== 'text') {
+            return [null, 'Scrivi il codice della pratica.'];
+        }
+
+        $code = Str::upper(trim($m->text));
+        $loan = LoanRequest::where('code', $code)->where('agent_wa_number', $conv->wa_number)->first();
+        if (! $loan) {
+            return [null, 'Codice non trovato. Controlla e riprova.'];
+        }
+        if ($loan->status === 'perfezionata') {
+            return [null, 'Questa pratica è già stata perfezionata.'];
+        }
+        if ($loan->status === 'richiesta') {
+            $loan->update(['status' => 'in_attesa_informativa']);
+        }
+
+        $conv->loan_request_id = $loan->id;
+        $conv->setRelation('loanRequest', $loan);
+
+        return [$code, null];
+    }
+
+    private function readFile(Conversation $conv, array $def, IncomingMessage $m): array
+    {
+        if ($m->type === 'text' && ($def['optional'] ?? false) && $this->normalize($m->text) === 'salta') {
+            return ['salta', null];
+        }
+        if ($m->type !== 'media') {
+            return [null, 'Invia una foto o un PDF.'];
+        }
+        if (! isset(self::ALLOWED_MIME[$m->mime])) {
+            return [null, 'Formato non accettato: invia una foto (JPG, PNG) o un PDF.'];
+        }
+
+        $file = $this->client->downloadMedia($m->mediaId);
+        if (! $file) {
+            return [null, 'Non sono riuscito a scaricare il file. Riprova.'];
+        }
+
+        $loan = $conv->loanRequest;
+        $path = "pratiche/{$loan->code}/{$def['kind']}-".Str::random(8).'.'.self::ALLOWED_MIME[$m->mime];
+        Storage::disk('local')->put($path, $file['body']);
+        $loan->attachments()->create([
+            'kind' => $def['kind'], 'path' => $path, 'mime' => $m->mime,
+            'wa_media_id' => $m->mediaId, 'received_at' => now(),
+        ]);
+        if ($def['kind'] === 'informativa') {
+            $loan->update(['privacy_received_at' => now(), 'status' => 'informativa_ricevuta']);
+        }
+
+        return ['ricevuto', null];
+    }
+
+    private function stato(string $from): array
+    {
+        $loans = LoanRequest::where('agent_wa_number', $from)->latest('id')->limit(10)->get();
+        if ($loans->isEmpty()) {
+            return [Reply::text('Non hai ancora nessuna pratica.')];
+        }
+
+        $products = config('finanziamento.flows.richiesta.nodes.prodotto.options');
+        $lines = $loans->map(fn ($l) => "• {$l->code} · ".($products[$l->product] ?? $l->product).' · '.str_replace('_', ' ', $l->status));
+
+        return [Reply::text("📂 *Le tue pratiche*\n\n".$lines->implode("\n"))];
+    }
+
+    private function isStale(Conversation $conv): bool
+    {
+        return $conv->updated_at->lt(now()->subDay()) || ! empty($conv->data['_resume']);
+    }
+
+    private function resume(Conversation $conv, IncomingMessage $m): array
+    {
+        $data = $conv->data ?? [];
+
+        if (! empty($data['_resume'])) {
+            if ($m->replyId === 'resume_si') {
+                unset($data['_resume']);
+                $conv->update(['data' => $data]);
+
+                return $this->prompt($conv);
+            }
+            if ($m->replyId === 'resume_no') {
+                $conv->update(['status' => 'annullata']);
+
+                return [$this->menu()];
+            }
+        } else {
+            $data['_resume'] = true;
+            $conv->update(['data' => $data]);
+        }
+
+        return [Reply::choice('La conversazione precedente è ferma da più di 24 ore. Vuoi continuare?', [
+            'resume_si' => 'Continua', 'resume_no' => 'Ricomincia',
+        ])];
     }
 }
