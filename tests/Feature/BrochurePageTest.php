@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class BrochurePageTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_la_brochure_mette_in_evidenza_risparmio_controlli_ai_e_segnalatori(): void
     {
         $this->get('/brochure')->assertOk()
