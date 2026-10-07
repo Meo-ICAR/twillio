@@ -43,6 +43,9 @@ return [
         'verify_token' => env('META_WA_VERIFY_TOKEN'),
         'token' => env('META_WA_TOKEN'),
         'phone_number_id' => env('META_WA_PHONE_NUMBER_ID'),
+        // Servono solo al comando whatsapp:extend-token (scambio del token breve con uno da circa 60 giorni).
+        'app_id' => env('META_APP_ID'),
+        'app_secret' => env('META_APP_SECRET'),
     ],
 
 ];
