@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use Dotenv\Dotenv;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
@@ -13,8 +14,9 @@ class ExtendWhatsAppToken extends Command
 
     public function handle(): int
     {
-        $appId = config('services.whatsapp.app_id');
-        $secret = config('services.whatsapp.app_secret');
+        // Legge i valori direttamente dal file .env, così funziona anche con la configurazione in cache.
+        $appId = $this->fromEnvFile('META_APP_ID');
+        $secret = $this->fromEnvFile('META_APP_SECRET');
         if (blank($appId) || blank($secret)) {
             $this->error('Mancano META_APP_ID e META_APP_SECRET nel .env (ID app e chiave segreta dalle impostazioni dell\'app Meta).');
 
@@ -53,5 +55,13 @@ class ExtendWhatsAppToken extends Command
         $this->comment('Dopo averlo scritto nel .env: php artisan config:clear, poi «Verifica WhatsApp» nella dashboard.');
 
         return self::SUCCESS;
+    }
+
+    private function fromEnvFile(string $key): ?string
+    {
+        $path = app()->environmentFilePath();
+        $values = is_readable($path) ? Dotenv::parse((string) file_get_contents($path)) : [];
+
+        return $values[$key] ?? config('services.whatsapp.'.strtolower(str_replace('META_', '', $key)));
     }
 }
