@@ -63,33 +63,33 @@
     az_finalita[&quot;Qual è la finalità?&quot;]
     az_garanzie[&quot;Quali garanzie sono disponibili?&quot;]
     riepilogo([&quot;Riepilogo e conferma&quot;])
-    prodotto --&gt;|&quot;Prestito personale / Cessione del quinto / Finalizzato (beni)&quot;| importo
     prodotto --&gt;|&quot;Mutuo&quot;| mutuo_scopo
+    prodotto --&gt;|&quot;Cessione del quinto / Prestito personale / Finalizzato (beni)&quot;| importo
     prodotto --&gt;|&quot;Leasing&quot;| leasing_bene
     prodotto --&gt;|&quot;Finanziamento aziendale&quot;| az_forma
     importo --&gt; durata
-    durata --&gt;|&quot;Prestito personale / Cessione del quinto / Finalizzato (beni)&quot;| lavoro
+    durata --&gt;|&quot;Cessione del quinto / Prestito personale / Finalizzato (beni)&quot;| lavoro
     durata --&gt;|&quot;Leasing&quot;| leasing_anticipo
     durata --&gt;|&quot;Finanziamento aziendale&quot;| az_finalita
-    lavoro --&gt;|&quot;Dipendente privato / Dipendente pubblico&quot;| contratto
-    lavoro --&gt;|&quot;Pensionato&quot;| ente_pensione
-    lavoro --&gt;|&quot;Autonomo&quot;| anni_attivita
     lavoro --&gt;|&quot;Altre risposte&quot;| impegni
+    lavoro --&gt;|&quot;Dipendente pubblico / Dipendente privato&quot;| contratto
+    lavoro --&gt;|&quot;Autonomo&quot;| anni_attivita
+    lavoro --&gt;|&quot;Pensionato&quot;| ente_pensione
     contratto --&gt; anzianita
     anzianita --&gt; reddito
-    reddito --&gt;|&quot;Cessione del quinto&quot;| dimensione_azienda
     reddito --&gt;|&quot;Altre risposte&quot;| impegni
+    reddito --&gt;|&quot;Cessione del quinto&quot;| dimensione_azienda
     dimensione_azienda --&gt; impegni
     ente_pensione --&gt; pensione_netta
     pensione_netta --&gt; impegni
     anni_attivita --&gt; reddito_autonomo
     reddito_autonomo --&gt; impegni
-    impegni --&gt;|&quot;Sì&quot;| rata
     impegni --&gt;|&quot;No&quot;| crif
+    impegni --&gt;|&quot;Sì&quot;| rata
     rata --&gt; crif
+    crif --&gt;|&quot;Altre risposte&quot;| riepilogo
     crif --&gt;|&quot;Cessione del quinto&quot;| quote_cedute
     crif --&gt;|&quot;Finalizzato (beni)&quot;| bene
-    crif --&gt;|&quot;Altre risposte&quot;| riepilogo
     quote_cedute --&gt; riepilogo
     bene --&gt; prezzo_bene
     prezzo_bene --&gt; anticipo
@@ -107,8 +107,8 @@
     leasing_riscatto --&gt; az_forma
     az_forma --&gt; az_anzianita
     az_anzianita --&gt; az_fatturato
-    az_fatturato --&gt;|&quot;Finanziamento aziendale&quot;| az_importo
     az_fatturato --&gt;|&quot;Leasing&quot;| riepilogo
+    az_fatturato --&gt;|&quot;Finanziamento aziendale&quot;| az_importo
     az_importo --&gt; durata
     az_finalita --&gt; az_garanzie
     az_garanzie --&gt; riepilogo
@@ -147,16 +147,16 @@
     doc_reddito[[&quot;Invia il documento di reddito (busta paga, CUD, cedolino pensione,…&quot;]]
     riepilogo_p([&quot;Riepilogo e conferma&quot;])
     codice --&gt; conferma_pratica
-    conferma_pratica --&gt;|&quot;Sì&quot;| informativa
     conferma_pratica --&gt;|&quot;No&quot;| codice
+    conferma_pratica --&gt;|&quot;Sì&quot;| informativa
     informativa --&gt; codice_fiscale
     codice_fiscale --&gt; cognome
     cognome --&gt; nome
     nome --&gt; verifica_cf
     verifica_cf --&gt;|&quot;Coerenti&quot;| luogo_nascita
     verifica_cf --&gt;|&quot;Non coerenti&quot;| conferma_cf
-    conferma_cf --&gt;|&quot;Confermo il codice&quot;| luogo_nascita
     conferma_cf --&gt;|&quot;Lo reinserisco&quot;| codice_fiscale
+    conferma_cf --&gt;|&quot;Confermo il codice&quot;| luogo_nascita
     luogo_nascita --&gt; residenza
     residenza --&gt; stato_civile
     stato_civile --&gt; documento_tipo
@@ -165,8 +165,8 @@
     documento_scadenza --&gt; telefono
     telefono --&gt; email
     email --&gt; iban
-    iban --&gt;|&quot;Finanziamento aziendale / Leasing&quot;| ragione_sociale
     iban --&gt;|&quot;Altre risposte&quot;| datore_lavoro
+    iban --&gt;|&quot;Leasing / Finanziamento aziendale&quot;| ragione_sociale
     datore_lavoro --&gt; data_assunzione
     data_assunzione --&gt; doc_identita
     ragione_sociale --&gt; partita_iva
@@ -192,10 +192,10 @@
     tipo[&quot;Quale documento vuoi inviare?&quot;]
     upload[[&quot;Invia la foto o il PDF del documento, un file alla volta. Un file n…&quot;]]
     pratica --&gt; dettaglio
-    dettaglio --&gt;|&quot;Carica documenti&quot;| tipo
     dettaglio --&gt;|&quot;Altra pratica&quot;| pratica
-    tipo --&gt;|&quot;Ho finito&quot;| dettaglio
+    dettaglio --&gt;|&quot;Carica documenti&quot;| tipo
     tipo --&gt;|&quot;Altre risposte&quot;| upload
+    tipo --&gt;|&quot;Ho finito&quot;| dettaglio
     upload --&gt; tipo
     classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
     classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600

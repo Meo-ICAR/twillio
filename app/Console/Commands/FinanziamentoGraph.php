@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\Conversation\FlowGraph;
+use App\Services\Flows\FlowRepository;
 use Illuminate\Console\Command;
 
 class FinanziamentoGraph extends Command
@@ -19,7 +20,7 @@ class FinanziamentoGraph extends Command
             mkdir($dir, 0775, true);
         }
 
-        foreach (array_keys(config('finanziamento.flows')) as $flow) {
+        foreach (array_keys(app(FlowRepository::class)->all()) as $flow) {
             file_put_contents("{$dir}/finanziamento-{$flow}.mmd", $graph->mermaid($flow));
         }
         file_put_contents("{$dir}/finanziamento-grafo.html", $graph->html());

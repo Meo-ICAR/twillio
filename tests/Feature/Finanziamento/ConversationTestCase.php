@@ -4,6 +4,7 @@ namespace Tests\Feature\Finanziamento;
 
 use App\Services\Conversation\ConversationEngine;
 use App\Services\Conversation\IncomingMessage;
+use Database\Seeders\FlowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -19,6 +20,8 @@ abstract class ConversationTestCase extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
+        // Tutti i test del dialogo girano sull'albero letto dal database (importato dalla configurazione).
+        $this->seed(FlowSeeder::class);
         config(['services.whatsapp.token' => 'TOK', 'services.whatsapp.phone_number_id' => '555']);
         Http::fake([
             'graph.facebook.com/v20.0/FAIL' => Http::response([], 500),

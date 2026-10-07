@@ -36,33 +36,33 @@ flowchart TD
     az_finalita["Qual è la finalità?"]
     az_garanzie["Quali garanzie sono disponibili?"]
     riepilogo(["Riepilogo e conferma"])
-    prodotto -->|"Prestito personale / Cessione del quinto / Finalizzato (beni)"| importo
     prodotto -->|"Mutuo"| mutuo_scopo
+    prodotto -->|"Cessione del quinto / Prestito personale / Finalizzato (beni)"| importo
     prodotto -->|"Leasing"| leasing_bene
     prodotto -->|"Finanziamento aziendale"| az_forma
     importo --> durata
-    durata -->|"Prestito personale / Cessione del quinto / Finalizzato (beni)"| lavoro
+    durata -->|"Cessione del quinto / Prestito personale / Finalizzato (beni)"| lavoro
     durata -->|"Leasing"| leasing_anticipo
     durata -->|"Finanziamento aziendale"| az_finalita
-    lavoro -->|"Dipendente privato / Dipendente pubblico"| contratto
-    lavoro -->|"Pensionato"| ente_pensione
-    lavoro -->|"Autonomo"| anni_attivita
     lavoro -->|"Altre risposte"| impegni
+    lavoro -->|"Dipendente pubblico / Dipendente privato"| contratto
+    lavoro -->|"Autonomo"| anni_attivita
+    lavoro -->|"Pensionato"| ente_pensione
     contratto --> anzianita
     anzianita --> reddito
-    reddito -->|"Cessione del quinto"| dimensione_azienda
     reddito -->|"Altre risposte"| impegni
+    reddito -->|"Cessione del quinto"| dimensione_azienda
     dimensione_azienda --> impegni
     ente_pensione --> pensione_netta
     pensione_netta --> impegni
     anni_attivita --> reddito_autonomo
     reddito_autonomo --> impegni
-    impegni -->|"Sì"| rata
     impegni -->|"No"| crif
+    impegni -->|"Sì"| rata
     rata --> crif
+    crif -->|"Altre risposte"| riepilogo
     crif -->|"Cessione del quinto"| quote_cedute
     crif -->|"Finalizzato (beni)"| bene
-    crif -->|"Altre risposte"| riepilogo
     quote_cedute --> riepilogo
     bene --> prezzo_bene
     prezzo_bene --> anticipo
@@ -80,8 +80,8 @@ flowchart TD
     leasing_riscatto --> az_forma
     az_forma --> az_anzianita
     az_anzianita --> az_fatturato
-    az_fatturato -->|"Finanziamento aziendale"| az_importo
     az_fatturato -->|"Leasing"| riepilogo
+    az_fatturato -->|"Finanziamento aziendale"| az_importo
     az_importo --> durata
     az_finalita --> az_garanzie
     az_garanzie --> riepilogo

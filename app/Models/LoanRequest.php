@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Flows\FlowRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
@@ -89,7 +90,7 @@ class LoanRequest extends Model
     /** @return array<string,string> id prodotto => nome */
     public static function productLabels(): array
     {
-        return config('finanziamento.flows.richiesta.nodes.prodotto.options');
+        return app(FlowRepository::class)->node('richiesta', 'prodotto')['options'];
     }
 
     /**
@@ -100,12 +101,13 @@ class LoanRequest extends Model
     public static function describe(?array $values, string $flow): array
     {
         $readable = [];
+        $def = app(FlowRepository::class)->flow($flow) ?? [];
         foreach ($values ?? [] as $key => $value) {
             if (str_starts_with((string) $key, '_') || ! is_scalar($value)) {
                 continue;
             }
-            $node = config("finanziamento.flows.{$flow}.nodes.{$key}") ?? [];
-            $label = config("finanziamento.flows.{$flow}.labels.{$key}") ?? $node['label'] ?? $key;
+            $node = $def['nodes'][$key] ?? [];
+            $label = $def['labels'][$key] ?? $node['label'] ?? $key;
             $readable[$label] = (string) ($node['options'][$value] ?? $value);
         }
 

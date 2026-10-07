@@ -2,6 +2,8 @@
 
 namespace App\Services\Conversation;
 
+use App\Services\Flows\FlowRepository;
+
 /** Disegna gli alberi di config/finanziamento.php come diagrammi Mermaid o pagina HTML. */
 class FlowGraph
 {
@@ -20,9 +22,14 @@ class FlowGraph
         'check' => ['{', '}'],
     ];
 
+    public function __construct(private ?FlowRepository $flows = null)
+    {
+        $this->flows ??= app(FlowRepository::class);
+    }
+
     public function mermaid(string $flow): string
     {
-        $nodes = config("finanziamento.flows.{$flow}.nodes");
+        $nodes = $this->flows->flow($flow)['nodes'];
         $lines = ['flowchart TD'];
         $byType = [];
 
@@ -59,7 +66,10 @@ class FlowGraph
         $sections = '';
         $first = true;
         foreach (self::TITLES as $flow => $title) {
-            $count = count(config("finanziamento.flows.{$flow}.nodes"));
+            if (! $this->flows->flow($flow)) {
+                continue;
+            }
+            $count = count($this->flows->flow($flow)['nodes']);
             // Il primo diagramma è molto grande: parte al 30% per mostrarlo intero.
             $zoom = $first ? '0.3' : '1';
             $first = false;
@@ -136,7 +146,7 @@ HTML;
             $grouped[$target][] = match (true) {
                 $key === '*' => 'Altre risposte',
                 $by === 'answer' => $node['outcomes'][$key] ?? $node['options'][$key] ?? $key,
-                $by === 'prodotto' => config('finanziamento.flows.richiesta.nodes.prodotto.options')[$key] ?? $key,
+                $by === 'prodotto' => ($this->flows->node('richiesta', 'prodotto')['options'] ?? [])[$key] ?? $key,
                 default => $key,
             };
         }

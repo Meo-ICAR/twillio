@@ -7,6 +7,7 @@ use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Services\Documents\DocumentReader;
+use App\Services\Flows\FlowRepository;
 use App\Services\Whatsapp\WhatsAppClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -27,6 +28,7 @@ class ConversationEngine
         private SensitiveDataGuard $guard,
         private WhatsAppClient $client,
         private DocumentReader $reader,
+        private FlowRepository $flows,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -51,7 +53,7 @@ class ConversationEngine
         if (! $conv) {
             return $this->fromMenu($m);
         }
-        if (! config("finanziamento.flows.{$conv->flow}.nodes.{$conv->node}")) {
+        if (! $this->flows->node($conv->flow, $conv->node)) {
             $this->close($conv, 'annullata');
 
             return [Reply::text('La conversazione non è più valida: ricominciamo dal menu.'), $this->menu()];
@@ -90,12 +92,13 @@ class ConversationEngine
 
     private function start(string $from, string $flow): array
     {
-        $conv = Conversation::create([
-            'wa_number' => $from, 'flow' => $flow, 'data' => [], 'history' => [],
-            'node' => config("finanziamento.flows.{$flow}.start"),
-        ]);
+        $def = $this->flows->flow($flow) ?? throw new \LogicException("Percorso {$flow} inesistente o disattivato");
+        $conv = Conversation::create(['wa_number' => $from, 'flow' => $flow, 'data' => [], 'history' => [], 'node' => $def['start']]);
 
-        return $this->prompt($conv);
+        // L'intestazione (facoltativa) si mostra una sola volta, all'inizio del dialogo.
+        $header = trim((string) ($def['header'] ?? ''));
+
+        return [...($header !== '' ? [Reply::text($header)] : []), ...$this->prompt($conv)];
     }
 
     private function answer(Conversation $conv, IncomingMessage $m): array
@@ -107,6 +110,10 @@ class ConversationEngine
         }
         if ($m->type === 'unsupported') {
             return [Reply::text('Questo tipo di messaggio non è supportato: rispondi con un testo, una scelta o un file.'), ...$this->prompt($conv)];
+        }
+
+        if ($m->type === 'text' && $this->canSkip($def) && $this->normalize($m->text) === 'salta') {
+            return $this->skip($conv, $def);
         }
 
         $result = $this->read($conv, $def, $m);
@@ -146,6 +153,31 @@ class ConversationEngine
         }
 
         return $replies;
+    }
+
+    /** Una domanda si salta solo se è marcata saltabile e ha un'uscita predefinita (nodo fisso oppure '*' nei salti). */
+    private function canSkip(array $def): bool
+    {
+        if (! ($def['skippable'] ?? false) || ! in_array($def['type'], ['choice', 'text', 'file'], true)) {
+            return false;
+        }
+
+        $next = $def['next'] ?? null;
+
+        return is_string($next) || (is_array($next) && isset($next['*']));
+    }
+
+    /** Salta la domanda: non salva nulla e prosegue dall'uscita predefinita. */
+    private function skip(Conversation $conv, array $def): array
+    {
+        $data = $conv->data ?? [];
+        $history = $conv->history ?? [];
+        $history[] = $conv->node;
+
+        $next = $this->nextNode($def, $conv, $data, '');
+        $conv->update(['data' => $data, 'history' => $history, 'node' => $next]);
+
+        return $this->prompt($conv);
     }
 
     /** @return array{0: ?string, 1: ?string, 2?: array<string,string>} [valore, errore, dati ricavati] */
@@ -396,7 +428,7 @@ class ConversationEngine
     {
         $conv->update([
             'data' => [], 'history' => [],
-            'node' => config("finanziamento.flows.{$conv->flow}.restart"),
+            'node' => $this->flows->flow($conv->flow)['restart'],
         ]);
 
         return [Reply::text('Ricominciamo.'), ...$this->prompt($conv)];
@@ -432,11 +464,13 @@ class ConversationEngine
         if ($def['prompt_summary'] ?? false) {
             $body = $this->describe($conv->loanRequest->answers, 'richiesta')."\n\n".$body;
         }
+        if ($this->canSkip($def)) {
+            $body .= "\n\nScrivi «salta» per saltare.";
+        }
 
         return match ($def['type']) {
             'choice' => [...$before, Reply::choice($body, $this->optionsFor($conv, $def))],
             'summary' => [Reply::text($this->summary($conv, $def)), Reply::choice($def['prompt'], $def['options'])],
-            'file' => [Reply::text($body.(($def['optional'] ?? false) ? "\n\nScrivi «salta» per saltare." : ''))],
             default => [Reply::text($body)],
         };
     }
@@ -470,7 +504,7 @@ class ConversationEngine
 
     private function def(string $flow, string $node): array
     {
-        return config("finanziamento.flows.{$flow}.nodes.{$node}") ?? throw new \LogicException("Nodo {$flow}.{$node} inesistente");
+        return $this->flows->node($flow, $node) ?? throw new \LogicException("Nodo {$flow}.{$node} inesistente");
     }
 
     private function normalize(string $text): string
@@ -504,9 +538,6 @@ class ConversationEngine
 
     private function readFile(Conversation $conv, array $def, IncomingMessage $m): array
     {
-        if ($m->type === 'text' && ($def['optional'] ?? false) && $this->normalize($m->text) === 'salta') {
-            return ['salta', null];
-        }
         if ($m->type !== 'media') {
             return [null, 'Invia una foto o un PDF.'];
         }

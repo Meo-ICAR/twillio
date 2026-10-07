@@ -4,10 +4,10 @@ flowchart TD
     tipo["Quale documento vuoi inviare?"]
     upload[["Invia la foto o il PDF del documento, un file alla volta. Un file n…"]]
     pratica --> dettaglio
-    dettaglio -->|"Carica documenti"| tipo
     dettaglio -->|"Altra pratica"| pratica
-    tipo -->|"Ho finito"| dettaglio
+    dettaglio -->|"Carica documenti"| tipo
     tipo -->|"Altre risposte"| upload
+    tipo -->|"Ho finito"| dettaglio
     upload --> tipo
     classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
     classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600

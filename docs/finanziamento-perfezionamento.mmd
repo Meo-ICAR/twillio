@@ -25,16 +25,16 @@ flowchart TD
     doc_reddito[["Invia il documento di reddito (busta paga, CUD, cedolino pensione,…"]]
     riepilogo_p(["Riepilogo e conferma"])
     codice --> conferma_pratica
-    conferma_pratica -->|"Sì"| informativa
     conferma_pratica -->|"No"| codice
+    conferma_pratica -->|"Sì"| informativa
     informativa --> codice_fiscale
     codice_fiscale --> cognome
     cognome --> nome
     nome --> verifica_cf
     verifica_cf -->|"Coerenti"| luogo_nascita
     verifica_cf -->|"Non coerenti"| conferma_cf
-    conferma_cf -->|"Confermo il codice"| luogo_nascita
     conferma_cf -->|"Lo reinserisco"| codice_fiscale
+    conferma_cf -->|"Confermo il codice"| luogo_nascita
     luogo_nascita --> residenza
     residenza --> stato_civile
     stato_civile --> documento_tipo
@@ -43,8 +43,8 @@ flowchart TD
     documento_scadenza --> telefono
     telefono --> email
     email --> iban
-    iban -->|"Finanziamento aziendale / Leasing"| ragione_sociale
     iban -->|"Altre risposte"| datore_lavoro
+    iban -->|"Leasing / Finanziamento aziendale"| ragione_sociale
     datore_lavoro --> data_assunzione
     data_assunzione --> doc_identita
     ragione_sociale --> partita_iva

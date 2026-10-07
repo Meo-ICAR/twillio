@@ -156,7 +156,7 @@ return [
 
                 'doc_identita' => $file('documento_identita', 'Invia il documento d\'identità del cliente (foto o PDF).', 'doc_cf'),
                 'doc_cf' => $file('codice_fiscale', 'Invia il codice fiscale del cliente (foto o PDF).', 'doc_reddito'),
-                'doc_reddito' => $file('reddito', 'Invia il documento di reddito (busta paga, CUD, cedolino pensione, dichiarazione o bilancio).', 'riepilogo_p', ['optional' => true]),
+                'doc_reddito' => $file('reddito', 'Invia il documento di reddito (busta paga, CUD, cedolino pensione, dichiarazione o bilancio).', 'riepilogo_p', ['skippable' => true]),
 
                 'riepilogo_p' => $summary(['prompt' => 'Invio la pratica in istruttoria al mediatore creditizio?', 'show_difformita' => true, 'options' => [
                     'conferma' => 'Invia in istruttoria', 'modifica' => 'Ricomincia', 'annulla' => 'Annulla',

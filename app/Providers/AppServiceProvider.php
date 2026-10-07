@@ -6,6 +6,7 @@ use Anthropic\Client;
 use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
 use App\Services\Documents\NullDocumentReader;
+use App\Services\Flows\FlowRepository;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\ServiceProvider;
 
@@ -16,6 +17,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // L'albero delle conversazioni resta in memoria per la richiesta; i modelli lo invalidano quando cambiano.
+        $this->app->singleton(FlowRepository::class);
+
         // Lettura dei documenti con AI: attiva solo se c'è la chiave Anthropic.
         $this->app->bind(DocumentReader::class, function () {
             $key = config('services.anthropic.key');
