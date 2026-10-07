@@ -97,4 +97,24 @@ class ExtendWhatsAppTokenTest extends TestCase
         $this->artisan('whatsapp:extend-token')->expectsQuestion('Token a breve durata', 'BREVE')
             ->expectsOutputToContain('Meta non indica la scadenza')->assertSuccessful();
     }
+
+    public function test_senza_argomento_usa_il_token_scritto_nel_file_env(): void
+    {
+        $this->fakeEnv("META_APP_ID=999\nMETA_APP_SECRET=S\nMETA_WA_TOKEN=BREVE-DAL-FILE\n");
+        Http::fake(['graph.facebook.com/*' => Http::response(['access_token' => 'LUNGO', 'expires_in' => 5184000])]);
+
+        $this->artisan('whatsapp:extend-token')->expectsOutputToContain('LUNGO')->doesntExpectOutputToContain('BREVE-DAL-FILE')->assertSuccessful();
+
+        Http::assertSent(fn ($r) => $r['fb_exchange_token'] === 'BREVE-DAL-FILE');
+    }
+
+    public function test_un_token_passato_vale_piu_di_quello_del_file(): void
+    {
+        $this->fakeEnv("META_APP_ID=999\nMETA_APP_SECRET=S\nMETA_WA_TOKEN=DAL-FILE\n");
+        Http::fake(['graph.facebook.com/*' => Http::response(['access_token' => 'LUNGO'])]);
+
+        $this->artisan('whatsapp:extend-token PASSATO')->assertSuccessful();
+
+        Http::assertSent(fn ($r) => $r['fb_exchange_token'] === 'PASSATO');
+    }
 }

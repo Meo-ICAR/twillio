@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 
 class ExtendWhatsAppToken extends Command
 {
-    protected $signature = 'whatsapp:extend-token {token? : Token utente a breve durata (se manca viene chiesto, senza mostrarlo)}';
+    protected $signature = 'whatsapp:extend-token {token? : Token a breve durata (se manca si usa META_WA_TOKEN del .env, altrimenti viene chiesto senza mostrarlo)}';
 
     protected $description = 'Scambia un token Meta a breve durata con uno da circa 60 giorni e lo mostra (non scrive nel .env)';
 
@@ -23,7 +23,8 @@ class ExtendWhatsAppToken extends Command
             return self::FAILURE;
         }
 
-        $short = $this->argument('token') ?: $this->secret('Token a breve durata');
+        // Il token breve è quello già scritto in META_WA_TOKEN: niente da ricopiare. In alternativa si può passare o digitare.
+        $short = $this->argument('token') ?: $this->fromEnvFile('META_WA_TOKEN') ?: $this->secret('Token a breve durata');
         if (blank($short)) {
             $this->error('Serve il token a breve durata.');
 
@@ -62,6 +63,10 @@ class ExtendWhatsAppToken extends Command
         $path = app()->environmentFilePath();
         $values = is_readable($path) ? Dotenv::parse((string) file_get_contents($path)) : [];
 
-        return $values[$key] ?? config('services.whatsapp.'.strtolower(str_replace('META_', '', $key)));
+        return $values[$key] ?? match ($key) {
+            'META_APP_ID' => config('services.whatsapp.app_id'),
+            'META_APP_SECRET' => config('services.whatsapp.app_secret'),
+            default => null,
+        };
     }
 }
