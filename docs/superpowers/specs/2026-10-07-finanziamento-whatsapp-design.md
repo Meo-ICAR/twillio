@@ -30,9 +30,9 @@ Resta anche la scelta testuale `1`, `2`, `3` e le parole chiave già presenti.
    fiscale, telefono, email, ragione sociale, P.IVA, indirizzo. Valori a fasce quando
    possibile. Niente note libere né allegati.
 2. **Fase 2 dopo l'informativa.** I dati personali si chiedono solo dopo aver ricevuto
-   l'informativa privacy firmata (file). Il bot non può verificare la firma: la pratica
-   segna l'informativa come "da verificare" (`privacy_verified_at` nullo) e il controllo
-   resta umano, su database.
+   l'informativa privacy firmata (file). Basta riceverla: il bot accetta il file e sblocca la
+   raccolta. Non può verificare la firma; ricezione e data restano tracciate (`privacy_received_at`
+   e allegato), l'eventuale controllo è esterno al sistema.
 3. **Albero come dati.** Le domande stanno in `config/finanziamento.php`; un motore generico
    le esegue. Aggiungere un prodotto o una domanda non richiede codice.
 4. **Stato in database.** La conversazione sopravvive tra un messaggio e l'altro e oltre le
@@ -50,7 +50,7 @@ Resta anche la scelta testuale `1`, `2`, `3` e le parole chiave già presenti.
 - `id`, `code` (univoco, `FIN-AAAA-NNNN`), `agent_wa_number`, `product`,
   `status` (`richiesta` → `in_attesa_informativa` → `informativa_ricevuta` → `perfezionata`),
   `answers` (JSON, solo dati anonimi), `personal` (JSON **cifrato**, cast `encrypted:array`),
-  `privacy_received_at`, `privacy_verified_at`, `perfected_at`, timestamp.
+  `privacy_received_at`, `perfected_at`, timestamp.
 
 **attachments**
 - `id`, `loan_request_id`, `kind` (`informativa`, `documento_identita`, `codice_fiscale`,
