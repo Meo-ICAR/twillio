@@ -26,6 +26,7 @@ class DocumentCatalogSeeder extends Seeder
     /** @return array<string, list<array{0:string,1:string,2:string,3:string,4:?string}>> */
     private function catalog(): array
     {
+        $informativa = ['informativa', 'Informativa firmata', 'obbligatorio', 'Il nostro modulo di informativa privacy, scaricato dal link, stampato e firmato dal cliente', 'informativa'];
         $identita = ['documento_identita', 'Documento d\'identità', 'obbligatorio', 'Carta d\'identità, passaporto o patente in corso di validità', 'identita'];
         $cf = ['codice_fiscale', 'Codice fiscale', 'obbligatorio', 'Tessera sanitaria o tessera del codice fiscale', 'codice_fiscale'];
         $reddito = ['reddito', 'Documento di reddito', 'obbligatorio', 'Busta paga, cedolino della pensione, CUD o dichiarazione', 'reddito'];
@@ -36,7 +37,7 @@ class DocumentCatalogSeeder extends Seeder
             ['altro_integrativo', 'Altro documento', 'integrativo', 'Altro documento richiesto dall\'istruttore', null],
         ];
         $azienda = [
-            $identita, $cf,
+            $informativa, $identita, $cf,
             ['visura_camerale', 'Visura camerale', 'obbligatorio', 'Visura camerale aggiornata dell\'azienda', null],
             ['bilancio', 'Ultimo bilancio', 'obbligatorio', 'Ultimo bilancio depositato o dichiarazione dei redditi', null],
             ['dichiarazione_iva', 'Dichiarazione IVA', 'facoltativo', 'Ultima dichiarazione IVA', null],
@@ -46,15 +47,15 @@ class DocumentCatalogSeeder extends Seeder
         ];
 
         return [
-            'personale' => [$identita, $cf, $reddito, $estratto, ...$integrativi],
-            'finalizzato' => [$identita, $cf, $reddito, ['preventivo_bene', 'Preventivo del bene', 'obbligatorio', 'Preventivo o proposta di acquisto del bene', null], $estratto, ...$integrativi],
+            'personale' => [$informativa, $identita, $cf, $reddito, $estratto, ...$integrativi],
+            'finalizzato' => [$informativa, $identita, $cf, $reddito, ['preventivo_bene', 'Preventivo del bene', 'obbligatorio', 'Preventivo o proposta di acquisto del bene', null], $estratto, ...$integrativi],
             'quinto' => [
-                $identita, $cf, $reddito,
+                $informativa, $identita, $cf, $reddito,
                 ['certificato_stipendio', 'Certificato di stipendio', 'obbligatorio', 'Certificato di stipendio o di servizio rilasciato dal datore di lavoro', null],
                 $estratto, ...$integrativi,
             ],
             'mutuo' => [
-                $identita, $cf, $reddito,
+                $informativa, $identita, $cf, $reddito,
                 ['dichiarazione_redditi', 'Dichiarazione redditi', 'obbligatorio', 'Modello 730 o Redditi PF dell\'ultimo anno', null],
                 ['compromesso', 'Preliminare di acquisto', 'facoltativo', 'Compromesso o proposta di acquisto dell\'immobile', null],
                 ['visura_catastale', 'Visura catastale', 'facoltativo', 'Visura catastale dell\'immobile', null],

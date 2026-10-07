@@ -11,7 +11,7 @@ class Attachment extends Model
 
     protected function casts(): array
     {
-        return ['received_at' => 'datetime', 'analysis' => 'encrypted:array'];
+        return ['received_at' => 'datetime', 'analysis' => 'encrypted:array', 'pending_checks' => 'array'];
     }
 
     public function praticaDocument(): BelongsTo

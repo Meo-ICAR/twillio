@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\AnalyzeAttachment;
 use App\Services\Flows\FlowRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -39,6 +40,7 @@ class LoanRequest extends Model
             'is_test' => 'boolean',
             'personal' => 'encrypted:array',
             'privacy_received_at' => 'datetime',
+            'privacy_verified_at' => 'datetime',
             'perfected_at' => 'datetime',
         ];
     }
@@ -51,6 +53,39 @@ class LoanRequest extends Model
     public function praticaDocuments(): HasMany
     {
         return $this->hasMany(PraticaDocument::class);
+    }
+
+    /** L'informativa è stata inviata e non è stata rifiutata: non serve chiederla di nuovo. */
+    public function hasInformativa(): bool
+    {
+        return $this->privacy_received_at !== null
+            && ! $this->praticaDocuments()->where('code', 'informativa')->where('status', 'rejected')->exists();
+    }
+
+    /** Dati letti dall'AI dai documenti, da far confermare all'agente. */
+    public function fields(): HasMany
+    {
+        return $this->hasMany(PraticaField::class);
+    }
+
+    /**
+     * L'informativa è a posto (nostro modulo, firmato): da qui i documenti si possono leggere.
+     * Quelli arrivati prima, e rimasti in attesa, vengono analizzati ora.
+     */
+    public function verifyPrivacy(): void
+    {
+        if (! $this->privacy_verified_at) {
+            $this->update(['privacy_verified_at' => now()]);
+        }
+
+        $this->attachments()->where('status', 'in_attesa_informativa')->get()
+            ->each(fn (Attachment $a) => AnalyzeAttachment::dispatchAfterResponse($a->id, $a->pending_checks));
+    }
+
+    /** L'informativa è stata rifiutata: i documenti già letti restano, quelli nuovi aspetteranno un'informativa valida. */
+    public function revokePrivacy(): void
+    {
+        $this->update(['privacy_verified_at' => null]);
     }
 
     /**

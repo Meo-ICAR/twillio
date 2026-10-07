@@ -362,7 +362,7 @@ class ConversationEngine
         $condition = $def['skip_if'] ?? null;
 
         return match (true) {
-            $condition === 'privacy_received' => (bool) $conv->loanRequest?->privacy_received_at,
+            $condition === 'privacy_received' => (bool) $conv->loanRequest?->hasInformativa(),
             is_string($condition) && str_starts_with($condition, 'filled:') => filled($data[substr($condition, 7)] ?? null),
             default => false,
         };
@@ -416,7 +416,8 @@ class ConversationEngine
     /** I documenti da preparare per il finanziamento (obbligatori e facoltativi del catalogo), con la descrizione. */
     private function requiredDocuments(LoanRequest $loan): string
     {
-        $slots = PraticaDocument::populate($loan)->load('template');
+        // L'informativa ha il suo paragrafo, con il link da cui scaricarla.
+        $slots = PraticaDocument::populate($loan)->load('template')->where('code', '!=', 'informativa');
 
         $sections = [];
         foreach (['obbligatorio' => 'Obbligatori', 'facoltativo' => 'Facoltativi'] as $requirement => $title) {
@@ -675,7 +676,7 @@ class ConversationEngine
         $path = "pratiche/{$loan->code}/{$kind}-".Str::random(8).'.'.self::ALLOWED_MIME[$m->mime];
         Storage::disk('local')->put($path, $file['body']);
         $this->storedPaths[] = $path;
-        $slot = $kind === 'informativa' ? null : PraticaDocument::populate($loan)->firstWhere('code', $kind);
+        $slot = PraticaDocument::populate($loan)->firstWhere('code', $kind);
         $attachment = $loan->attachments()->create([
             'kind' => $kind, 'path' => $path, 'mime' => $m->mime, 'pratica_document_id' => $slot?->id,
             'wa_media_id' => $m->mediaId, 'received_at' => now(),

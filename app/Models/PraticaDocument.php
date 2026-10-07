@@ -84,6 +84,10 @@ class PraticaDocument extends Model
     {
         $this->update(['status' => 'ok', 'reviewed_at' => now()]);
         $this->addAnnotation('operatore', 'Approvato dall\'operatore.', $userId);
+
+        if ($this->code === 'informativa') {
+            $this->loanRequest->verifyPrivacy();
+        }
     }
 
     /** L'operatore rifiuta il documento: la nota dice all'agente cosa non va. */
@@ -107,6 +111,10 @@ class PraticaDocument extends Model
 
         $this->update(['status' => $status, 'reviewed_at' => now()]);
         $this->addAnnotation('operatore', $note, $userId);
+
+        if ($this->code === 'informativa') {
+            $this->loanRequest->revokePrivacy();
+        }
     }
 
     public function lastAnnotation(): ?string

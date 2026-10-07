@@ -10,7 +10,7 @@ class FinanziamentoDocument extends Model
 {
     public const REQUIREMENTS = ['obbligatorio' => 'Obbligatorio', 'facoltativo' => 'Facoltativo', 'integrativo' => 'Integrativo'];
 
-    public const AI_KINDS = ['identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito'];
+    public const AI_KINDS = ['identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito', 'informativa' => 'Informativa firmata'];
 
     protected $guarded = [];
 

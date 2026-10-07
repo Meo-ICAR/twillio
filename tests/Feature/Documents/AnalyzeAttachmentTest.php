@@ -55,7 +55,7 @@ class AnalyzeAttachmentTest extends TestCase
     {
         $loan = LoanRequest::create([
             'code' => 'FIN-2026-0001', 'agent_wa_number' => '393331112222', 'product' => 'personale', 'status' => 'informativa_ricevuta',
-            'answers' => ['prodotto' => 'personale'],
+            'answers' => ['prodotto' => 'personale'], 'privacy_received_at' => now(), 'privacy_verified_at' => now(),
             'personal' => ['cognome' => 'Rossi', 'nome' => 'Mario', 'codice_fiscale' => 'RSSMRA80A01H501U', 'data_nascita' => '01/01/1980'],
         ]);
         $path = "pratiche/FIN-2026-0001/{$kind}-x.jpg";

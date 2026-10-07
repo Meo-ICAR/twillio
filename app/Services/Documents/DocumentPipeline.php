@@ -3,6 +3,7 @@
 namespace App\Services\Documents;
 
 use App\Models\Attachment;
+use App\Models\PraticaField;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Checks\DocumentCheck;
 use App\Services\Checks\DocumentContext;
@@ -49,6 +50,16 @@ class DocumentPipeline
         $label = $slot?->name ?? self::LABELS[$readerKind];
         $loan = $attachment->loanRequest;
 
+        // Dati personali all'AI solo dopo l'informativa verificata: il documento aspetta e riparte quando lo è.
+        if ($aiKind !== 'informativa' && ! $loan->privacy_verified_at) {
+            $attachment->update(['status' => 'in_attesa_informativa', 'pending_checks' => $checks]);
+
+            return new AnalysisOutcome($attachment, 'in_attesa', $label, $aiKind);
+        }
+
+        // Dati noti con cui confrontare: quelli dichiarati dall'agente e quelli già letti dagli altri documenti.
+        $declared = array_replace(PraticaField::knownValues($loan, $slot?->code ?? $attachment->kind), array_filter($loan->personal ?? [], 'filled'));
+
         $context = new DocumentContext($attachment, $loan, $readerKind, function () use ($attachment, $readerKind) {
             try {
                 return $this->reader->read($readerKind, $attachment->mime, Storage::disk('local')->get($attachment->path));
@@ -58,7 +69,7 @@ class DocumentPipeline
 
                 return null;
             }
-        }, $loan->personal ?? []);
+        }, $declared);
 
         if ($context->fields() === null) {
             $attachment->update(['status' => 'non_analizzato']);
@@ -74,7 +85,7 @@ class DocumentPipeline
             ! ($fields['legible'] ?? true) => 'non_leggibile',
             default => 'difforme',
         };
-        $attachment->update(['status' => $status, 'analysis' => ['fields' => $fields, 'discrepancies' => $issues]]);
+        $attachment->update(['status' => $status, 'pending_checks' => null, 'analysis' => ['fields' => $fields, 'discrepancies' => $issues]]);
 
         // Esito sul documento della pratica: l'AI propone OK o rejected e lascia le annotazioni; l'operatore può correggere.
         if ($slot) {
@@ -82,6 +93,10 @@ class DocumentPipeline
             foreach ($issues === [] ? ['Controllo automatico: nessun problema trovato.'] : $issues as $note) {
                 $slot->addAnnotation('ai', $note);
             }
+        }
+
+        if ($issues === [] && $proposals) {
+            PraticaField::propose($loan, $proposals, $attachment);
         }
 
         return new AnalysisOutcome($attachment, $status, $label, $aiKind, $issues, $issues === [] ? $proposals : []);

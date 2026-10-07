@@ -44,7 +44,7 @@ class DocumentPipelineTest extends TestCase
 
     private function attachment(string $code = 'documento_identita', array $personal = ['cognome' => 'Rossi', 'nome' => 'Mario']): array
     {
-        $loan = LoanRequest::create(['code' => 'FIN-2026-0001', 'agent_wa_number' => '39', 'product' => 'personale', 'status' => 'informativa_ricevuta', 'answers' => [], 'personal' => $personal]);
+        $loan = LoanRequest::create(['code' => 'FIN-2026-0001', 'agent_wa_number' => '39', 'product' => 'personale', 'status' => 'informativa_ricevuta', 'answers' => [], 'personal' => $personal, 'privacy_received_at' => now(), 'privacy_verified_at' => now()]);
         $slot = PraticaDocument::populate($loan)->firstWhere('code', $code);
         Storage::disk('local')->put("pratiche/x/{$code}.jpg", 'BYTES');
         $a = Attachment::create(['loan_request_id' => $loan->id, 'pratica_document_id' => $slot->id, 'kind' => $code, 'path' => "pratiche/x/{$code}.jpg", 'mime' => 'image/jpeg', 'received_at' => now()]);

@@ -101,7 +101,7 @@ class DocumentCatalogTest extends TestCase
 
         $this->assertSame($count, $loan->praticaDocuments()->count());
         $this->assertSame('ok', $loan->praticaDocuments()->where('code', 'documento_identita')->value('status'));
-        $this->assertSame('documento_identita', $loan->praticaDocuments()->orderBy('sort_order')->value('code'));
+        $this->assertSame('informativa', $loan->praticaDocuments()->orderBy('sort_order')->value('code'), 'l\'informativa firmata è il primo documento');
     }
 
     public function test_le_annotazioni_hanno_autore_data_e_sono_cifrate(): void
@@ -173,7 +173,7 @@ class DocumentCatalogTest extends TestCase
     public function test_un_documento_fuori_catalogo_resta_dopo_la_modifica_del_catalogo(): void
     {
         $this->seed(DocumentCatalogSeeder::class);
-        $slot = PraticaDocument::populate($this->loan())->first();
+        $slot = PraticaDocument::populate($this->loan())->firstWhere('code', 'documento_identita');
 
         FinanziamentoDocument::find($slot->finanziamento_document_id)->delete();
 

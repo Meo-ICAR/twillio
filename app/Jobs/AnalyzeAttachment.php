@@ -21,7 +21,7 @@ class AnalyzeAttachment
     /**
      * @param  array<int,string|array<string,mixed>>|null  $checks  controlli agganciati al passo; null = predefiniti del tipo
      */
-    public function __construct(private int $attachmentId, private ?array $checks = null) {}
+    public function __construct(public readonly int $attachmentId, public readonly ?array $checks = null) {}
 
     public function handle(DocumentPipeline $pipeline, DocumentReader $reader, WhatsAppClient $client): void
     {
@@ -38,6 +38,11 @@ class AnalyzeAttachment
             return;
         }
 
+        // Prima di scrivere all'agente: se l'invio fallisse, i documenti in attesa devono comunque ripartire.
+        if ($outcome->aiKind === 'informativa' && $outcome->passed()) {
+            $attachment->loanRequest->verifyPrivacy();
+        }
+
         $client->send($attachment->loanRequest->agent_wa_number, Reply::text($this->message($outcome)));
     }
 
@@ -45,6 +50,10 @@ class AnalyzeAttachment
     {
         $code = $outcome->attachment->loanRequest->code;
         $label = $outcome->label;
+
+        if ($outcome->status === 'in_attesa') {
+            return "⏳ {$label} ({$code}): ricevuto. Lo controllo appena l'informativa privacy risulta verificata.";
+        }
 
         if ($outcome->status === 'non_analizzato') {
             return "ℹ️ {$label} ({$code}): è stato comunque ricevuto, ma non sono riuscito a controllarlo in automatico. Lo vedrà l'istruttore.";

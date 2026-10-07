@@ -77,7 +77,7 @@ class DocumentiFlowTest extends ConversationTestCase
         $this->setStatus($loan, 'documento_identita', 'ok');
         $this->setStatus($loan, 'codice_fiscale', 'rejected', 'Cognome: sul documento «BIANCHI», dichiarato «Rossi»');
         $this->setStatus($loan, 'estratto_conto', 'ricevuto');
-        $this->attach($loan, 'informativa');
+        $this->setStatus($loan, 'informativa', 'ricevuto');
 
         $replies = $this->say('#menu_stato', '#FIN-2026-0001');
         $body = $this->bodies($replies);
@@ -89,7 +89,7 @@ class DocumentiFlowTest extends ConversationTestCase
         $this->assertStringContainsString('➖ Documento di reddito', $body);
         $this->assertStringContainsString('Obbligatori', $body);
         $this->assertStringContainsString('Facoltativi', $body);
-        $this->assertStringNotContainsString('Informativa', $body);
+        $this->assertStringContainsString('📎 Informativa firmata', $body, 'anche l\'informativa è un documento della pratica');
         $this->assertSame(['carica' => 'Carica documenti', 'altra' => 'Altra pratica'], end($replies)->options);
         $this->assertSame($loan->id, Conversation::first()->loan_request_id);
     }
@@ -145,7 +145,7 @@ class DocumentiFlowTest extends ConversationTestCase
 
         $replies = $this->say('#menu_stato', '#FIN-2026-0001', '#carica');
 
-        $this->assertSame(['codice_fiscale', 'reddito', 'estratto_conto', 'fine'], array_keys(end($replies)->options));
+        $this->assertSame(['informativa', 'codice_fiscale', 'reddito', 'estratto_conto', 'fine'], array_keys(end($replies)->options));
         $this->assertSame('Estratto conto bancario', end($replies)->options['estratto_conto']);
     }
 

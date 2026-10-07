@@ -218,6 +218,20 @@ class FilamentAdminTest extends TestCase
         ])->assertCanSeeTableRecords([$a])->assertTableColumnFormattedStateSet('status', 'Difforme', record: $a);
     }
 
+    public function test_un_allegato_in_attesa_dell_informativa_si_riconosce_nell_elenco(): void
+    {
+        $loan = $this->loan();
+        $a = Attachment::create([
+            'loan_request_id' => $loan->id, 'kind' => 'documento_identita', 'path' => 'pratiche/x.jpg', 'mime' => 'image/jpeg',
+            'status' => 'in_attesa_informativa', 'received_at' => now(),
+        ]);
+        $this->login();
+
+        $this->get('/admin/attachments')->assertOk()->assertSee('In attesa informativa');
+        Livewire::test(AttachmentsRelationManager::class, ['ownerRecord' => $loan, 'pageClass' => ViewLoanRequest::class])
+            ->assertTableColumnFormattedStateSet('status', 'In attesa informativa', record: $a);
+    }
+
     public function test_il_catalogo_dei_documenti_si_gestisce_dal_pannello(): void
     {
         $this->seed(DocumentCatalogSeeder::class);

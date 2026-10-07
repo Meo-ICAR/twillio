@@ -19,9 +19,10 @@ class AttachmentsTable
         'difforme' => 'Difforme',
         'non_leggibile' => 'Non leggibile',
         'non_analizzato' => 'Non analizzato',
+        'in_attesa_informativa' => 'In attesa informativa',
     ];
 
-    public const COLORS = ['verificato' => 'success', 'difforme' => 'danger', 'non_leggibile' => 'warning', 'non_analizzato' => 'gray'];
+    public const COLORS = ['verificato' => 'success', 'difforme' => 'danger', 'non_leggibile' => 'warning', 'non_analizzato' => 'gray', 'in_attesa_informativa' => 'warning'];
 
     public const KINDS = [
         'informativa' => 'Informativa privacy',

@@ -8,7 +8,7 @@ use App\Models\Attachment;
 final class AnalysisOutcome
 {
     /**
-     * @param  string  $status  verificato | difforme | non_leggibile | non_analizzato
+     * @param  string  $status  verificato | difforme | non_leggibile | non_analizzato | in_attesa (informativa non ancora verificata)
      * @param  list<string>  $issues
      * @param  array<string,string>  $proposals  dati letti, da far confermare (solo se il documento è a posto)
      */
