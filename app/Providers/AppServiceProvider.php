@@ -8,6 +8,8 @@ use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
 use App\Services\Documents\NullDocumentReader;
 use App\Services\Flows\FlowRepository;
+use App\Services\Loans\LoanEstimator;
+use App\Services\Loans\RandomLoanEstimator;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,6 +23,9 @@ class AppServiceProvider extends ServiceProvider
         // L'albero delle conversazioni resta in memoria per la richiesta; i modelli lo invalidano quando cambiano.
         $this->app->singleton(FlowRepository::class);
         $this->app->singleton(CheckRegistry::class);
+
+        // Calcolo degli importi ottenibili: per ora una simulazione.
+        $this->app->bind(LoanEstimator::class, RandomLoanEstimator::class);
 
         // Lettura dei documenti con AI: attiva solo se c'è la chiave Anthropic.
         $this->app->bind(DocumentReader::class, function () {

@@ -3,7 +3,9 @@
 namespace App\Services\Conversation;
 
 use App\Jobs\AnalyzeAttachment;
+use App\Models\Company;
 use App\Models\Conversation;
+use App\Models\Fornitore;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Models\User;
@@ -12,6 +14,7 @@ use App\Services\Checks\CheckRegistry;
 use App\Services\Checks\NodeCheck;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
+use App\Services\Loans\LoanEstimator;
 use App\Services\Whatsapp\WhatsAppClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +41,7 @@ class ConversationEngine
         private DocumentReader $reader,
         private FlowRepository $flows,
         private CheckRegistry $checks,
+        private LoanEstimator $estimator,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -675,7 +679,29 @@ class ConversationEngine
         $conv->loan_request_id = $loan->id;
         $this->close($conv, 'completata');
 
-        return [Reply::text("✅ Richiesta registrata.\n\nCodice pratica: *{$loan->code}*\n\nConservalo: ti servirà per perfezionare il finanziamento con i dati del cliente.")];
+        $text = "✅ Richiesta registrata.\n\nCodice pratica: *{$loan->code}*\n\nConservalo: ti servirà per perfezionare il finanziamento con i dati del cliente.";
+
+        return [Reply::text($text."\n\n".$this->outcomeText($loan, $conv->wa_number))];
+    }
+
+    /** Importi ottenibili per i produttori; chi non lo è (segnalatore occasionale) è invitato a chiamare la company. */
+    private function outcomeText(LoanRequest $loan, string $waNumber): string
+    {
+        if (Fornitore::isProducer($waNumber)) {
+            $range = $this->estimator->estimate($loan);
+
+            return '💶 Importo ottenibile: da *'.number_format($range['min'], 0, ',', '.').' €* a *'.number_format($range['max'], 0, ',', '.').' €*.';
+        }
+
+        Fornitore::registerOccasional($waNumber);
+        $company = Company::current();
+        $contacts = array_filter([
+            $company?->customer_care_phone ? "📞 {$company->customer_care_phone}" : null,
+            $company?->customer_care_email ? "✉️ {$company->customer_care_email}" : null,
+        ]);
+
+        return "Per conoscere l'importo ottenibile e proseguire, contatta telefonicamente il customer care".($company?->name ? " di {$company->name}" : '')
+            .($contacts ? ":\n".implode("\n", $contacts) : '.');
     }
 
     private function completePerfezionamento(Conversation $conv): array

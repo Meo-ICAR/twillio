@@ -77,6 +77,26 @@ class Fornitore extends Model
             ->first(fn (self $f) => self::nationalNumber($f->tel) === $wanted);
     }
 
+    public const OCCASIONAL_TYPE = 'Segnalatore occasionale';
+
+    /** Chi scrive è un produttore convenzionato (attivo)? */
+    public static function isProducer(string $waNumber): bool
+    {
+        return self::findByWhatsApp($waNumber) !== null;
+    }
+
+    /**
+     * Registra un numero sconosciuto come segnalatore occasionale (non attivo), una volta sola.
+     * Un numero già presente, anche non attivo, non si duplica.
+     */
+    public static function registerOccasional(string $waNumber): self
+    {
+        $wanted = self::nationalNumber($waNumber);
+        $existing = static::withTrashed()->whereNotNull('tel')->get()->first(fn (self $f) => self::nationalNumber($f->tel) === $wanted);
+
+        return $existing ?? static::create(['tel' => $waNumber, 'type' => self::OCCASIONAL_TYPE, 'is_active' => false]);
+    }
+
     /** Solo cifre, senza prefisso internazionale italiano (+39 / 0039). */
     public static function nationalNumber(string $phone): string
     {
