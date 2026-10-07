@@ -122,6 +122,7 @@
             <div class="card"><div class="step-n">2</div><h3>Informativa privacy</h3><p>Per perfezionare, l'agente inserisce il codice e invia l'informativa firmata dal cliente, in foto o PDF. Solo a quel punto l'assistente apre la raccolta dei dati personali.</p></div>
             <div class="card"><div class="step-n">3</div><h3>Perfeziona Finanziamento</h3><p>Anagrafica, documento d'identità, IBAN, dati lavorativi e documenti. Ogni dato è controllato mentre viene scritto, con un riepilogo da confermare prima di chiudere.</p></div>
         </div>
+        <p style="margin-top:22px"><a class="btn ghost" href="/grafo-domande">Guarda tutte le domande del bot →</a></p>
     </section>
 
     <section>
@@ -183,7 +184,7 @@
 
     <footer>
         <div>UnicoAgent · assistente WhatsApp per pratiche di finanziamento.</div>
-        <div><a href="/privacy">Informativa privacy</a></div>
+        <div><a href="/grafo-domande">Grafo delle domande</a> · <a href="/privacy">Informativa privacy</a></div>
         <div>Il servizio non sostituisce gli obblighi informativi e contrattuali del mediatore: i testi dell'informativa e dei consensi restano quelli forniti dal tuo ufficio legale.</div>
     </footer>
 </div>

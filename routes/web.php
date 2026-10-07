@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\WhatsAppController;
 use App\Models\Company;
+use App\Services\Conversation\FlowGraph;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
@@ -11,6 +12,8 @@ Route::post('/api/whatsapp/webhook', [WhatsAppController::class, 'handleWebhook'
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/grafo-domande', fn () => response((new FlowGraph)->html()));
 
 Route::get('/privacy', fn () => view('privacy', ['company' => Company::current()]));
 

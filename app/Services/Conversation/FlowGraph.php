@@ -77,10 +77,12 @@ class FlowGraph
   .meta, .legend { color:var(--muted); margin:0 0 12px; font-size:.9rem; }
   .scroll { overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
   pre.mermaid { margin:0; text-align:center; }
+  a { color:#2b6cb0; }
 </style>
 </head>
 <body>
 <main>
+  <p class="legend"><a href="/">← Torna alla home</a></p>
   <h1>Grafo delle domande del bot</h1>
   <p class="legend">Rettangolo = scelta · parallelogramma = testo libero · doppio bordo = file o codice · ovale = riepilogo e conferma. Generato da <code>config/finanziamento.php</code> con <code>php artisan finanziamento:graph</code>.</p>
   {$sections}
