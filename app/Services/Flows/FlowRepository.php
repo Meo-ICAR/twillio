@@ -39,6 +39,12 @@ class FlowRepository
         return $this->test ? array_replace($production, $this->variant(true)) : $production;
     }
 
+    /** I percorsi di produzione, qualunque sia la modalità corrente. */
+    public function production(): array
+    {
+        return $this->variant(false);
+    }
+
     /** @return array<string,mixed>|null */
     public function flow(string $code): ?array
     {

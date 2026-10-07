@@ -152,4 +152,16 @@ class FlowTestModeAdminTest extends TestCase
             ->filterTable('is_test', true)->assertCanSeeTableRecords([$test])->assertCanNotSeeTableRecords([$real])
             ->filterTable('is_test', false)->assertCanSeeTableRecords([$real])->assertCanNotSeeTableRecords([$test]);
     }
+
+    public function test_dall_elenco_si_scarica_la_configurazione_esportata(): void
+    {
+        Livewire::test(ListFlows::class)
+            ->callAction('esporta')
+            ->assertFileDownloaded('finanziamento.php');
+    }
+
+    public function test_dall_elenco_c_e_il_link_al_grafo_delle_domande(): void
+    {
+        Livewire::test(ListFlows::class)->assertActionHasUrl('grafo', '/grafo-domande');
+    }
 }
