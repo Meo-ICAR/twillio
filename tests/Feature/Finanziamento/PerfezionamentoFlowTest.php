@@ -4,6 +4,7 @@ namespace Tests\Feature\Finanziamento;
 
 use App\Models\Conversation;
 use App\Models\LoanRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -19,8 +20,21 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
     private function personal(): array
     {
-        return ['Mario', 'Rossi', 'rssmra80a01h501u', '01/01/1980', 'Roma', 'Via Roma 1, 00100 Roma', '#coniugato', '#ci',
+        return ['rssmra80a01h501u', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#coniugato', '#ci',
             'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', 'it60 x054 2811 1010 0000 0123 456'];
+    }
+
+    /** Codice fiscale sintetico con la data di nascita voluta (il carattere di controllo non viene verificato). */
+    private function cfBorn(Carbon $date, string $place = 'H501'): string
+    {
+        return 'RSSMRA'.$date->format('y').'ABCDEHLMPRST'[$date->month - 1].$date->format('d').$place.'U';
+    }
+
+    /** Dal codice fiscale al riepilogo, con i dati personali coerenti. */
+    private function untilSummary(array $start): array
+    {
+        return [...$start, 'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com',
+            'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015', 'media:D1:image/jpeg', 'media:D2:image/jpeg', 'salta'];
     }
 
     public function test_percorso_completo_con_informativa_e_dati_cifrati(): void
@@ -76,7 +90,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
         $replies = $this->say('media:M1:image/jpeg');
 
-        $this->assertStringContainsString('Nome del cliente', $this->bodies($replies));
+        $this->assertStringContainsString('Codice fiscale del cliente', $this->bodies($replies));
         $loan = LoanRequest::first();
         $this->assertSame('informativa_ricevuta', $loan->status);
         $this->assertNotNull($loan->privacy_received_at);
@@ -89,7 +103,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
         $replies = $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
 
-        $this->assertStringContainsString('Nome del cliente', $this->bodies($replies));
+        $this->assertStringContainsString('Codice fiscale del cliente', $this->bodies($replies));
     }
 
     public function test_formato_file_non_accettato(): void
@@ -137,17 +151,120 @@ class PerfezionamentoFlowTest extends ConversationTestCase
         $this->assertStringContainsString('Inserisci il codice', $this->bodies($this->say('#no')));
     }
 
-    public function test_dati_non_validi_vengono_rifiutati(): void
+    public function test_il_codice_fiscale_non_interpretabile_viene_rifiutato_e_poi_ricava_i_dati(): void
     {
         $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
-        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'Mario', 'Rossi');
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
+        $this->assertSame('codice_fiscale', Conversation::first()->node);
 
-        $this->assertStringContainsString('Codice fiscale non valido', $this->bodies($this->say('ABC')));
-        $this->say('RSSMRA80A01H501U');
-        $this->assertStringContainsString('Data non valida', $this->bodies($this->say('31/02/1980')));
-        $this->assertStringContainsString('Data non valida', $this->bodies($this->say('1980-01-01')));
-        $this->say('01/01/1980', 'Roma', 'Via Roma 1', '#celibe', '#ci');
-        $this->assertSame('documento_numero', Conversation::first()->node);
+        foreach (['ABC', 'RSSMRA80Z01H501U', 'RSSMRA80B31H501U'] as $bad) {
+            $this->assertStringContainsString('Codice fiscale non valido', $this->bodies($this->say($bad)), $bad);
+            $this->assertSame('codice_fiscale', Conversation::first()->node);
+        }
+
+        $replies = $this->say('RSSMRA80A01H501U');
+        $this->assertStringContainsString('nato/a il 01/01/1980', $this->bodies($replies));
+        $this->assertStringContainsString('Roma (RM)', $this->bodies($replies));
+        $this->assertSame('cognome', Conversation::first()->node);
+
+        $this->say('Rossi', 'Mario');
+        $this->assertSame('residenza', Conversation::first()->node);
+        $this->assertSame(
+            ['data_nascita' => '01/01/1980', 'sesso' => 'M', 'luogo_nascita' => 'Roma (RM)'],
+            array_intersect_key(Conversation::first()->data, array_flip(['data_nascita', 'sesso', 'luogo_nascita']))
+        );
+    }
+
+    public function test_se_il_luogo_non_si_ricava_lo_chiede(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+
+        $replies = $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01Z404U', 'Rossi', 'Mario');
+
+        $this->assertStringContainsString('Luogo di nascita', $this->bodies($replies));
+        $this->assertSame('luogo_nascita', Conversation::first()->node);
+        $this->say('Tunisi');
+        $this->assertSame('residenza', Conversation::first()->node);
+    }
+
+    public function test_indietro_dal_cognome_azzera_i_dati_ricavati(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U');
+
+        $this->say('indietro');
+
+        $data = Conversation::first()->data;
+        $this->assertSame('codice_fiscale', Conversation::first()->node);
+        $this->assertArrayNotHasKey('codice_fiscale', $data);
+        $this->assertArrayNotHasKey('data_nascita', $data);
+        $this->assertArrayNotHasKey('luogo_nascita', $data);
+    }
+
+    public function test_cognome_difforme_chiede_di_confermare_il_codice_fiscale(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+
+        $replies = $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Bianchi', 'Mario');
+
+        $this->assertSame('conferma_cf', Conversation::first()->node);
+        $this->assertStringContainsString('Bianchi', $this->bodies($replies));
+        $this->assertStringContainsString('BNC', $this->bodies($replies));
+        $this->assertStringContainsString('RSS', $this->bodies($replies));
+        $this->assertSame(['cf_ok' => 'Confermo il codice', 'cf_no' => 'Lo reinserisco'], end($replies)->options);
+    }
+
+    public function test_reinserire_il_codice_fiscale_riverifica_senza_richiedere_i_nomi(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Bianchi', 'Mario', '#cf_no');
+        $this->assertSame('codice_fiscale', Conversation::first()->node);
+
+        $this->say('BNCMRA80A01H501X');
+
+        $data = Conversation::first()->data;
+        $this->assertSame('residenza', Conversation::first()->node);
+        $this->assertSame('BNCMRA80A01H501X', $data['codice_fiscale']);
+        $this->assertSame('Bianchi', $data['cognome']);
+        $this->assertArrayNotHasKey('_difformita', $data);
+    }
+
+    public function test_difformita_confermate_compaiono_in_fondo_prima_dell_invio_in_istruttoria(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+
+        $replies = $this->say(...[
+            '#menu_perfeziona', 'FIN-2026-0007', '#si',
+            ...$this->untilSummary(['RSSMRA80A01H501U', 'Bianchi', 'Mario', '#cf_ok']),
+        ]);
+
+        $this->assertCount(2, $replies);
+        $this->assertStringContainsString('Dati difformi da verificare', $replies[0]->body);
+        $this->assertStringContainsString('Bianchi', substr($replies[0]->body, strpos($replies[0]->body, 'Dati difformi')));
+        $this->assertSame('Invia in istruttoria', $replies[1]->options['conferma']);
+        $this->assertSame('buttons', $replies[1]->kind);
+
+        $done = $this->say('#conferma');
+
+        $this->assertStringContainsString('istruttoria', $this->bodies($done));
+        $loan = LoanRequest::first();
+        $this->assertSame('perfezionata', $loan->status);
+        $this->assertCount(1, $loan->personal['_difformita']);
+    }
+
+    public function test_senza_difformita_il_riepilogo_non_mostra_la_sezione(): void
+    {
+        $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
+
+        $replies = $this->say(...[
+            '#menu_perfeziona', 'FIN-2026-0007', '#si',
+            ...$this->untilSummary(['RSSMRA80A01H501U', 'Rossi', 'Mario']),
+        ]);
+
+        $this->assertStringNotContainsString('difformi', $replies[0]->body);
+        $this->assertStringContainsString('Data di nascita: 01/01/1980', $replies[0]->body);
+        $this->say('#conferma');
+        $this->assertArrayNotHasKey('_difformita', LoanRequest::first()->personal);
     }
 
     public function test_un_testo_dove_serve_un_file_viene_rifiutato_ma_il_reddito_si_salta(): void
@@ -224,9 +341,10 @@ class PerfezionamentoFlowTest extends ConversationTestCase
     {
         $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
 
-        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'Mario', 'Rossi', 'RSSMRA8LT01H501U');
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA8LT01H501U');
 
-        $this->assertSame('data_nascita', Conversation::first()->node);
+        $this->assertSame('cognome', Conversation::first()->node);
+        $this->assertSame('01/12/1980', Conversation::first()->data['data_nascita']);
     }
 
     public function test_risposta_digitata_alla_ripresa_dopo_24_ore(): void
@@ -274,22 +392,21 @@ class PerfezionamentoFlowTest extends ConversationTestCase
     public function test_il_cliente_deve_essere_maggiorenne(): void
     {
         $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
-        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'Mario', 'Rossi', 'RSSMRA80A01H501U');
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si');
 
-        foreach ([now()->subYears(17)->format('d/m/Y'), now()->addDay()->format('d/m/Y')] as $date) {
-            $this->assertStringContainsString('maggiorenne', $this->bodies($this->say($date)), $date);
-            $this->assertSame('data_nascita', Conversation::first()->node);
-        }
+        $minor = $this->cfBorn(now()->subYears(18)->addDay());
+        $this->assertStringContainsString('minorenne', $this->bodies($this->say($minor)));
+        $this->assertSame('codice_fiscale', Conversation::first()->node);
 
-        $this->say(now()->subYears(18)->format('d/m/Y'));
-        $this->assertSame('luogo_nascita', Conversation::first()->node);
+        $this->say($this->cfBorn(now()->subYears(18)));
+        $this->assertSame('cognome', Conversation::first()->node);
     }
 
     public function test_iban_con_checksum_errato_e_rifiutato(): void
     {
         $this->loan(['status' => 'informativa_ricevuta', 'privacy_received_at' => now()]);
         $this->say(...[
-            '#menu_perfeziona', 'FIN-2026-0007', '#si', 'Mario', 'Rossi', 'RSSMRA80A01H501U', '01/01/1980', 'Roma',
+            '#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario',
             'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com',
         ]);
 

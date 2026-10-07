@@ -27,7 +27,7 @@ class FinanziamentoConfigTest extends TestCase
 
             $targets = [];
             foreach ($nodes as $name => $node) {
-                $this->assertContains($node['type'], ['choice', 'text', 'code', 'file', 'summary'], "$flow.$name tipo");
+                $this->assertContains($node['type'], ['choice', 'text', 'code', 'file', 'summary', 'check'], "$flow.$name tipo");
                 $this->assertNotEmpty($node['prompt'] ?? null, "$flow.$name senza prompt");
                 $this->assertLessThanOrEqual(900, mb_strlen($node['prompt']), "$flow.$name prompt troppo lungo");
 

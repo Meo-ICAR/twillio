@@ -16,6 +16,7 @@ class FlowGraph
         'file' => ['[[', ']]'],
         'code' => ['[[', ']]'],
         'summary' => ['([', '])'],
+        'check' => ['{', '}'],
     ];
 
     public function mermaid(string $flow): string
@@ -44,6 +45,7 @@ class FlowGraph
         $lines[] = '    classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08';
         $lines[] = '    classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08';
         $lines[] = '    classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a';
+        $lines[] = '    classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52';
         foreach ($byType as $type => $names) {
             $lines[] = '    class '.implode(',', $names).' '.$type;
         }
@@ -132,7 +134,7 @@ HTML;
         foreach ($node['next'] as $key => $target) {
             $grouped[$target][] = match (true) {
                 $key === '*' => 'Altre risposte',
-                $by === 'answer' => $node['options'][$key] ?? $key,
+                $by === 'answer' => $node['outcomes'][$key] ?? $node['options'][$key] ?? $key,
                 $by === 'prodotto' => config('finanziamento.flows.richiesta.nodes.prodotto.options')[$key] ?? $key,
                 default => $key,
             };

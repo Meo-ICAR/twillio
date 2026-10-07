@@ -171,4 +171,19 @@ class FilamentAdminTest extends TestCase
 
         $this->get('/admin/companies/create')->assertForbidden();
     }
+
+    public function test_la_scheda_pratica_evidenzia_i_dati_difformi_per_il_mediatore(): void
+    {
+        $loan = $this->loan();
+        $loan->update(['personal' => [
+            'nome' => 'Mario', 'cognome' => 'Bianchi',
+            '_difformita' => ['Il cognome «Bianchi» darebbe «BNC», ma il codice fiscale contiene «RSS»'],
+        ]]);
+        $this->login();
+
+        $this->get("/admin/loan-requests/{$loan->id}")->assertOk()
+            ->assertSee('Dati difformi da verificare')
+            ->assertSee('darebbe')
+            ->assertSee('Bianchi');
+    }
 }

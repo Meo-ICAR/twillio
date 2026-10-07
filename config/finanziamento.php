@@ -119,17 +119,27 @@ return [
         // Fase 2: dati personali solo dopo l'informativa firmata.
         'perfezionamento' => [
             'start' => 'codice',
-            'restart' => 'nome',
+            'restart' => 'codice_fiscale',
+            'labels' => ['data_nascita' => 'Data di nascita', 'sesso' => 'Sesso'],
             'nodes' => [
                 'codice' => ['type' => 'code', 'prompt' => 'Inserisci il codice della pratica (es. FIN-2026-0001):', 'save' => false, 'next' => 'conferma_pratica'],
                 'conferma_pratica' => $choice('Conferma', 'È la pratica giusta?', $yn, ['si' => 'informativa', 'no' => 'codice'], ['save' => false, 'prompt_summary' => true]),
-                'informativa' => $file('informativa', 'Per procedere invia l\'informativa privacy firmata dal cliente (foto o PDF).', 'nome', ['skip_if' => 'privacy_received']),
+                'informativa' => $file('informativa', 'Per procedere invia l\'informativa privacy firmata dal cliente (foto o PDF).', 'codice_fiscale', ['skip_if' => 'privacy_received']),
 
-                'nome' => $text('Nome', 'Nome del cliente:', ['required', 'string', 'max:60'], 'cognome'),
-                'cognome' => $text('Cognome', 'Cognome del cliente:', ['required', 'string', 'max:60'], 'codice_fiscale'),
-                'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale:', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'data_nascita', ['upper' => true, 'strip_spaces' => true, 'error' => 'Codice fiscale non valido (16 caratteri), riprova.']),
-                'data_nascita' => $text('Data di nascita', 'Data di nascita (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'luogo_nascita', ['min_age' => 18, 'error' => 'Data non valida: usa il formato gg/mm/aaaa.', 'age_error' => 'Il cliente deve essere maggiorenne: controlla la data di nascita.']),
-                'luogo_nascita' => $text('Luogo di nascita', 'Luogo di nascita:', ['required', 'string', 'max:80'], 'residenza'),
+                // Dal codice fiscale si ricavano data, sesso e luogo di nascita; poi si verifica che cognome e nome siano coerenti.
+                'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale del cliente (da qui ricavo data e luogo di nascita):', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'cognome', [
+                    'upper' => true, 'strip_spaces' => true, 'derive' => 'codice_fiscale', 'derives' => ['data_nascita', 'sesso', 'luogo_nascita'], 'min_age' => 18,
+                    'error' => 'Codice fiscale non valido (16 caratteri), riprova.',
+                    'age_error' => 'Dal codice fiscale il cliente risulta minorenne: controlla il codice.',
+                ]),
+                'cognome' => $text('Cognome', 'Cognome del cliente:', ['required', 'string', 'max:60'], 'nome', ['show_derived' => true, 'skip_if' => 'filled:cognome']),
+                'nome' => $text('Nome', 'Nome del cliente:', ['required', 'string', 'max:60'], 'verifica_cf', ['skip_if' => 'filled:nome']),
+                'verifica_cf' => [
+                    'type' => 'check', 'check' => 'cf_names', 'prompt' => 'Cognome e nome coerenti con il codice fiscale?', 'save' => false,
+                    'next' => ['ok' => 'luogo_nascita', 'mismatch' => 'conferma_cf'], 'outcomes' => ['ok' => 'Coerenti', 'mismatch' => 'Non coerenti'],
+                ],
+                'conferma_cf' => $choice('Conferma codice fiscale', 'Confermi il codice fiscale inserito?', ['cf_ok' => 'Confermo il codice', 'cf_no' => 'Lo reinserisco'], ['cf_ok' => 'luogo_nascita', 'cf_no' => 'codice_fiscale'], ['save' => false, 'show_difformita' => true]),
+                'luogo_nascita' => $text('Luogo di nascita', 'Luogo di nascita (non ricavabile dal codice fiscale):', ['required', 'string', 'max:80'], 'residenza', ['skip_if' => 'filled:luogo_nascita']),
                 'residenza' => $text('Residenza', 'Indirizzo di residenza (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'stato_civile'),
                 'stato_civile' => $choice('Stato civile', 'Stato civile:', ['celibe' => 'Celibe/Nubile', 'coniugato' => 'Coniugato/a', 'separato' => 'Separato/a', 'vedovo' => 'Vedovo/a'], 'documento_tipo'),
                 'documento_tipo' => $choice('Documento', 'Tipo di documento d\'identità:', ['ci' => 'Carta d\'identità', 'patente' => 'Patente', 'passaporto' => 'Passaporto'], 'documento_numero'),
@@ -148,7 +158,9 @@ return [
                 'doc_cf' => $file('codice_fiscale', 'Invia il codice fiscale del cliente (foto o PDF).', 'doc_reddito'),
                 'doc_reddito' => $file('reddito', 'Invia il documento di reddito (busta paga, CUD, cedolino pensione, dichiarazione o bilancio).', 'riepilogo_p', ['optional' => true]),
 
-                'riepilogo_p' => $summary(['docs' => [
+                'riepilogo_p' => $summary(['prompt' => 'Invio la pratica in istruttoria al mediatore creditizio?', 'show_difformita' => true, 'options' => [
+                    'conferma' => 'Invia in istruttoria', 'modifica' => 'Ricomincia', 'annulla' => 'Annulla',
+                ], 'docs' => [
                     'documento_identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito',
                 ]]),
             ],

@@ -75,7 +75,7 @@
         <p>Il servizio ha due fasi.</p>
         <ul>
             <li><strong>Richiesta:</strong> dati di profilo <em>non identificativi</em>, indicati a fasce (prodotto richiesto, importo, durata, situazione lavorativa, reddito, impegni in corso). In questa fase non vengono raccolti nome, codice fiscale, recapiti o dati dell'azienda.</li>
-            <li><strong>Perfezionamento:</strong> solo dopo la ricezione di questa informativa firmata, vengono raccolti dati anagrafici (nome, cognome, data e luogo di nascita, residenza, stato civile), codice fiscale, estremi del documento d'identità, telefono, email, IBAN, dati del rapporto di lavoro o dell'attività e, per le aziende, ragione sociale e partita IVA. Vengono inoltre acquisite copie dei documenti (identità, codice fiscale, reddito).</li>
+            <li><strong>Perfezionamento:</strong> solo dopo la ricezione di questa informativa firmata, vengono raccolti dati anagrafici (nome, cognome, residenza, stato civile), codice fiscale (da cui si ricavano data e luogo di nascita e sesso), estremi del documento d'identità, telefono, email, IBAN, dati del rapporto di lavoro o dell'attività e, per le aziende, ragione sociale e partita IVA. Vengono inoltre acquisite copie dei documenti (identità, codice fiscale, reddito).</li>
         </ul>
 
         <h2>4. Finalità e base giuridica</h2>

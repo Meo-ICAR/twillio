@@ -129,7 +129,7 @@
         <h2>Cosa ottieni</h2>
         <div class="grid three">
             <div class="card"><h3>Domande giuste, sempre</h3><p>Un percorso diverso per ogni prodotto, con salti automatici in base alle risposte. Gli agenti non dimenticano più niente.</p></div>
-            <div class="card"><h3>Dati controllati all'ingresso</h3><p>Codice fiscale, date, telefono, email e IBAN vengono verificati subito. Il cliente deve essere maggiorenne e l'IBAN deve avere un checksum valido.</p></div>
+            <div class="card"><h3>Dati controllati all'ingresso</h3><p>Dal codice fiscale il bot ricava data e luogo di nascita e controlla che cognome e nome siano coerenti: se non lo sono, chiede conferma e segnala la difformità al mediatore. Il cliente deve essere maggiorenne e l'IBAN deve avere un checksum valido.</p></div>
             <div class="card"><h3>Pannello per il backoffice</h3><p>Elenco delle pratiche con filtri, scheda con risposte leggibili, allegati scaricabili e stato aggiornabile. Le conversazioni in corso si consultano senza vedere dati personali.</p></div>
             <div class="card"><h3>Comandi semplici</h3><p>In ogni momento l'agente può scrivere «indietro», «menu» o «annulla». Se riprende dopo più di un giorno, il bot gli chiede se continuare.</p></div>
             <div class="card"><h3>Stato delle pratiche</h3><p>Con «Stato Pratiche» ogni agente rivede le proprie ultime pratiche e a che punto sono. Nessuno vede quelle degli altri.</p></div>

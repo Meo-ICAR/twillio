@@ -53,8 +53,12 @@ class LoanRequest extends Model
     {
         $readable = [];
         foreach ($values ?? [] as $key => $value) {
+            if (str_starts_with((string) $key, '_') || ! is_scalar($value)) {
+                continue;
+            }
             $node = config("finanziamento.flows.{$flow}.nodes.{$key}") ?? [];
-            $readable[$node['label'] ?? $key] = (string) ($node['options'][$value] ?? $value);
+            $label = config("finanziamento.flows.{$flow}.labels.{$key}") ?? $node['label'] ?? $key;
+            $readable[$label] = (string) ($node['options'][$value] ?? $value);
         }
 
         return $readable;

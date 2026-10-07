@@ -2,11 +2,12 @@ flowchart TD
     codice[["Inserisci il codice della pratica (es. FIN-2026-0001):"]]
     conferma_pratica["È la pratica giusta?"]
     informativa[["Per procedere invia l#39;informativa privacy firmata dal cliente (foto…"]]
-    nome[/"Nome del cliente:"/]
+    codice_fiscale[/"Codice fiscale del cliente (da qui ricavo data e luogo di nascita):"/]
     cognome[/"Cognome del cliente:"/]
-    codice_fiscale[/"Codice fiscale:"/]
-    data_nascita[/"Data di nascita (gg/mm/aaaa):"/]
-    luogo_nascita[/"Luogo di nascita:"/]
+    nome[/"Nome del cliente:"/]
+    verifica_cf{"Cognome e nome coerenti con il codice fiscale?"}
+    conferma_cf["Confermi il codice fiscale inserito?"]
+    luogo_nascita[/"Luogo di nascita (non ricavabile dal codice fiscale):"/]
     residenza[/"Indirizzo di residenza (via, numero, CAP, città):"/]
     stato_civile["Stato civile:"]
     documento_tipo["Tipo di documento d#39;identità:"]
@@ -26,11 +27,14 @@ flowchart TD
     codice --> conferma_pratica
     conferma_pratica -->|"Sì"| informativa
     conferma_pratica -->|"No"| codice
-    informativa --> nome
-    nome --> cognome
-    cognome --> codice_fiscale
-    codice_fiscale --> data_nascita
-    data_nascita --> luogo_nascita
+    informativa --> codice_fiscale
+    codice_fiscale --> cognome
+    cognome --> nome
+    nome --> verifica_cf
+    verifica_cf -->|"Coerenti"| luogo_nascita
+    verifica_cf -->|"Non coerenti"| conferma_cf
+    conferma_cf -->|"Confermo il codice"| luogo_nascita
+    conferma_cf -->|"Lo reinserisco"| codice_fiscale
     luogo_nascita --> residenza
     residenza --> stato_civile
     stato_civile --> documento_tipo
@@ -53,8 +57,10 @@ flowchart TD
     classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
     classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
     classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
+    classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
     class codice code
-    class conferma_pratica,stato_civile,documento_tipo choice
+    class conferma_pratica,conferma_cf,stato_civile,documento_tipo choice
     class informativa,doc_identita,doc_cf,doc_reddito file
-    class nome,cognome,codice_fiscale,data_nascita,luogo_nascita,residenza,documento_numero,documento_scadenza,telefono,email,iban,datore_lavoro,data_assunzione,ragione_sociale,partita_iva text
+    class codice_fiscale,cognome,nome,luogo_nascita,residenza,documento_numero,documento_scadenza,telefono,email,iban,datore_lavoro,data_assunzione,ragione_sociale,partita_iva text
+    class verifica_cf check
     class riepilogo_p summary

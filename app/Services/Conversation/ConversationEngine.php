@@ -104,7 +104,9 @@ class ConversationEngine
             return [Reply::text('Questo tipo di messaggio non è supportato: rispondi con un testo, una scelta o un file.'), ...$this->prompt($conv)];
         }
 
-        [$value, $error] = $this->read($conv, $def, $m);
+        $result = $this->read($conv, $def, $m);
+        [$value, $error] = $result;
+        $extra = $result[2] ?? [];
         if ($value === null) {
             return [Reply::text($error), ...$this->prompt($conv)];
         }
@@ -113,22 +115,23 @@ class ConversationEngine
         }
 
         $data = $conv->data ?? [];
+        foreach ($def['derives'] ?? [] as $key) {
+            unset($data[$key]);
+        }
         if ($def['save'] ?? true) {
             $data[$conv->node] = $value;
         }
+        $data = array_merge($data, $extra);
         $history = $conv->history ?? [];
         $history[] = $conv->node;
 
-        $conv->update([
-            'data' => $data,
-            'history' => $history,
-            'node' => $this->nextNode($def, $conv, $data, $value),
-        ]);
+        $next = $this->nextNode($def, $conv, $data, $value);
+        $conv->update(['data' => $data, 'history' => $history, 'node' => $next]);
 
         return $this->prompt($conv);
     }
 
-    /** @return array{0: ?string, 1: ?string} [valore, errore] */
+    /** @return array{0: ?string, 1: ?string, 2?: array<string,string>} [valore, errore, dati ricavati] */
     private function read(Conversation $conv, array $def, IncomingMessage $m): array
     {
         return match ($def['type']) {
@@ -169,8 +172,8 @@ class ConversationEngine
         if (($def['checksum'] ?? null) === 'iban' && ! Iban::isValid($value)) {
             return [null, $error];
         }
-        if (isset($def['min_age']) && Carbon::createFromFormat('!d/m/Y', $value)->gt(today()->subYears($def['min_age']))) {
-            return [null, $def['age_error'] ?? 'Il cliente non ha l\'età richiesta.'];
+        if (($def['derive'] ?? null) === 'codice_fiscale') {
+            return $this->deriveFromCodiceFiscale($def, $value, $error);
         }
 
         return [$value, null];
@@ -192,28 +195,92 @@ class ConversationEngine
         return ctype_digit($needle) && isset($keys[(int) $needle - 1]) ? (string) $keys[(int) $needle - 1] : null;
     }
 
-    private function nextNode(array $def, Conversation $conv, array $data, string $value): string
+    /** Nodo successivo: segue i salti, esegue i controlli automatici e salta le domande già note. */
+    private function nextNode(array $def, Conversation $conv, array &$data, string $value): string
+    {
+        $node = $this->target($def, $conv, $data, $value);
+
+        for ($i = 0; $i < 10; $i++) {
+            $next = $this->def($conv->flow, $node);
+
+            if ($next['type'] === 'check') {
+                $node = $this->target($next, $conv, $data, $this->runCheck($next, $data));
+            } elseif ($this->shouldSkip($next, $conv, $data)) {
+                $node = $this->target($next, $conv, $data, '');
+            } else {
+                return $node;
+            }
+        }
+
+        throw new \LogicException("Troppi salti automatici a partire da {$conv->flow}.{$conv->node}");
+    }
+
+    private function target(array $def, Conversation $conv, array $data, string $value): string
     {
         $next = $def['next'];
         if (is_string($next)) {
-            return $this->skip($conv, $next);
+            return $next;
         }
 
         $by = $def['next_by'] ?? 'answer';
         $source = $conv->flow === 'richiesta' ? $data : ($conv->loanRequest->answers ?? []);
         $key = $by === 'answer' ? $value : (string) ($source[$by] ?? '');
 
-        return $this->skip($conv, $next[$key] ?? $next['*'] ?? throw new \LogicException("Salto non definito per '{$key}'"));
+        return $next[$key] ?? $next['*'] ?? throw new \LogicException("Salto non definito per '{$key}'");
     }
 
-    private function skip(Conversation $conv, string $node): string
+    private function shouldSkip(array $def, Conversation $conv, array $data): bool
     {
-        $def = $this->def($conv->flow, $node);
-        if (($def['skip_if'] ?? null) === 'privacy_received' && $conv->loanRequest?->privacy_received_at) {
-            return $this->nextNode($def, $conv, [], '');
+        $condition = $def['skip_if'] ?? null;
+
+        return match (true) {
+            $condition === 'privacy_received' => (bool) $conv->loanRequest?->privacy_received_at,
+            is_string($condition) && str_starts_with($condition, 'filled:') => filled($data[substr($condition, 7)] ?? null),
+            default => false,
+        };
+    }
+
+    /** Controlli automatici fra una domanda e l'altra: restituiscono la chiave del salto da seguire. */
+    private function runCheck(array $def, array &$data): string
+    {
+        if ($def['check'] === 'cf_names') {
+            $mismatches = CodiceFiscale::mismatches($data['codice_fiscale'], $data['cognome'], $data['nome']);
+            if (! $mismatches) {
+                unset($data['_difformita']);
+
+                return 'ok';
+            }
+
+            $labels = ['cognome' => 'cognome', 'nome' => 'nome'];
+            $data['_difformita'] = array_map(fn (array $m) => sprintf(
+                'Il %s «%s» darebbe «%s», ma il codice fiscale contiene «%s»',
+                $labels[$m['field']], $data[$m['field']], $m['expected'], $m['found']
+            ), $mismatches);
+
+            return 'mismatch';
         }
 
-        return $node;
+        throw new \LogicException("Controllo sconosciuto: {$def['check']}");
+    }
+
+    /** @return array{0: ?string, 1: ?string, 2?: array<string,string>} */
+    private function deriveFromCodiceFiscale(array $def, string $value, string $error): array
+    {
+        $info = CodiceFiscale::parse($value);
+        if (! $info) {
+            return [null, $error];
+        }
+
+        $birth = Carbon::createFromFormat('!d/m/Y', $info['birth_date']);
+        if (isset($def['min_age']) && $birth->gt(today()->subYears($def['min_age']))) {
+            return [null, $def['age_error'] ?? 'Il cliente non ha l\'età richiesta.'];
+        }
+
+        return [$value, null, array_filter([
+            'data_nascita' => $info['birth_date'],
+            'sesso' => $info['sex'],
+            'luogo_nascita' => $info['place'],
+        ])];
     }
 
     private function back(Conversation $conv): array
@@ -226,6 +293,9 @@ class ConversationEngine
         $previous = array_pop($history);
         $data = $conv->data ?? [];
         unset($data[$previous]);
+        foreach ($this->def($conv->flow, $previous)['derives'] ?? [] as $key) {
+            unset($data[$key]);
+        }
         $conv->update(['node' => $previous, 'history' => $history, 'data' => $data]);
 
         return $this->prompt($conv);
@@ -267,7 +337,7 @@ class ConversationEngine
         $loan->update(['personal' => $conv->data ?? [], 'status' => 'perfezionata', 'perfected_at' => now()]);
         $this->close($conv, 'completata');
 
-        return [Reply::text("✅ Pratica *{$loan->code}* perfezionata.")];
+        return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
     }
 
     /** Chiude la conversazione e cancella i dati in corso (i dati definitivi stanno nella pratica). */
@@ -298,6 +368,14 @@ class ConversationEngine
     {
         $def = $this->def($conv->flow, $conv->node);
         $body = $def['prompt'];
+        $data = $conv->data ?? [];
+        if (($def['show_derived'] ?? false) && isset($data['data_nascita'])) {
+            $body = 'Dal codice fiscale risulta: nato/a il '.$data['data_nascita']
+                .(isset($data['luogo_nascita']) ? ' a '.$data['luogo_nascita'] : '')."\n\n".$body;
+        }
+        if (($def['show_difformita'] ?? false) && $def['type'] === 'choice' && ! empty($data['_difformita'])) {
+            $body = "⚠️ I dati non coincidono con il codice fiscale:\n• ".implode("\n• ", $data['_difformita'])."\n\n".$body;
+        }
         if ($def['prompt_summary'] ?? false) {
             $body = $this->describe($conv->loanRequest->answers, 'richiesta')."\n\n".$body;
         }
@@ -322,21 +400,19 @@ class ConversationEngine
             }
         }
 
+        if (($def['show_difformita'] ?? false) && ! empty($conv->data['_difformita'])) {
+            $text .= "\n\n⚠️ *Dati difformi da verificare*\n• ".implode("\n• ", $conv->data['_difformita'])
+                ."\nSaranno segnalati al mediatore creditizio.";
+        }
+
         return rtrim($text);
     }
 
     private function describe(array $answers, string $flow): string
     {
-        $lines = [];
-        foreach ($answers as $key => $value) {
-            if (str_starts_with((string) $key, '_')) {
-                continue;
-            }
-            $node = config("finanziamento.flows.{$flow}.nodes.{$key}") ?? [];
-            $lines[] = '• '.($node['label'] ?? $key).': '.($node['options'][$value] ?? $value);
-        }
-
-        return implode("\n", $lines);
+        return collect(LoanRequest::describe($answers, $flow))
+            ->map(fn (string $value, string $label) => "• {$label}: {$value}")
+            ->implode("\n");
     }
 
     private function def(string $flow, string $node): array

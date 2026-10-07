@@ -42,4 +42,17 @@ class ModelsTest extends TestCase
         $this->assertStringNotContainsString('Rossi', DB::table('conversations')->value('data'));
         $this->assertTrue($conv->loanRequest->is($loan));
     }
+
+    public function test_describe_usa_le_etichette_del_percorso_e_ignora_le_chiavi_interne(): void
+    {
+        $readable = LoanRequest::describe([
+            'codice_fiscale' => 'RSSMRA80A01H501U', 'data_nascita' => '01/01/1980', 'sesso' => 'M',
+            '_difformita' => ['x'], 'stato_civile' => 'celibe',
+        ], 'perfezionamento');
+
+        $this->assertSame(
+            ['Codice fiscale' => 'RSSMRA80A01H501U', 'Data di nascita' => '01/01/1980', 'Sesso' => 'M', 'Stato civile' => 'Celibe/Nubile'],
+            $readable
+        );
+    }
 }

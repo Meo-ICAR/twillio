@@ -28,6 +28,13 @@ class LoanRequestInfolist
                 KeyValueEntry::make('answers')->hiddenLabel()->keyLabel('Domanda')->valueLabel('Risposta')
                     ->state(fn (LoanRequest $record) => LoanRequest::describe($record->answers, 'richiesta')),
             ]),
+            Section::make('Dati difformi da verificare')
+                ->description('Segnalati dal bot e confermati dall\'agente: da controllare in istruttoria.')
+                ->visible(fn (LoanRequest $record) => filled($record->personal['_difformita'] ?? null))
+                ->schema([
+                    TextEntry::make('difformita')->hiddenLabel()->bulleted()->listWithLineBreaks()
+                        ->state(fn (LoanRequest $record) => $record->personal['_difformita'] ?? []),
+                ]),
             Section::make('Dati personali')
                 ->visible(fn (LoanRequest $record) => filled($record->personal))
                 ->schema([
