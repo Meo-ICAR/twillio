@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\Attachments\Pages\ListAttachments;
+use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
 use App\Models\Attachment;
+use App\Models\Company;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Models\User;
@@ -139,5 +141,34 @@ class FilamentAdminTest extends TestCase
 
         $this->get('/admin/users')->assertOk();
         $this->get('/admin/users/create')->assertOk();
+    }
+
+    public function test_l_azienda_titolare_si_modifica_dal_pannello_e_compare_nell_informativa(): void
+    {
+        $company = Company::create(['name' => 'Vecchia Spa']);
+        $this->login();
+
+        $this->get('/admin/companies')->assertOk()->assertSee('Vecchia Spa');
+
+        Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
+            ->fillForm([
+                'name' => 'Nuova Spa', 'address' => 'Via Verdi 2, Torino', 'email' => 'privacy@nuova.example',
+                'dpo_email' => null, 'retention_perfected' => 'Dieci anni.',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->get('/privacy')->assertOk()->assertSee('Nuova Spa')->assertSee('Via Verdi 2, Torino')->assertSee('Dieci anni.');
+    }
+
+    public function test_si_crea_una_sola_azienda_e_non_si_elimina(): void
+    {
+        $this->login();
+
+        $this->get('/admin/companies/create')->assertOk();
+
+        Company::create(['name' => 'Unica Spa']);
+
+        $this->get('/admin/companies/create')->assertForbidden();
     }
 }

@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Filament\Resources\Companies\Schemas;
+
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
+
+class CompanyForm
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema->components([
+            Section::make('Titolare del trattamento')
+                ->description('Questi dati compaiono nell\'informativa privacy pubblica (/privacy).')
+                ->columns(2)
+                ->schema([
+                    TextInput::make('name')->label('Ragione sociale')->required()->maxLength(255)->columnSpanFull(),
+                    TextInput::make('address')->label('Sede')->maxLength(255)->columnSpanFull(),
+                    TextInput::make('email')->label('Email per la privacy')->email()->maxLength(255),
+                    TextInput::make('dpo_email')->label('Email del DPO (se nominato)')->email()->maxLength(255),
+                    Textarea::make('retention_perfected')
+                        ->label('Conservazione delle pratiche perfezionate')
+                        ->helperText('Per quanto tempo e perché vengono conservati i dati delle pratiche perfezionate.')
+                        ->rows(4)
+                        ->columnSpanFull(),
+                ]),
+        ]);
+    }
+}

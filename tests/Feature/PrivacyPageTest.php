@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\Company;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class PrivacyPageTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_la_pagina_esiste_e_nomina_i_ruoli(): void
     {
         $this->get('/privacy')->assertOk()
@@ -18,27 +22,37 @@ class PrivacyPageTest extends TestCase
             ->assertSee('30 giorni');
     }
 
-    public function test_i_dati_del_titolare_vengono_dalla_configurazione(): void
+    public function test_i_dati_del_titolare_vengono_dalla_tabella_companies(): void
     {
-        config([
-            'privacy.titolare.nome' => 'Credito Facile Spa',
-            'privacy.titolare.sede' => 'Via Roma 1, 20100 Milano',
-            'privacy.titolare.email' => 'privacy@creditofacile.example',
-            'privacy.retention_perfected' => 'Per 10 anni dalla chiusura, come previsto dalla legge.',
+        Company::create([
+            'name' => 'Credito Facile Spa',
+            'address' => 'Via Roma 1, 20100 Milano',
+            'email' => 'privacy@creditofacile.example',
+            'dpo_email' => 'dpo@creditofacile.example',
+            'retention_perfected' => 'Per 10 anni dalla chiusura, come previsto dalla legge.',
         ]);
 
         $this->get('/privacy')->assertOk()
             ->assertSee('Credito Facile Spa')
             ->assertSee('Via Roma 1, 20100 Milano')
             ->assertSee('privacy@creditofacile.example')
+            ->assertSee('dpo@creditofacile.example')
+            ->assertSee('Per 10 anni dalla chiusura')
             ->assertDontSee('da completare');
     }
 
-    public function test_senza_configurazione_i_segnaposto_sono_visibili(): void
+    public function test_senza_azienda_i_segnaposto_sono_visibili(): void
     {
-        config(['privacy.titolare.nome' => null, 'privacy.titolare.sede' => null, 'privacy.titolare.email' => null]);
-
         $this->get('/privacy')->assertOk()->assertSee('da completare');
+    }
+
+    public function test_i_campi_vuoti_dell_azienda_restano_segnaposto(): void
+    {
+        Company::create(['name' => 'Credito Facile Spa']);
+
+        $html = $this->get('/privacy')->assertOk()->assertSee('Credito Facile Spa')->getContent();
+
+        $this->assertStringContainsString('da completare', $html);
     }
 
     public function test_i_giorni_di_conservazione_seguono_la_configurazione(): void

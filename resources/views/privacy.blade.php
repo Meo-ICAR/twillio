@@ -1,6 +1,5 @@
 @php
     $ph = fn ($value) => filled($value) ? $value : '[da completare]';
-    $titolare = config('privacy.titolare');
     $responsabile = config('privacy.responsabile.nome');
     $giorni = (int) config('privacy.retention_days');
 @endphp
@@ -60,11 +59,11 @@
 
         <h2>1. Titolare del trattamento</h2>
         <div class="box">
-            <p><strong>Titolare del trattamento:</strong> {{ $ph($titolare['nome']) }}</p>
-            <p><strong>Sede:</strong> {{ $ph($titolare['sede']) }}</p>
-            <p><strong>Contatto per la privacy:</strong> {{ $ph($titolare['email']) }}</p>
-            @if (filled($titolare['dpo']))
-                <p><strong>Responsabile della protezione dei dati (DPO):</strong> {{ $titolare['dpo'] }}</p>
+            <p><strong>Titolare del trattamento:</strong> {{ $ph($company?->name) }}</p>
+            <p><strong>Sede:</strong> {{ $ph($company?->address) }}</p>
+            <p><strong>Contatto per la privacy:</strong> {{ $ph($company?->email) }}</p>
+            @if (filled($company?->dpo_email))
+                <p><strong>Responsabile della protezione dei dati (DPO):</strong> {{ $company->dpo_email }}</p>
             @endif
         </div>
         <p>Il Titolare è l'azienda per cui l'agente opera: decide perché e come i dati vengono trattati.</p>
@@ -103,7 +102,7 @@
         <h2>8. Conservazione</h2>
         <ul>
             <li><strong>Pratica non perfezionata:</strong> i dati e i documenti sono cancellati automaticamente dopo <strong>{{ $giorni }} giorni</strong> dalla richiesta.</li>
-            <li><strong>Pratica perfezionata:</strong> {{ $ph(config('privacy.retention_perfected')) }}</li>
+            <li><strong>Pratica perfezionata:</strong> {{ $ph($company?->retention_perfected) }}</li>
         </ul>
 
         <h2>9. Diritti dell'interessato</h2>

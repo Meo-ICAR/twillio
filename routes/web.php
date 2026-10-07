@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\WhatsAppController;
+use App\Models\Company;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
@@ -11,7 +12,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::view('/privacy', 'privacy');
+Route::get('/privacy', fn () => view('privacy', ['company' => Company::current()]));
 
 Route::get('/test-whatsapp', function () {
     $phoneNumberId = config('services.whatsapp.phone_number_id');
