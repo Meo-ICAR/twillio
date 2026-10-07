@@ -30,15 +30,16 @@ class FlowResource extends Resource
 
     protected static ?int $navigationSort = 6;
 
-    /** I percorsi nascono dall'importazione (php artisan flows:import): dal pannello si modificano, non si creano né si eliminano. */
+    /** I percorsi nascono dall'importazione (php artisan flows:import); la copia di prova si crea da «Crea copia di prova». */
     public static function canCreate(): bool
     {
         return false;
     }
 
+    /** Si elimina solo una copia di prova: la produzione no. */
     public static function canDelete($record): bool
     {
-        return false;
+        return (bool) $record->is_test;
     }
 
     public static function form(Schema $schema): Schema

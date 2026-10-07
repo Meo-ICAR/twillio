@@ -118,11 +118,13 @@
     classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
     classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
     classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
+    classDef message fill:#e6f3f7,stroke:#2c7a8c,color:#0c2a33
     class prodotto,importo,durata,lavoro,contratto,anzianita,reddito,dimensione_azienda,ente_pensione,pensione_netta,anni_attivita,reddito_autonomo,impegni,rata,crif,quote_cedute,bene,prezzo_bene,anticipo,mutuo_scopo,mutuo_valore,mutuo_ltv,durata_mutuo,mutuo_reddito,mutuo_intestatari,mutuo_tasso,leasing_bene,leasing_valore,leasing_anticipo,leasing_riscatto,az_forma,az_anzianita,az_fatturato,az_importo,az_finalita,az_garanzie choice
     class riepilogo summary
-</pre></div></section><section data-zoom="1"><h2>Perfeziona Finanziamento (fase 2, dopo l&#039;informativa)</h2><p class="meta">25 domande</p><div class="tools"><button type="button" data-zoom-out>−</button><button type="button" data-zoom-in>+</button><button type="button" data-zoom-reset>100%</button><span class="level"></span></div><div class="scroll"><pre class="mermaid">flowchart TD
+</pre></div></section><section data-zoom="1"><h2>Perfeziona Finanziamento (fase 2, dopo l&#039;informativa)</h2><p class="meta">26 domande</p><div class="tools"><button type="button" data-zoom-out>−</button><button type="button" data-zoom-in>+</button><button type="button" data-zoom-reset>100%</button><span class="level"></span></div><div class="scroll"><pre class="mermaid">flowchart TD
     codice[[&quot;Inserisci il codice della pratica (es. FIN-2026-0001):&quot;]]
     conferma_pratica[&quot;È la pratica giusta?&quot;]
+    riepilogo_documenti[(&quot;📄 *Documenti per perfezionare la pratica {codice}* ({prodotto})  {d…&quot;)]
     informativa[[&quot;Per procedere invia l#39;informativa privacy firmata dal cliente (foto…&quot;]]
     codice_fiscale[/&quot;Codice fiscale del cliente (da qui ricavo data e luogo di nascita):&quot;/]
     cognome[/&quot;Cognome del cliente:&quot;/]
@@ -148,7 +150,8 @@
     riepilogo_p([&quot;Riepilogo e conferma&quot;])
     codice --&gt; conferma_pratica
     conferma_pratica --&gt;|&quot;No&quot;| codice
-    conferma_pratica --&gt;|&quot;Sì&quot;| informativa
+    conferma_pratica --&gt;|&quot;Sì&quot;| riepilogo_documenti
+    riepilogo_documenti --&gt; informativa
     informativa --&gt; codice_fiscale
     codice_fiscale --&gt; cognome
     cognome --&gt; nome
@@ -180,8 +183,10 @@
     classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
     classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
     classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
+    classDef message fill:#e6f3f7,stroke:#2c7a8c,color:#0c2a33
     class codice code
     class conferma_pratica,conferma_cf,stato_civile,documento_tipo choice
+    class riepilogo_documenti message
     class informativa,doc_identita,doc_cf,doc_reddito file
     class codice_fiscale,cognome,nome,luogo_nascita,residenza,documento_numero,documento_scadenza,telefono,email,iban,datore_lavoro,data_assunzione,ragione_sociale,partita_iva text
     class verifica_cf check
@@ -203,6 +208,7 @@
     classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
     classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
     classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
+    classDef message fill:#e6f3f7,stroke:#2c7a8c,color:#0c2a33
     class pratica,dettaglio,tipo choice
     class upload file
 </pre></div></section>

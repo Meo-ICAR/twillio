@@ -90,6 +90,8 @@ class FlowValidator
         foreach (['start' => 'La domanda iniziale', 'restart' => 'La domanda di ripartenza'] as $field => $label) {
             if (! $nodes->has($flow->{$field})) {
                 $errors[] = "{$label} «{$flow->{$field}}» non esiste.";
+            } elseif (in_array($nodes[$flow->{$field}]->type, ['message', 'check'], true)) {
+                $errors[] = "{$label} «{$flow->{$field}}» è un messaggio o un controllo automatico: deve essere una domanda.";
             }
         }
 

@@ -19,7 +19,7 @@ class Flow extends Model
 
     protected function casts(): array
     {
-        return ['labels' => 'array', 'is_active' => 'boolean'];
+        return ['labels' => 'array', 'is_active' => 'boolean', 'is_test' => 'boolean'];
     }
 
     public function nodes(): HasMany

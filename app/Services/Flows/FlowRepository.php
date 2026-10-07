@@ -10,16 +10,33 @@ use Illuminate\Support\Facades\Schema;
  * L'albero delle conversazioni, nella stessa forma di config/finanziamento.php.
  * Si legge dalle tabelle; se non c'è ancora nessun percorso nel database si usa la configurazione.
  * Il risultato resta in memoria per la durata della richiesta.
+ *
+ * Ogni percorso può avere una copia di prova (is_test). In modalità prova (setTest) si usa la copia
+ * quando c'è, altrimenti la produzione. La modalità la imposta il motore per chi è associato a un utente.
  */
 class FlowRepository
 {
-    /** @var array<string,array<string,mixed>>|null */
-    private ?array $flows = null;
+    /** @var array<int,array<string,array<string,mixed>>> memoria per variante: 0 = produzione, 1 = prova */
+    private array $memo = [];
 
-    /** @return array<string,array<string,mixed>> */
+    private bool $test = false;
+
+    public function setTest(bool $test): void
+    {
+        $this->test = $test;
+    }
+
+    public function isTest(): bool
+    {
+        return $this->test;
+    }
+
+    /** Tutti i percorsi nella modalità corrente; in prova, le copie sostituiscono i percorsi di produzione. */
     public function all(): array
     {
-        return $this->flows ??= $this->load();
+        $production = $this->variant(false);
+
+        return $this->test ? array_replace($production, $this->variant(true)) : $production;
     }
 
     /** @return array<string,mixed>|null */
@@ -34,21 +51,37 @@ class FlowRepository
         return $this->flow($flow)['nodes'][$node] ?? null;
     }
 
+    /** Codici dei percorsi che hanno una copia di prova attiva. @return list<string> */
+    public function testFlowCodes(): array
+    {
+        return array_keys($this->variant(true));
+    }
+
     public function forget(): void
     {
-        $this->flows = null;
+        $this->memo = [];
     }
 
     /** @return array<string,array<string,mixed>> */
-    private function load(): array
+    private function variant(bool $test): array
+    {
+        return $this->memo[(int) $test] ??= $this->load($test);
+    }
+
+    /** @return array<string,array<string,mixed>> */
+    private function load(bool $test): array
     {
         // Prima della migrazione, o se non è stato importato nulla, vale la configurazione.
-        if (! Schema::hasTable('flows') || Flow::query()->doesntExist()) {
+        if (! Schema::hasTable('flows') || ! Schema::hasColumn('flows', 'is_test')) {
+            return $test ? [] : config('finanziamento.flows');
+        }
+        if (! $test && Flow::where('is_test', false)->doesntExist()) {
             return config('finanziamento.flows');
         }
 
         $result = [];
-        $flows = Flow::query()->where('is_active', true)->with(['nodes.options', 'nodes.jumps'])->orderBy('id')->get();
+        $flows = Flow::where('is_test', $test)->where('is_active', true)
+            ->with(['nodes.options', 'nodes.jumps'])->orderBy('id')->get();
 
         foreach ($flows as $flow) {
             $def = ['start' => $flow->start, 'restart' => $flow->restart];

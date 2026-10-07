@@ -31,7 +31,7 @@ class NodesRelationManager extends RelationManager
 
     protected static ?string $title = 'Domande';
 
-    private const TYPES = ['choice' => 'Scelta', 'text' => 'Testo libero', 'file' => 'File', 'code' => 'Codice pratica', 'summary' => 'Riepilogo', 'check' => 'Controllo automatico'];
+    private const TYPES = ['choice' => 'Scelta', 'text' => 'Testo libero', 'file' => 'File', 'code' => 'Codice pratica', 'summary' => 'Riepilogo', 'check' => 'Controllo automatico', 'message' => 'Messaggio'];
 
     public function isReadOnly(): bool
     {

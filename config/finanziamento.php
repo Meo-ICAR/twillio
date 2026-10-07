@@ -46,6 +46,14 @@ return [
             'menu_perfeziona' => 'Perfeziona Finanziamento',
             'menu_stato' => 'Stato Pratiche',
         ],
+
+        // Voci di prova: le vede solo chi ha il numero associato a un utente del pannello, e solo se il percorso
+        // ha una copia di prova. percorso => [id della voce, titolo (max 24 caratteri)].
+        'test' => [
+            'richiesta' => ['test_richiedi', 'Prova: Richiedi'],
+            'perfezionamento' => ['test_perfeziona', 'Prova: Perfeziona'],
+            'documenti' => ['test_stato', 'Prova: Stato Pratiche'],
+        ],
     ],
 
     'flows' => [
@@ -134,7 +142,13 @@ return [
             'labels' => ['data_nascita' => 'Data di nascita', 'sesso' => 'Sesso'],
             'nodes' => [
                 'codice' => ['type' => 'code', 'prompt' => 'Inserisci il codice della pratica (es. FIN-2026-0001):', 'save' => false, 'next' => 'conferma_pratica'],
-                'conferma_pratica' => $choice('Conferma', 'È la pratica giusta?', $yn, ['si' => 'informativa', 'no' => 'codice'], ['save' => false, 'prompt_summary' => true]),
+                'conferma_pratica' => $choice('Conferma', 'È la pratica giusta?', $yn, ['si' => 'riepilogo_documenti', 'no' => 'codice'], ['save' => false, 'prompt_summary' => true]),
+                // Messaggio senza risposta: riassume i documenti del finanziamento e dà il link all'informativa da far firmare.
+                // Segnaposto: {codice}, {prodotto}, {documenti} (dal catalogo del prodotto), {informativa_url}.
+                'riepilogo_documenti' => [
+                    'type' => 'message', 'save' => false, 'next' => 'informativa',
+                    'prompt' => "📄 *Documenti per perfezionare la pratica {codice}* ({prodotto})\n\n{documenti}\n\n🔒 *Informativa privacy*\nPrima dei dati personali serve l'informativa firmata dal cliente. Scaricala da questo link, stampala e falla firmare:\n{informativa_url}",
+                ],
                 'informativa' => $file('informativa', 'Per procedere invia l\'informativa privacy firmata dal cliente (foto o PDF).', 'codice_fiscale', ['skip_if' => 'privacy_received']),
 
                 // Dal codice fiscale si ricavano data, sesso e luogo di nascita; poi si verifica che cognome e nome siano coerenti.

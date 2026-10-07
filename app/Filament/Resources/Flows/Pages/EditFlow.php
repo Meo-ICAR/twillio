@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Flows\Pages;
 
 use App\Filament\Resources\Flows\FlowResource;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditFlow extends EditRecord
@@ -11,6 +12,6 @@ class EditFlow extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [DeleteAction::make()->visible(fn () => $this->record->is_test)];
     }
 }

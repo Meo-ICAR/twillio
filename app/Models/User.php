@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\Phone;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -12,12 +13,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'whatsapp_number'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    /** Il numero WhatsApp è associato a un utente del pannello: può provare le versioni di prova dei percorsi. */
+    public static function hasTesterNumber(string $waNumber): bool
+    {
+        return static::whereNotNull('whatsapp_number')->pluck('whatsapp_number')
+            ->contains(fn (string $number) => Phone::same($number, $waNumber));
+    }
 
     /** Gli utenti si creano solo da un amministratore (nessuna registrazione pubblica). */
     public function canAccessPanel(Panel $panel): bool

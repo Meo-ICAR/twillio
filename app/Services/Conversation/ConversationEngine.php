@@ -6,6 +6,7 @@ use App\Jobs\AnalyzeAttachment;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
+use App\Models\User;
 use App\Services\Checks\CheckContext;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Documents\DocumentReader;
@@ -25,6 +26,9 @@ class ConversationEngine
 
     /** @var string[] file salvati in questa richiesta, da eliminare se l'invio fallisce */
     private array $storedPaths = [];
+
+    /** @var Reply[] messaggi senza risposta incontrati nel percorso, da mostrare prima della prossima domanda */
+    private array $notices = [];
 
     public function __construct(
         private SensitiveDataGuard $guard,
@@ -46,12 +50,27 @@ class ConversationEngine
     {
         $conv = Conversation::with('loanRequest')
             ->where('wa_number', $m->from)->where('status', 'attiva')->latest('id')->first();
+
+        // Una conversazione di prova prosegue sempre sulla copia di prova del percorso; le altre sulla produzione.
+        $this->flows->setTest((bool) $conv?->is_test);
+        $this->notices = [];
+
+        try {
+            return $this->dispatch($m, $conv);
+        } finally {
+            $this->flows->setTest(false);
+        }
+    }
+
+    /** @return Reply[] */
+    private function dispatch(IncomingMessage $m, ?Conversation $conv): array
+    {
         $command = $m->type === 'text' ? $this->normalize($m->text) : null;
 
         if (in_array($command, ['annulla', 'menu'], true)) {
             $conv && $this->close($conv, 'annullata');
 
-            return $command === 'annulla' ? [Reply::text('Operazione annullata.'), $this->menu()] : [$this->menu()];
+            return $command === 'annulla' ? [Reply::text('Operazione annullata.'), $this->menu($m->from)] : [$this->menu($m->from)];
         }
         if (! $conv) {
             return $this->fromMenu($m);
@@ -59,7 +78,7 @@ class ConversationEngine
         if (! $this->flows->node($conv->flow, $conv->node)) {
             $this->close($conv, 'annullata');
 
-            return [Reply::text('La conversazione non è più valida: ricominciamo dal menu.'), $this->menu()];
+            return [Reply::text('La conversazione non è più valida: ricominciamo dal menu.'), $this->menu($m->from)];
         }
         if ($this->isStale($conv)) {
             return $this->resume($conv, $m);
@@ -71,9 +90,21 @@ class ConversationEngine
         return $this->answer($conv, $m);
     }
 
-    private function menu(): Reply
+    /** Il menu; chi ha il numero associato a un utente vede anche le voci di prova dei percorsi che hanno una copia. */
+    private function menu(?string $waNumber = null): Reply
     {
-        return Reply::choice(config('finanziamento.menu.body'), config('finanziamento.menu.options'));
+        $options = config('finanziamento.menu.options');
+
+        if ($waNumber !== null && User::hasTesterNumber($waNumber)) {
+            $hasCopy = $this->flows->testFlowCodes();
+            foreach (config('finanziamento.menu.test') as $flow => [$id, $title]) {
+                if (in_array($flow, $hasCopy, true)) {
+                    $options[$id] = $title;
+                }
+            }
+        }
+
+        return Reply::choice(config('finanziamento.menu.body'), $options);
     }
 
     private function fromMenu(IncomingMessage $m): array
@@ -85,18 +116,30 @@ class ConversationEngine
             default => null,
         };
 
+        // Le voci di prova valgono solo per chi è associato a un utente e solo se il percorso ha una copia di prova.
+        foreach (config('finanziamento.menu.test') as $flow => [$id]) {
+            if ($choice === $id && User::hasTesterNumber($m->from) && in_array($flow, $this->flows->testFlowCodes(), true)) {
+                $this->flows->setTest(true);
+
+                return $flow === 'documenti' ? $this->startDocuments($m->from) : $this->start($m->from, $flow);
+            }
+        }
+
         return match ($choice) {
             'menu_richiedi' => $this->start($m->from, 'richiesta'),
             'menu_perfeziona' => $this->start($m->from, 'perfezionamento'),
             'menu_stato' => $this->startDocuments($m->from),
-            default => [$this->menu()],
+            default => [$this->menu($m->from)],
         };
     }
 
     private function start(string $from, string $flow): array
     {
         $def = $this->flows->flow($flow) ?? throw new \LogicException("Percorso {$flow} inesistente o disattivato");
-        $conv = Conversation::create(['wa_number' => $from, 'flow' => $flow, 'data' => [], 'history' => [], 'node' => $def['start']]);
+        $conv = Conversation::create([
+            'wa_number' => $from, 'flow' => $flow, 'data' => [], 'history' => [], 'node' => $def['start'],
+            'is_test' => $this->flows->isTest(),
+        ]);
 
         // L'intestazione (facoltativa) si mostra una sola volta, all'inizio del dialogo.
         $header = trim((string) ($def['header'] ?? ''));
@@ -148,7 +191,7 @@ class ConversationEngine
         $history[] = $conv->node;
 
         if ($def['binds_loan'] ?? false) {
-            $loan = LoanRequest::where('code', $value)->where('agent_wa_number', $conv->wa_number)->firstOrFail();
+            $loan = LoanRequest::where('code', $value)->where('agent_wa_number', $conv->wa_number)->where('is_test', $this->flows->isTest())->firstOrFail();
             $conv->loan_request_id = $loan->id;
             $conv->setRelation('loanRequest', $loan);
         }
@@ -156,7 +199,7 @@ class ConversationEngine
         $next = $this->nextNode($def, $conv, $data, $value);
         $conv->update(['data' => $data, 'history' => $history, 'node' => $next]);
 
-        $replies = $this->prompt($conv);
+        $replies = [...$this->takeNotices(), ...$this->prompt($conv)];
         if ($def['type'] === 'file' && ($def['ack'] ?? false)) {
             $note = '✅ Documento ricevuto.'.($this->reader->enabled() ? ' Lo controllo e ti scrivo l\'esito tra poco.' : '');
             array_unshift($replies, Reply::text($note));
@@ -187,7 +230,7 @@ class ConversationEngine
         $next = $this->nextNode($def, $conv, $data, '');
         $conv->update(['data' => $data, 'history' => $history, 'node' => $next]);
 
-        return $this->prompt($conv);
+        return [...$this->takeNotices(), ...$this->prompt($conv)];
     }
 
     /** @return array{0: ?string, 1: ?string, 2?: array<string,string>} [valore, errore, dati ricavati] */
@@ -235,7 +278,7 @@ class ConversationEngine
     /** @return Collection<int,LoanRequest> */
     private function agentLoans(string $waNumber)
     {
-        return LoanRequest::where('agent_wa_number', $waNumber)->latest('id')->limit(10)->get();
+        return LoanRequest::where('agent_wa_number', $waNumber)->where('is_test', $this->flows->isTest())->latest('id')->limit(10)->get();
     }
 
     private function readText(array $def, IncomingMessage $m): array
@@ -286,6 +329,9 @@ class ConversationEngine
 
             if ($next['type'] === 'check') {
                 $node = $this->target($next, $conv, $data, $this->runCheck($next, $data));
+            } elseif ($next['type'] === 'message') {
+                $this->notices[] = Reply::text($this->renderMessage($next, $conv));
+                $node = $this->target($next, $conv, $data, '');
             } elseif ($this->shouldSkip($next, $conv, $data)) {
                 $node = $this->target($next, $conv, $data, '');
             } else {
@@ -342,6 +388,49 @@ class ConversationEngine
         }
 
         throw new \LogicException("Controllo sconosciuto: {$def['check']}");
+    }
+
+    /** @return Reply[] */
+    private function takeNotices(): array
+    {
+        $notices = $this->notices;
+        $this->notices = [];
+
+        return $notices;
+    }
+
+    /** Testo di un messaggio senza risposta, con i segnaposto sostituiti. */
+    private function renderMessage(array $def, Conversation $conv): string
+    {
+        $loan = $conv->loanRequest;
+
+        return strtr($def['prompt'], [
+            '{codice}' => $loan?->code ?? '',
+            '{prodotto}' => $loan ? (LoanRequest::productLabels()[$loan->product] ?? $loan->product) : '',
+            '{documenti}' => $loan ? $this->requiredDocuments($loan) : '',
+            '{informativa_url}' => rtrim((string) config('app.url'), '/').'/privacy',
+        ]);
+    }
+
+    /** I documenti da preparare per il finanziamento (obbligatori e facoltativi del catalogo), con la descrizione. */
+    private function requiredDocuments(LoanRequest $loan): string
+    {
+        $slots = PraticaDocument::populate($loan)->load('template');
+
+        $sections = [];
+        foreach (['obbligatorio' => 'Obbligatori', 'facoltativo' => 'Facoltativi'] as $requirement => $title) {
+            $lines = $slots->where('requirement', $requirement)
+                ->map(fn (PraticaDocument $d) => '• '.$d->name.($d->template?->description ? " — {$d->template->description}" : ''))->all();
+            if ($lines) {
+                $sections[] = "*{$title}*\n".implode("\n", $lines);
+            }
+        }
+
+        if (! $sections) {
+            return 'Nessun documento previsto per questo finanziamento: l\'istruttore ti dirà se serve altro.';
+        }
+
+        return implode("\n\n", $sections)."\n\nSe servono approfondimenti, l'istruttore potrà chiederti altri documenti.";
     }
 
     /**
@@ -425,7 +514,8 @@ class ConversationEngine
     {
         $data = $conv->data ?? [];
         $loan = LoanRequest::create([
-            'code' => LoanRequestCode::next(),
+            'code' => LoanRequestCode::next($this->flows->isTest()),
+            'is_test' => $this->flows->isTest(),
             'agent_wa_number' => $conv->wa_number,
             'product' => $data['prodotto'],
             'status' => 'richiesta',
@@ -467,7 +557,7 @@ class ConversationEngine
     {
         $this->close($conv, 'annullata');
 
-        return [Reply::text('Operazione annullata.'), $this->menu()];
+        return [Reply::text('Operazione annullata.'), $this->menu($conv->wa_number)];
     }
 
     /** @return Reply[] */
@@ -548,7 +638,7 @@ class ConversationEngine
         }
 
         $code = Str::upper(trim($m->text));
-        $loan = LoanRequest::where('code', $code)->where('agent_wa_number', $conv->wa_number)->first();
+        $loan = LoanRequest::where('code', $code)->where('agent_wa_number', $conv->wa_number)->where('is_test', $this->flows->isTest())->first();
         if (! $loan) {
             return [null, 'Codice non trovato. Controlla e riprova.'];
         }
@@ -672,7 +762,7 @@ class ConversationEngine
             if ($choice === 'resume_no') {
                 $this->close($conv, 'annullata');
 
-                return [$this->menu()];
+                return [$this->menu($conv->wa_number)];
             }
         } else {
             $data['_resume'] = true;

@@ -26,12 +26,12 @@ class FlowImporter
         $imported = 0;
 
         foreach (config('finanziamento.flows') as $code => $def) {
-            if (! $force && Flow::where('code', $code)->exists()) {
+            if (! $force && Flow::where('code', $code)->where('is_test', false)->exists()) {
                 continue;
             }
 
             DB::transaction(function () use ($code, $def) {
-                $flow = Flow::updateOrCreate(['code' => $code], [
+                $flow = Flow::updateOrCreate(['code' => $code, 'is_test' => false], [
                     'name' => self::FLOW_NAMES[$code] ?? $code,
                     'header' => $def['header'] ?? null,
                     'start' => $def['start'],

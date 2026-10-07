@@ -1,6 +1,7 @@
 flowchart TD
     codice[["Inserisci il codice della pratica (es. FIN-2026-0001):"]]
     conferma_pratica["È la pratica giusta?"]
+    riepilogo_documenti[("📄 *Documenti per perfezionare la pratica {codice}* ({prodotto})  {d…")]
     informativa[["Per procedere invia l#39;informativa privacy firmata dal cliente (foto…"]]
     codice_fiscale[/"Codice fiscale del cliente (da qui ricavo data e luogo di nascita):"/]
     cognome[/"Cognome del cliente:"/]
@@ -26,7 +27,8 @@ flowchart TD
     riepilogo_p(["Riepilogo e conferma"])
     codice --> conferma_pratica
     conferma_pratica -->|"No"| codice
-    conferma_pratica -->|"Sì"| informativa
+    conferma_pratica -->|"Sì"| riepilogo_documenti
+    riepilogo_documenti --> informativa
     informativa --> codice_fiscale
     codice_fiscale --> cognome
     cognome --> nome
@@ -58,8 +60,10 @@ flowchart TD
     classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
     classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
     classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
+    classDef message fill:#e6f3f7,stroke:#2c7a8c,color:#0c2a33
     class codice code
     class conferma_pratica,conferma_cf,stato_civile,documento_tipo choice
+    class riepilogo_documenti message
     class informativa,doc_identita,doc_cf,doc_reddito file
     class codice_fiscale,cognome,nome,luogo_nascita,residenza,documento_numero,documento_scadenza,telefono,email,iban,datore_lavoro,data_assunzione,ragione_sociale,partita_iva text
     class verifica_cf check

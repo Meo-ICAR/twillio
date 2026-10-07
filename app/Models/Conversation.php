@@ -14,6 +14,7 @@ class Conversation extends Model
         return [
             'data' => 'encrypted:array',
             'history' => 'array',
+            'is_test' => 'boolean',
         ];
     }
 

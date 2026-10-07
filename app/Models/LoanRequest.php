@@ -36,6 +36,7 @@ class LoanRequest extends Model
     {
         return [
             'answers' => 'array',
+            'is_test' => 'boolean',
             'personal' => 'encrypted:array',
             'privacy_received_at' => 'datetime',
             'perfected_at' => 'datetime',

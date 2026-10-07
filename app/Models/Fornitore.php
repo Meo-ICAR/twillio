@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -79,9 +80,6 @@ class Fornitore extends Model
     /** Solo cifre, senza prefisso internazionale italiano (+39 / 0039). */
     public static function nationalNumber(string $phone): string
     {
-        $digits = preg_replace('/\D+/', '', $phone);
-        $digits = preg_replace('/^00/', '', $digits);
-
-        return strlen($digits) >= 11 && str_starts_with($digits, '39') ? substr($digits, 2) : $digits;
+        return Phone::national($phone);
     }
 }
