@@ -23,7 +23,7 @@ class AttachmentResource extends Resource
 
     protected static ?string $pluralModelLabel = 'allegati';
 
-    protected static ?int $navigationSort = 3;
+    protected static bool $shouldRegisterNavigation = false;
 
     /** Gli allegati arrivano solo da WhatsApp. */
     public static function canCreate(): bool

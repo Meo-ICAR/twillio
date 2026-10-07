@@ -22,15 +22,15 @@ class LoanRequestResource extends Resource
 {
     protected static ?string $model = LoanRequest::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentCheck;
+
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $modelLabel = 'pratica';
 
     protected static ?string $pluralModelLabel = 'pratiche';
 
     protected static ?string $recordTitleAttribute = 'code';
-
-    protected static ?int $navigationSort = 1;
 
     /** Le pratiche nascono dal bot: il codice è generato dalla conversazione. */
     public static function canCreate(): bool

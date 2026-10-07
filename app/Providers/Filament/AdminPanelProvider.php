@@ -28,6 +28,10 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandLogo(asset('unicoagent_banner.png'))
+            ->brandLogoHeight('2.5rem')
+            ->favicon(asset('unicoagent_logo.png'))
+            ->navigationGroups(['Settings', 'Anagrafiche'])
             ->colors([
                 'primary' => Color::Amber,
             ])

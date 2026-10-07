@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class CompanyResource extends Resource
 {
@@ -22,11 +23,7 @@ class CompanyResource extends Resource
 
     protected static ?string $pluralModelLabel = 'azienda (Titolare)';
 
-    protected static ?string $navigationLabel = 'Azienda (Titolare)';
-
     protected static ?string $recordTitleAttribute = 'name';
-
-    protected static ?int $navigationSort = 5;
 
     /** L'installazione serve una sola azienda: se esiste già si modifica quella. */
     public static function canCreate(): bool
@@ -34,7 +31,13 @@ class CompanyResource extends Resource
         return ! Company::exists();
     }
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
+
+    protected static ?int $navigationSort = 1;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Anagrafiche';
+
+    protected static ?string $navigationLabel = 'Azienda';
 
     public static function form(Schema $schema): Schema
     {

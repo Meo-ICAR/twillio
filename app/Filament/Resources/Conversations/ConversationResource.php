@@ -19,11 +19,11 @@ class ConversationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleLeftRight;
 
+    protected static ?int $navigationSort = 2;
+
     protected static ?string $modelLabel = 'conversazione';
 
     protected static ?string $pluralModelLabel = 'conversazioni';
-
-    protected static ?int $navigationSort = 2;
 
     /** Solo consultazione: lo stato lo gestisce il bot. */
     public static function canCreate(): bool

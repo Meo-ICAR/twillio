@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class FlowCheckResource extends Resource
 {
@@ -19,15 +20,17 @@ class FlowCheckResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
 
+    protected static ?int $navigationSort = 3;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
+
+    protected static ?string $navigationLabel = 'Controlli sulle risposte';
+
     protected static ?string $modelLabel = 'controllo';
 
     protected static ?string $pluralModelLabel = 'controlli sulle risposte';
 
-    protected static ?string $navigationLabel = 'Controlli sulle risposte';
-
     protected static ?string $recordTitleAttribute = 'code';
-
-    protected static ?int $navigationSort = 7;
 
     /** I controlli nascono da una classe: si scrive la classe e il pulsante «Cerca nuovi controlli» la aggiunge all'elenco. */
     public static function canCreate(): bool

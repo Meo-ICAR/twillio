@@ -13,22 +13,25 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class FlowResource extends Resource
 {
     protected static ?string $model = Flow::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowsRightLeft;
+
+    protected static ?int $navigationSort = 1;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
+
+    protected static ?string $navigationLabel = 'Percorsi di configurazione';
 
     protected static ?string $modelLabel = 'percorso';
 
     protected static ?string $pluralModelLabel = 'percorsi di conversazione';
 
-    protected static ?string $navigationLabel = 'Percorsi di conversazione';
-
     protected static ?string $recordTitleAttribute = 'name';
-
-    protected static ?int $navigationSort = 6;
 
     /** I percorsi nascono dall'importazione (php artisan flows:import); la copia di prova si crea da «Crea copia di prova». */
     public static function canCreate(): bool
