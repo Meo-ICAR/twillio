@@ -18,6 +18,7 @@ class IntegrationsWidget extends StatsOverviewWidget
         $wa = $health->whatsapp();
         $ai = $health->analysis();
         $purge = $health->lastPurge();
+        $check = $health->aiCheck();
 
         return [
             match (true) {
@@ -27,8 +28,8 @@ class IntegrationsWidget extends StatsOverviewWidget
             },
             $ai['active']
                 ? Stat::make('Analisi AI', $ai['pending'].' in corso')
-                    ->description($ai['failed_24h'].' non riuscite nelle ultime 24 ore'.($ai['oldest_pending'] ? ', la più vecchia da '.$ai['oldest_pending']->diffForHumans(null, true) : ''))
-                    ->color($ai['failed_24h'] ? 'warning' : 'success')
+                    ->description($ai['failed_24h'].' non riuscite nelle ultime 24 ore'.($ai['oldest_pending'] ? ', la più vecchia da '.$ai['oldest_pending']->diffForHumans(null, true) : '').($check ? ' · Verifica '.$check['at']->diffForHumans().': '.$check['detail'] : ' · Credito: usa «Verifica AI» (l\'API non indica il residuo)'))
+                    ->color($check && ! $check['ok'] ? 'danger' : ($ai['failed_24h'] ? 'warning' : 'success'))
                 : Stat::make('Analisi AI', 'Non attiva')->description('Manca la chiave: i documenti si controllano a mano')->color('gray'),
             Stat::make('Pulizia automatica', $purge ? $purge->diffForHumans() : 'Mai eseguita')
                 ->description($purge ? 'Cancellazione delle pratiche scadute' : 'Il cron di schedule:run non risulta attivo')

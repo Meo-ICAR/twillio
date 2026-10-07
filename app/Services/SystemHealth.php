@@ -9,6 +9,7 @@ use App\Models\PraticaDocument;
 use App\Services\Documents\DocumentReader;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 /** Numeri della dashboard: cosa richiede un intervento e se le integrazioni funzionano. */
 class SystemHealth
@@ -37,6 +38,81 @@ class SystemHealth
         $ok = Cache::get('health.whatsapp_ok_at');
 
         return ['ok' => $last['ok'], 'status' => $last['status'], 'at' => Carbon::parse($last['at']), 'last_ok' => $ok ? Carbon::parse($ok) : null];
+    }
+
+    /**
+     * Verifica attiva del token WhatsApp: legge i dati del numero (come /test-whatsapp ma senza mandare messaggi).
+     *
+     * @return array{ok: bool, detail: string}
+     */
+    public function checkWhatsApp(): array
+    {
+        $id = config('services.whatsapp.phone_number_id');
+        $token = config('services.whatsapp.token');
+        if (! $id || ! $token) {
+            self::recordWhatsApp(false, null);
+
+            return ['ok' => false, 'detail' => 'Token o ID del numero non configurati.'];
+        }
+
+        try {
+            $r = Http::withToken($token)->timeout(10)->get("https://graph.facebook.com/v20.0/{$id}", ['fields' => 'display_phone_number,verified_name']);
+        } catch (\Throwable) {
+            return ['ok' => false, 'detail' => 'Meta non raggiungibile.'];
+        }
+
+        self::recordWhatsApp($r->successful(), $r->status());
+
+        return $r->successful()
+            ? ['ok' => true, 'detail' => trim(($r->json('verified_name') ?? '').' '.($r->json('display_phone_number') ?? ''))]
+            : ['ok' => false, 'detail' => (string) ($r->json('error.message') ?? 'Errore '.$r->status())];
+    }
+
+    /**
+     * Verifica attiva dell'AI con una richiesta minima (1 token). L'API di Anthropic non espone il credito residuo:
+     * si vede solo se la chiave vale e se il credito è esaurito.
+     *
+     * @return array{ok: bool, detail: string}
+     */
+    public function checkAi(): array
+    {
+        $key = config('services.anthropic.key');
+        if (! $key) {
+            return $this->recordAi(false, 'Chiave non configurata.');
+        }
+
+        try {
+            $r = Http::withHeaders(['x-api-key' => $key, 'anthropic-version' => '2023-06-01'])->timeout(15)
+                ->post('https://api.anthropic.com/v1/messages', ['model' => 'claude-haiku-4-5-20251001', 'max_tokens' => 1, 'messages' => [['role' => 'user', 'content' => 'ok']]]);
+        } catch (\Throwable) {
+            return $this->recordAi(false, 'Anthropic non raggiungibile.');
+        }
+
+        $message = (string) ($r->json('error.message') ?? '');
+
+        return match (true) {
+            $r->successful() => $this->recordAi(true, 'Chiave valida e credito disponibile.'),
+            str_contains(strtolower($message), 'credit balance') => $this->recordAi(false, 'Credito esaurito: ricaricare.'),
+            $r->status() === 401 => $this->recordAi(false, 'Chiave non valida.'),
+            $r->status() === 429 => $this->recordAi(true, 'Chiave valida (limite di richieste raggiunto al momento).'),
+            default => $this->recordAi(false, $message ?: 'Errore '.$r->status()),
+        };
+    }
+
+    /** @return array{ok: bool, detail: string} */
+    private function recordAi(bool $ok, string $detail): array
+    {
+        Cache::forever('health.ai', ['ok' => $ok, 'detail' => $detail, 'at' => now()->toIso8601String()]);
+
+        return ['ok' => $ok, 'detail' => $detail];
+    }
+
+    /** @return array{ok: bool, detail: string, at: Carbon}|null */
+    public function aiCheck(): ?array
+    {
+        $c = Cache::get('health.ai');
+
+        return $c ? ['ok' => $c['ok'], 'detail' => $c['detail'], 'at' => Carbon::parse($c['at'])] : null;
     }
 
     public function lastPurge(): ?Carbon

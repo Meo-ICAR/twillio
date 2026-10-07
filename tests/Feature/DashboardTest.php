@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\Dashboard;
 use App\Filament\Widgets\AttentionWidget;
 use App\Filament\Widgets\IntegrationsWidget;
 use App\Filament\Widgets\WeekWidget;
@@ -10,6 +11,7 @@ use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Models\User;
 use App\Services\Conversation\Reply;
+use App\Services\Documents\DocumentReader;
 use App\Services\SystemHealth;
 use App\Services\Whatsapp\WhatsAppClient;
 use Database\Seeders\DocumentCatalogSeeder;
@@ -119,5 +121,75 @@ class DashboardTest extends TestCase
         $this->assertEquals(['richiesta' => 1, 'perfezionata' => 1], $w['per_stato']);
         $this->assertSame(2, $w['in_scadenza'], 'oltre 23 giorni (30 - 7), compresa quella già scaduta');
         Livewire::test(WeekWidget::class)->assertSee('Pratiche nuove')->assertSee('Conversazioni attive');
+    }
+
+    public function test_la_verifica_whatsapp_legge_il_numero_senza_mandare_messaggi(): void
+    {
+        config(['services.whatsapp.token' => 'T', 'services.whatsapp.phone_number_id' => '1']);
+        Http::fake(['graph.facebook.com/*' => Http::response(['verified_name' => 'Unico', 'display_phone_number' => '+39 1'])]);
+
+        $r = app(SystemHealth::class)->checkWhatsApp();
+
+        $this->assertTrue($r['ok']);
+        $this->assertStringContainsString('Unico', $r['detail']);
+        Http::assertSent(fn ($req) => $req->method() === 'GET' && ! str_contains($req->url(), '/messages'));
+        $this->assertTrue(app(SystemHealth::class)->whatsapp()['ok']);
+    }
+
+    public function test_la_verifica_whatsapp_con_token_scaduto_segnala_il_problema(): void
+    {
+        config(['services.whatsapp.token' => 'T', 'services.whatsapp.phone_number_id' => '1']);
+        Http::fake(['graph.facebook.com/*' => Http::response(['error' => ['message' => 'Session has expired']], 401)]);
+
+        $r = app(SystemHealth::class)->checkWhatsApp();
+
+        $this->assertFalse($r['ok']);
+        $this->assertSame('Session has expired', $r['detail']);
+        $this->assertFalse(app(SystemHealth::class)->whatsapp()['ok']);
+    }
+
+    public function test_la_verifica_ai_distingue_chiave_credito_e_funzionamento(): void
+    {
+        $h = app(SystemHealth::class);
+        config(['services.anthropic.key' => null]);
+        $this->assertFalse($h->checkAi()['ok']);
+
+        config(['services.anthropic.key' => 'k']);
+        Http::fake(['api.anthropic.com/*' => Http::sequence()
+            ->push(['content' => []])
+            ->push(['error' => ['message' => 'Your credit balance is too low to access the Anthropic API.']], 400)
+            ->push(['error' => ['message' => 'invalid x-api-key']], 401)]);
+
+        $this->assertTrue($h->checkAi()['ok']);
+        $this->assertSame('Credito esaurito: ricaricare.', $h->checkAi()['detail']);
+        $this->assertSame('Chiave non valida.', $h->checkAi()['detail']);
+        $this->assertFalse($h->aiCheck()['ok']);
+        Http::assertSent(fn ($r) => $r->hasHeader('x-api-key', 'k') && $r['max_tokens'] === 1);
+    }
+
+    public function test_il_widget_mostra_l_esito_della_verifica_ai(): void
+    {
+        config(['services.anthropic.key' => 'k']);
+        $this->app->instance(DocumentReader::class, new class implements DocumentReader
+        {
+            public function enabled(): bool
+            {
+                return true;
+            }
+
+            public function read(string $kind, string $mime, string $bytes): ?array
+            {
+                return null;
+            }
+        });
+        Http::fake(['api.anthropic.com/*' => Http::response(['error' => ['message' => 'credit balance is too low']], 400)]);
+        app(SystemHealth::class)->checkAi();
+
+        Livewire::test(IntegrationsWidget::class)->assertSee('Credito esaurito');
+    }
+
+    public function test_la_dashboard_ha_i_due_pulsanti_di_verifica(): void
+    {
+        Livewire::test(Dashboard::class)->assertActionExists('verificaWhatsapp')->assertActionExists('verificaAi');
     }
 }
