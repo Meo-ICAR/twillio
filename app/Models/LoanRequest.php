@@ -38,6 +38,22 @@ class LoanRequest extends Model
         return $this->hasMany(Attachment::class);
     }
 
+    public function praticaDocuments(): HasMany
+    {
+        return $this->hasMany(PraticaDocument::class);
+    }
+
+    /** Tutti i documenti obbligatori sono OK e non c'è nessuna integrazione richiesta e non ancora ricevuta. */
+    public function documentsComplete(): bool
+    {
+        $slots = $this->praticaDocuments()->get();
+        $required = $slots->where('requirement', 'obbligatorio');
+
+        return $required->isNotEmpty()
+            && $required->every(fn (PraticaDocument $d) => $d->status === 'ok')
+            && ! $slots->contains('status', 'integrazione_richiesta');
+    }
+
     /** @return array<string,string> id prodotto => nome */
     public static function productLabels(): array
     {
