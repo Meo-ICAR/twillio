@@ -19,6 +19,9 @@ class AnalyzeAttachment
 {
     use Dispatchable;
 
+    /** Documento (codice storico) => tipo di lettura. */
+    private const LEGACY = ['documento_identita' => 'identita', 'codice_fiscale' => 'codice_fiscale', 'reddito' => 'reddito'];
+
     private const LABELS = [
         'documento_identita' => 'Documento d\'identità',
         'codice_fiscale' => 'Codice fiscale',
@@ -32,16 +35,24 @@ class AnalyzeAttachment
         // Parte dopo la risposta al webhook: il limite di 30 secondi del web non basta per leggere un documento.
         @set_time_limit(150);
 
-        $attachment = Attachment::with('loanRequest')->find($this->attachmentId);
-        if (! $attachment || $attachment->kind === 'informativa' || ! $reader->enabled()) {
+        $attachment = Attachment::with(['loanRequest', 'praticaDocument.template'])->find($this->attachmentId);
+        if (! $attachment || ! $reader->enabled()) {
             return;
         }
 
-        $label = self::LABELS[$attachment->kind] ?? $attachment->kind;
+        // L'AI legge solo i documenti del catalogo con un tipo di lettura (o i tre storici, se il documento non è più in catalogo).
+        $slot = $attachment->praticaDocument;
+        $aiKind = $slot?->template ? $slot->template->ai_kind : (self::LEGACY[$attachment->kind] ?? null);
+        if (! $aiKind) {
+            return;
+        }
+        $readerKind = array_search($aiKind, self::LEGACY, true);
+
+        $label = $slot?->name ?? self::LABELS[$attachment->kind] ?? $attachment->kind;
         $loan = $attachment->loanRequest;
 
         try {
-            $fields = $reader->read($attachment->kind, $attachment->mime, Storage::disk('local')->get($attachment->path));
+            $fields = $reader->read($readerKind, $attachment->mime, Storage::disk('local')->get($attachment->path));
         } catch (\Throwable $e) {
             // Mai messaggi o contenuti nel log: possono contenere dati personali.
             Log::error('Lettura documento non riuscita', ['attachment' => $attachment->id, 'exception' => $e::class]);
@@ -55,13 +66,21 @@ class AnalyzeAttachment
             return;
         }
 
-        $issues = $checker->check($attachment->kind, $fields, $loan->personal ?? []);
+        $issues = $checker->check($readerKind, $fields, $loan->personal ?? []);
         $status = match (true) {
             ! ($fields['legible'] ?? true) => 'non_leggibile',
             $issues !== [] => 'difforme',
             default => 'verificato',
         };
         $attachment->update(['status' => $status, 'analysis' => ['fields' => $fields, 'discrepancies' => $issues]]);
+
+        // Esito sul documento della pratica: l'AI propone OK o rejected e lascia le annotazioni; l'operatore può correggere.
+        if ($slot) {
+            $slot->update(['status' => $issues === [] ? 'ok' : 'rejected', 'reviewed_at' => now()]);
+            foreach ($issues === [] ? ['Controllo automatico: nessuna differenza con i dati inseriti.'] : $issues as $note) {
+                $slot->addAnnotation('ai', $note);
+            }
+        }
 
         $text = $issues === []
             ? "✅ {$label} ({$loan->code}): controllo completato, nessuna differenza con i dati inseriti."

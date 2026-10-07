@@ -6,11 +6,31 @@ use App\Jobs\AnalyzeAttachment;
 use App\Models\Attachment;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
+use App\Models\PraticaDocument;
+use Database\Seeders\DocumentCatalogSeeder;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 
 class DocumentiFlowTest extends ConversationTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DocumentCatalogSeeder::class);
+    }
+
+    private function setStatus(LoanRequest $loan, string $code, string $status, ?string $note = null): PraticaDocument
+    {
+        PraticaDocument::populate($loan);
+        $slot = $loan->praticaDocuments()->where('code', $code)->firstOrFail();
+        $slot->update(['status' => $status]);
+        if ($note) {
+            $slot->addAnnotation('operatore', $note);
+        }
+
+        return $slot;
+    }
+
     private function loan(string $code, array $overrides = []): LoanRequest
     {
         return LoanRequest::create($overrides + [
@@ -51,11 +71,12 @@ class DocumentiFlowTest extends ConversationTestCase
         $this->assertSame('pratica', Conversation::first()->node);
     }
 
-    public function test_il_dettaglio_mostra_la_checklist_dei_documenti(): void
+    public function test_il_dettaglio_mostra_i_documenti_della_pratica_con_stato_e_annotazioni(): void
     {
         $loan = $this->loan('FIN-2026-0001');
-        $this->attach($loan, 'documento_identita', 'verificato');
-        $this->attach($loan, 'codice_fiscale', 'difforme');
+        $this->setStatus($loan, 'documento_identita', 'ok');
+        $this->setStatus($loan, 'codice_fiscale', 'rejected', 'Cognome: sul documento «BIANCHI», dichiarato «Rossi»');
+        $this->setStatus($loan, 'estratto_conto', 'ricevuto');
         $this->attach($loan, 'informativa');
 
         $replies = $this->say('#menu_stato', '#FIN-2026-0001');
@@ -63,10 +84,37 @@ class DocumentiFlowTest extends ConversationTestCase
 
         $this->assertStringContainsString('✅ Documento d\'identità', $body);
         $this->assertStringContainsString('⚠️ Codice fiscale', $body);
+        $this->assertStringContainsString('BIANCHI', $body);
+        $this->assertStringContainsString('📎 Estratto conto bancario', $body);
         $this->assertStringContainsString('➖ Documento di reddito', $body);
+        $this->assertStringContainsString('Obbligatori', $body);
+        $this->assertStringContainsString('Facoltativi', $body);
         $this->assertStringNotContainsString('Informativa', $body);
         $this->assertSame(['carica' => 'Carica documenti', 'altra' => 'Altra pratica'], end($replies)->options);
         $this->assertSame($loan->id, Conversation::first()->loan_request_id);
+    }
+
+    public function test_le_integrazioni_richieste_compaiono_con_la_nota_dell_istruttore(): void
+    {
+        $loan = $this->loan('FIN-2026-0001');
+        PraticaDocument::populate($loan);
+        $slot = $loan->praticaDocuments()->create(['code' => 'contratto_lavoro', 'name' => 'Contratto di lavoro', 'requirement' => 'integrativo', 'status' => 'integrazione_richiesta']);
+        $slot->addAnnotation('operatore', 'Serve anche la pagina con la firma');
+
+        $body = $this->bodies($this->say('#menu_stato', '#FIN-2026-0001'));
+
+        $this->assertStringContainsString('Integrazioni richieste', $body);
+        $this->assertStringContainsString('📝 Contratto di lavoro', $body);
+        $this->assertStringContainsString('Serve anche la pagina con la firma', $body);
+    }
+
+    public function test_il_dettaglio_crea_i_documenti_se_la_pratica_non_li_ha_ancora(): void
+    {
+        $loan = $this->loan('FIN-2026-0001');
+
+        $this->say('#menu_stato', '#FIN-2026-0001');
+
+        $this->assertGreaterThanOrEqual(3, $loan->praticaDocuments()->count());
     }
 
     public function test_non_si_carica_senza_informativa(): void
@@ -90,27 +138,52 @@ class DocumentiFlowTest extends ConversationTestCase
         $this->assertSame('pratica', Conversation::first()->node);
     }
 
-    public function test_caricamento_di_piu_documenti_con_analisi_dopo_la_risposta(): void
+    public function test_si_propongono_solo_i_documenti_non_ancora_ok_piu_ho_finito(): void
+    {
+        $loan = $this->loan('FIN-2026-0001');
+        $this->setStatus($loan, 'documento_identita', 'ok');
+
+        $replies = $this->say('#menu_stato', '#FIN-2026-0001', '#carica');
+
+        $this->assertSame(['codice_fiscale', 'reddito', 'estratto_conto', 'fine'], array_keys(end($replies)->options));
+        $this->assertSame('Estratto conto bancario', end($replies)->options['estratto_conto']);
+    }
+
+    public function test_caricamento_di_piu_documenti_collegati_al_documento_della_pratica(): void
     {
         Bus::fake([AnalyzeAttachment::class]);
         $loan = $this->loan('FIN-2026-0001');
 
-        $replies = $this->say('#menu_stato', '#FIN-2026-0001', '#carica');
-        $this->assertSame(['documento_identita', 'codice_fiscale', 'reddito', 'fine'], array_keys(end($replies)->options));
-
-        $this->say('#documento_identita');
+        $this->say('#menu_stato', '#FIN-2026-0001', '#carica', '#documento_identita');
         $replies = $this->say('media:M1:image/jpeg');
 
         $this->assertSame('tipo', Conversation::first()->node);
         $this->assertStringContainsString('Documento ricevuto', $this->bodies($replies));
         $attachment = $loan->attachments()->first();
+        $slot = $loan->praticaDocuments()->where('code', 'documento_identita')->first();
         $this->assertSame('documento_identita', $attachment->kind);
-        $this->assertSame('ricevuto', $attachment->status);
+        $this->assertSame($slot->id, $attachment->pratica_document_id);
+        $this->assertSame('ricevuto', $slot->status);
+        $this->assertNotNull($slot->received_at);
         Storage::disk('local')->assertExists($attachment->path);
         Bus::assertDispatchedAfterResponse(AnalyzeAttachment::class);
 
         $this->say('#reddito', 'media:M2:application/pdf', '#codice_fiscale', 'media:M3:image/png');
         $this->assertSame(3, $loan->attachments()->count());
+        $this->assertSame(3, $loan->praticaDocuments()->where('status', 'ricevuto')->count());
+    }
+
+    public function test_un_documento_rifiutato_o_con_integrazione_richiesta_si_puo_ricaricare(): void
+    {
+        Bus::fake([AnalyzeAttachment::class]);
+        $loan = $this->loan('FIN-2026-0001');
+        $this->setStatus($loan, 'codice_fiscale', 'rejected', 'Illeggibile');
+
+        $replies = $this->say('#menu_stato', '#FIN-2026-0001', '#carica');
+        $this->assertContains('codice_fiscale', array_keys(end($replies)->options));
+
+        $this->say('#codice_fiscale', 'media:M1:image/jpeg');
+        $this->assertSame('ricevuto', $loan->praticaDocuments()->where('code', 'codice_fiscale')->value('status'));
     }
 
     public function test_la_pratica_resta_caricabile_in_giorni_diversi(): void

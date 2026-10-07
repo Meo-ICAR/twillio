@@ -5,6 +5,7 @@ namespace App\Services\Conversation;
 use App\Jobs\AnalyzeAttachment;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
+use App\Models\PraticaDocument;
 use App\Services\Documents\DocumentReader;
 use App\Services\Whatsapp\WhatsAppClient;
 use Illuminate\Support\Carbon;
@@ -178,6 +179,12 @@ class ConversationEngine
     {
         if (($def['options_from'] ?? null) === 'agent_loans') {
             return $this->agentLoans($conv->wa_number)->mapWithKeys(fn (LoanRequest $l) => [$l->code => $l->code])->all();
+        }
+
+        if (($def['options_from'] ?? null) === 'loan_documents') {
+            $pending = $conv->loanRequest ? PraticaDocument::populate($conv->loanRequest)->where('status', '!=', 'ok')->take(9) : collect();
+
+            return $pending->mapWithKeys(fn (PraticaDocument $d) => [$d->code => mb_substr($d->name, 0, 24)])->all() + ($def['options'] ?? []);
         }
 
         return $def['options'] ?? [];
@@ -363,6 +370,7 @@ class ConversationEngine
             'status' => 'richiesta',
             'answers' => $data,
         ]);
+        PraticaDocument::populate($loan);
         $conv->loan_request_id = $loan->id;
         $this->close($conv, 'completata');
 
@@ -417,15 +425,16 @@ class ConversationEngine
         if (($def['prompt_with'] ?? null) === 'loans_list') {
             $body .= "\n\n".$this->agentLoans($conv->wa_number)->map(fn (LoanRequest $l) => $this->loanLine($l))->implode("\n");
         }
+        $before = [];
         if (($def['prompt_with'] ?? null) === 'doc_checklist' && $conv->loanRequest) {
-            $body = $this->checklist($conv->loanRequest)."\n\n".$body;
+            $before[] = Reply::text($this->checklist($conv->loanRequest));
         }
         if ($def['prompt_summary'] ?? false) {
             $body = $this->describe($conv->loanRequest->answers, 'richiesta')."\n\n".$body;
         }
 
         return match ($def['type']) {
-            'choice' => [Reply::choice($body, $this->optionsFor($conv, $def))],
+            'choice' => [...$before, Reply::choice($body, $this->optionsFor($conv, $def))],
             'summary' => [Reply::text($this->summary($conv, $def)), Reply::choice($def['prompt'], $def['options'])],
             'file' => [Reply::text($body.(($def['optional'] ?? false) ? "\n\nScrivi «salta» per saltare." : ''))],
             default => [Reply::text($body)],
@@ -515,10 +524,12 @@ class ConversationEngine
         $path = "pratiche/{$loan->code}/{$kind}-".Str::random(8).'.'.self::ALLOWED_MIME[$m->mime];
         Storage::disk('local')->put($path, $file['body']);
         $this->storedPaths[] = $path;
+        $slot = $kind === 'informativa' ? null : PraticaDocument::populate($loan)->firstWhere('code', $kind);
         $attachment = $loan->attachments()->create([
-            'kind' => $kind, 'path' => $path, 'mime' => $m->mime,
+            'kind' => $kind, 'path' => $path, 'mime' => $m->mime, 'pratica_document_id' => $slot?->id,
             'wa_media_id' => $m->mediaId, 'received_at' => now(),
         ]);
+        $slot?->update(['status' => 'ricevuto', 'received_at' => now()]);
         if ($def['analyze'] ?? false) {
             AnalyzeAttachment::dispatchAfterResponse($attachment->id);
         }
@@ -544,31 +555,41 @@ class ConversationEngine
         return "• {$loan->code} · ".(LoanRequest::productLabels()[$loan->product] ?? $loan->product).' · '.str_replace('_', ' ', $loan->status);
     }
 
-    /** Dettaglio della pratica con i documenti ricevuti e il loro esito (conta l'ultimo file di ogni tipo). */
+    /** Dettaglio della pratica con i suoi documenti, raggruppati per tipo, con stato e ultima annotazione. */
     private function checklist(LoanRequest $loan): string
     {
-        $labels = ['documento_identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito'];
-        $latest = $loan->attachments()->whereIn('kind', array_keys($labels))->orderBy('id')->get()->keyBy('kind');
+        $slots = PraticaDocument::populate($loan);
 
-        $lines = [];
-        foreach ($labels as $kind => $label) {
-            $lines[] = match ($latest[$kind]->status ?? null) {
-                null => "➖ {$label}: mancante",
-                'verificato' => "✅ {$label}: verificato",
-                'difforme' => "⚠️ {$label}: da correggere",
-                'non_leggibile' => "⚠️ {$label}: non leggibile",
-                default => "📎 {$label}: ricevuto",
-            };
+        $sections = [];
+        foreach (['obbligatorio' => 'Obbligatori', 'facoltativo' => 'Facoltativi', 'integrativo' => 'Integrazioni richieste'] as $requirement => $title) {
+            $lines = $slots->where('requirement', $requirement)->map(fn (PraticaDocument $d) => $this->slotLine($d))->all();
+            if ($lines) {
+                $sections[] = "*{$title}*\n".implode("\n", $lines);
+            }
         }
 
         $text = '📂 *'.$loan->code.'* · '.(LoanRequest::productLabels()[$loan->product] ?? $loan->product)
-            .' · '.str_replace('_', ' ', $loan->status)."\n\n*Documenti*\n".implode("\n", $lines);
+            .' · '.str_replace('_', ' ', $loan->status)."\n\n".implode("\n\n", $sections);
 
         if (! $loan->privacy_received_at) {
             $text .= "\n\nPer caricare documenti serve prima l'informativa firmata: usa Perfeziona Finanziamento.";
         }
 
         return $text;
+    }
+
+    private function slotLine(PraticaDocument $doc): string
+    {
+        $note = $doc->lastAnnotation();
+        $note = $note ? ' — '.Str::limit($note, 90) : '';
+
+        return match ($doc->status) {
+            'ok' => "✅ {$doc->name}",
+            'ricevuto' => "📎 {$doc->name}: ricevuto, in verifica",
+            'rejected' => "⚠️ {$doc->name}: da correggere{$note}",
+            'integrazione_richiesta' => "📝 {$doc->name}: richiesto{$note}",
+            default => "➖ {$doc->name}: mancante",
+        };
     }
 
     private function isStale(Conversation $conv): bool

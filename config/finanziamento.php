@@ -177,9 +177,8 @@ return [
                 'dettaglio' => $choice('Azione', 'Cosa vuoi fare?', ['carica' => 'Carica documenti', 'altra' => 'Altra pratica'], ['carica' => 'tipo', 'altra' => 'pratica'], [
                     'prompt_with' => 'doc_checklist', 'guards' => ['carica' => 'privacy_received'], 'save' => false,
                 ]),
-                'tipo' => $choice('Documento', 'Quale documento vuoi inviare?', [
-                    'documento_identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito', 'fine' => 'Ho finito',
-                ], ['fine' => 'dettaglio', '*' => 'upload']),
+                // I documenti proposti sono quelli della pratica (catalogo del tipo di finanziamento) non ancora OK.
+                'tipo' => $choice('Documento', 'Quale documento vuoi inviare?', ['fine' => 'Ho finito'], ['fine' => 'dettaglio', '*' => 'upload'], ['options_from' => 'loan_documents']),
                 'upload' => [
                     'type' => 'file', 'kind_from' => 'tipo', 'prompt' => 'Invia la foto o il PDF del documento, un file alla volta. Un file nuovo sostituisce quello precedente nella verifica.',
                     'next' => 'tipo', 'save' => false, 'ack' => true, 'analyze' => true,

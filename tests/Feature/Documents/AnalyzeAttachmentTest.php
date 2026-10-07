@@ -5,6 +5,8 @@ namespace Tests\Feature\Documents;
 use App\Jobs\AnalyzeAttachment;
 use App\Models\Attachment;
 use App\Models\LoanRequest;
+use App\Models\PraticaDocument;
+use Database\Seeders\DocumentCatalogSeeder;
 use App\Services\Documents\DocumentReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
@@ -165,6 +167,76 @@ class AnalyzeAttachmentTest extends TestCase
         AnalyzeAttachment::dispatchSync($a->id);
         AnalyzeAttachment::dispatchSync(99999);
 
+        $this->assertSame('ricevuto', $a->fresh()->status);
+        Http::assertNothingSent();
+    }
+
+    private function withSlot(string $code = 'documento_identita'): array
+    {
+        $this->seed(DocumentCatalogSeeder::class);
+        $a = $this->attachment($code);
+        PraticaDocument::populate($a->loanRequest);
+        $slot = $a->loanRequest->praticaDocuments()->where('code', $code)->first();
+        $slot->update(['status' => 'ricevuto']);
+        $a->update(['pratica_document_id' => $slot->id]);
+
+        return [$a, $slot];
+    }
+
+    public function test_documento_coerente_porta_il_documento_della_pratica_a_ok(): void
+    {
+        $this->useReader($this->fields());
+        [$a, $slot] = $this->withSlot();
+
+        AnalyzeAttachment::dispatchSync($a->id);
+
+        $this->assertSame('ok', $slot->fresh()->status);
+        $this->assertNotNull($slot->fresh()->reviewed_at);
+        $this->assertSame('ai', $slot->fresh()->annotations[0]['by']);
+    }
+
+    public function test_difformita_portano_il_documento_a_rejected_con_le_annotazioni_dell_ai(): void
+    {
+        $this->useReader($this->fields(['surname' => 'BIANCHI', 'name' => 'LUCA']));
+        [$a, $slot] = $this->withSlot();
+
+        AnalyzeAttachment::dispatchSync($a->id);
+
+        $slot->refresh();
+        $this->assertSame('rejected', $slot->status);
+        $this->assertCount(2, array_filter($slot->annotations, fn ($n) => $n['by'] === 'ai'));
+        $this->assertStringContainsString('BIANCHI', $slot->annotations[0]['text']);
+    }
+
+    public function test_illeggibile_porta_a_rejected(): void
+    {
+        $this->useReader(['legible' => false, 'kind_detected' => 'identita']);
+        [$a, $slot] = $this->withSlot();
+
+        AnalyzeAttachment::dispatchSync($a->id);
+
+        $this->assertSame('rejected', $slot->fresh()->status);
+    }
+
+    public function test_se_la_lettura_non_riesce_il_documento_resta_ricevuto_per_l_istruttore(): void
+    {
+        $this->useReader(null);
+        [$a, $slot] = $this->withSlot();
+
+        AnalyzeAttachment::dispatchSync($a->id);
+
+        $this->assertSame('ricevuto', $slot->fresh()->status);
+        $this->assertNull($slot->fresh()->annotations);
+    }
+
+    public function test_i_documenti_senza_lettura_ai_restano_ricevuti_e_l_api_non_viene_chiamata(): void
+    {
+        $this->useReader(new \RuntimeException('non deve essere chiamata'));
+        [$a, $slot] = $this->withSlot('estratto_conto');
+
+        AnalyzeAttachment::dispatchSync($a->id);
+
+        $this->assertSame('ricevuto', $slot->fresh()->status);
         $this->assertSame('ricevuto', $a->fresh()->status);
         Http::assertNothingSent();
     }
