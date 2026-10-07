@@ -73,6 +73,9 @@ return [
         ],
     ],
 
+    // CRM del committente: codice HTTP restituito dalla simulazione (CRM_SIMULATED_STATUS=500 per provare l'errore).
+    'crm' => ['simulated_status' => (int) env('CRM_SIMULATED_STATUS', 200)],
+
     'flows' => [
 
         // Fase 1: nessun dato identificativo, solo profilo a fasce.

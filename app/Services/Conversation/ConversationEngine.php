@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Checks\CheckContext;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Checks\NodeCheck;
+use App\Services\Crm\CrmGateway;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Loans\LoanEstimator;
@@ -42,6 +43,7 @@ class ConversationEngine
         private FlowRepository $flows,
         private CheckRegistry $checks,
         private LoanEstimator $estimator,
+        private CrmGateway $crm,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -707,10 +709,29 @@ class ConversationEngine
     private function completePerfezionamento(Conversation $conv): array
     {
         $loan = $conv->loanRequest;
-        $loan->update(['personal' => $conv->data ?? [], 'status' => 'perfezionata', 'perfected_at' => now()]);
+        $data = $conv->data ?? [];
+
+        // Se il CRM non accetta la pratica resta tutto com'è: l'agente può riprovare dal riepilogo.
+        if ($this->submitToCrm($loan, $data) !== 200) {
+            return [Reply::text('⚠️ Invio pratica fallito, riprovare o contattare Istruttoria.'), ...$this->prompt($conv)];
+        }
+
+        $loan->update(['personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now()]);
         $this->close($conv, 'completata');
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
+    }
+
+    private function submitToCrm(LoanRequest $loan, array $data): int
+    {
+        try {
+            return $this->crm->submit($loan, $data);
+        } catch (\Throwable $e) {
+            // Nel log solo il tipo di errore: il messaggio potrebbe contenere dati personali.
+            Log::error('Invio al CRM non riuscito', ['loan' => $loan->code, 'exception' => $e::class]);
+
+            return 0;
+        }
     }
 
     /** Chiude la conversazione e cancella i dati in corso (i dati definitivi stanno nella pratica). */

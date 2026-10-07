@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Anthropic\Client;
 use App\Services\Checks\CheckRegistry;
+use App\Services\Crm\CrmGateway;
+use App\Services\Crm\SimulatedCrmGateway;
 use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
 use App\Services\Documents\NullDocumentReader;
@@ -23,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
         // L'albero delle conversazioni resta in memoria per la richiesta; i modelli lo invalidano quando cambiano.
         $this->app->singleton(FlowRepository::class);
         $this->app->singleton(CheckRegistry::class);
+
+        // Invio al CRM del committente: per ora una simulazione.
+        $this->app->bind(CrmGateway::class, SimulatedCrmGateway::class);
 
         // Calcolo degli importi ottenibili: per ora una simulazione.
         $this->app->bind(LoanEstimator::class, RandomLoanEstimator::class);
