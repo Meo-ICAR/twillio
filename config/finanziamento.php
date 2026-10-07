@@ -1,0 +1,157 @@
+<?php
+
+// Alberi delle conversazioni WhatsApp. Solo dati: nessuna closure salvata (compatibile con config:cache).
+// Limiti WhatsApp: titolo opzione max 24 caratteri, max 10 opzioni per nodo.
+
+$yn = ['si' => 'Sì', 'no' => 'No'];
+$importi = ['imp_5k' => 'Fino a 5.000 €', 'imp_10k' => '5.000 - 10.000 €', 'imp_20k' => '10.000 - 20.000 €', 'imp_35k' => '20.000 - 35.000 €', 'imp_oltre' => 'Oltre 35.000 €'];
+$grandi = ['g_100k' => 'Fino a 100.000 €', 'g_200k' => '100.000 - 200.000 €', 'g_400k' => '200.000 - 400.000 €', 'g_oltre' => 'Oltre 400.000 €'];
+$redditi = ['red_1000' => 'Fino a 1.000 €', 'red_1500' => '1.000 - 1.500 €', 'red_2000' => '1.500 - 2.000 €', 'red_3000' => '2.000 - 3.000 €', 'red_oltre' => 'Oltre 3.000 €'];
+$anzianita = ['anz_1' => 'Meno di 1 anno', 'anz_3' => '1 - 3 anni', 'anz_10' => '3 - 10 anni', 'anz_oltre' => 'Oltre 10 anni'];
+$durate = ['m24' => '24 mesi', 'm36' => '36 mesi', 'm48' => '48 mesi', 'm60' => '60 mesi', 'm84' => '84 mesi', 'm120' => '120 mesi'];
+$durateMutuo = ['m120' => '120 mesi', 'm180' => '180 mesi', 'm240' => '240 mesi', 'm300' => '300 mesi', 'm360' => '360 mesi'];
+$consumo = fn (string $to) => ['personale' => $to, 'quinto' => $to, 'finalizzato' => $to];
+
+$choice = fn (string $label, string $prompt, array $options, string|array $next, array $extra = []) => array_merge(
+    ['type' => 'choice', 'label' => $label, 'prompt' => $prompt, 'options' => $options, 'next' => $next], $extra
+);
+$text = fn (string $label, string $prompt, array $rules, string|array $next, array $extra = []) => array_merge(
+    ['type' => 'text', 'label' => $label, 'prompt' => $prompt, 'rules' => $rules, 'next' => $next], $extra
+);
+$file = fn (string $kind, string $prompt, string $next, array $extra = []) => array_merge(
+    ['type' => 'file', 'kind' => $kind, 'prompt' => $prompt, 'next' => $next, 'save' => false], $extra
+);
+$summary = fn (array $extra = []) => array_merge([
+    'type' => 'summary', 'prompt' => 'Confermi i dati inseriti?', 'save' => false,
+    'options' => ['conferma' => 'Conferma', 'modifica' => 'Ricomincia', 'annulla' => 'Annulla'],
+], $extra);
+
+return [
+
+    'menu' => [
+        'body' => 'Ciao! Benvenuto nel servizio agenti. Cosa vuoi fare?',
+        'options' => [
+            'menu_richiedi' => 'Richiedi Finanziamento',
+            'menu_perfeziona' => 'Perfeziona Finanziamento',
+            'menu_stato' => 'Stato Pratiche',
+        ],
+    ],
+
+    'flows' => [
+
+        // Fase 1: nessun dato identificativo, solo profilo a fasce.
+        'richiesta' => [
+            'start' => 'prodotto',
+            'restart' => 'prodotto',
+            'nodes' => [
+                'prodotto' => $choice('Prodotto', 'Che tipo di finanziamento vuoi richiedere?', [
+                    'personale' => 'Prestito personale', 'quinto' => 'Cessione del quinto', 'finalizzato' => 'Finalizzato (beni)',
+                    'mutuo' => 'Mutuo', 'leasing' => 'Leasing', 'aziendale' => 'Finanziamento aziendale',
+                ], [
+                    'personale' => 'importo', 'quinto' => 'importo', 'finalizzato' => 'importo',
+                    'mutuo' => 'mutuo_scopo', 'leasing' => 'leasing_bene', 'aziendale' => 'az_forma',
+                ]),
+
+                // Comune al consumo
+                'importo' => $choice('Importo', 'Quale importo ti serve?', $importi, 'durata'),
+                'durata' => $choice('Durata', 'Su quale durata?', $durate, $consumo('lavoro') + ['leasing' => 'leasing_anticipo', 'aziendale' => 'az_finalita'], ['next_by' => 'prodotto']),
+
+                // Credito al consumo
+                'lavoro' => $choice('Situazione lavorativa', 'Qual è la situazione lavorativa del cliente?', [
+                    'dip_priv' => 'Dipendente privato', 'dip_pub' => 'Dipendente pubblico', 'pensionato' => 'Pensionato',
+                    'autonomo' => 'Autonomo', 'altro' => 'Altro',
+                ], ['dip_priv' => 'contratto', 'dip_pub' => 'contratto', 'pensionato' => 'ente_pensione', 'autonomo' => 'anni_attivita', '*' => 'impegni']),
+                'contratto' => $choice('Contratto', 'Che tipo di contratto ha?', ['indet' => 'Tempo indeterminato', 'det' => 'Tempo determinato'], 'anzianita'),
+                'anzianita' => $choice('Anzianità lavorativa', 'Da quanto lavora presso l\'attuale datore?', $anzianita, 'reddito'),
+                'reddito' => $choice('Reddito netto mensile', 'Qual è il reddito netto mensile?', $redditi, ['quinto' => 'dimensione_azienda', '*' => 'impegni'], ['next_by' => 'prodotto']),
+                'dimensione_azienda' => $choice('Dimensione azienda', 'Quanti dipendenti ha l\'azienda?', ['oltre15' => 'Oltre 15 dipendenti', 'fino15' => 'Fino a 15 dipendenti'], 'impegni'),
+                'ente_pensione' => $choice('Ente pensionistico', 'Da quale ente riceve la pensione?', ['inps' => 'INPS', 'exinpdap' => 'Ex INPDAP', 'altro' => 'Altro ente'], 'pensione_netta'),
+                'pensione_netta' => $choice('Pensione netta mensile', 'Qual è la pensione netta mensile?', $redditi, 'impegni'),
+                'anni_attivita' => $choice('Anni di attività', 'Da quanti anni svolge l\'attività?', $anzianita, 'reddito_autonomo'),
+                'reddito_autonomo' => $choice('Reddito', 'Qual è il reddito dell\'ultima dichiarazione (mensile netto)?', $redditi, 'impegni'),
+                'impegni' => $choice('Finanziamenti in corso', 'Ci sono finanziamenti in corso?', $yn, ['si' => 'rata', 'no' => 'crif']),
+                'rata' => $choice('Rata mensile', 'A quanto ammonta la rata mensile totale?', ['rata_200' => 'Fino a 200 €', 'rata_400' => '200 - 400 €', 'rata_oltre' => 'Oltre 400 €'], 'crif'),
+                'crif' => $choice('Segnalazioni CRIF', 'Ci sono segnalazioni in CRIF o protesti?', ['no' => 'No', 'si' => 'Sì', 'nonso' => 'Non so'], ['quinto' => 'quote_cedute', 'finalizzato' => 'bene', '*' => 'riepilogo'], ['next_by' => 'prodotto']),
+                'quote_cedute' => $choice('Quote già cedute', 'Ci sono quote dello stipendio già cedute?', $yn, 'riepilogo'),
+                'bene' => $choice('Bene', 'Quale bene si vuole acquistare?', ['auto_nuova' => 'Auto nuova', 'auto_usata' => 'Auto usata', 'moto' => 'Moto', 'altro' => 'Altro bene'], 'prezzo_bene'),
+                'prezzo_bene' => $choice('Prezzo del bene', 'Qual è il prezzo del bene?', $importi, 'anticipo'),
+                'anticipo' => $choice('Anticipo', 'È previsto un anticipo?', $yn, 'riepilogo'),
+
+                // Mutuo
+                'mutuo_scopo' => $choice('Scopo', 'Qual è lo scopo del mutuo?', [
+                    'prima' => 'Acquisto prima casa', 'seconda' => 'Acquisto seconda casa', 'surroga' => 'Surroga', 'liquidita' => 'Liquidità',
+                ], 'mutuo_valore'),
+                'mutuo_valore' => $choice('Valore immobile', 'Qual è il valore dell\'immobile?', $grandi, 'mutuo_ltv'),
+                'mutuo_ltv' => $choice('Quota da finanziare', 'Quale quota del valore vuoi finanziare?', ['ltv_50' => 'Fino al 50%', 'ltv_80' => '50% - 80%', 'ltv_oltre' => 'Oltre l\'80%'], 'durata_mutuo'),
+                'durata_mutuo' => $choice('Durata', 'Su quale durata?', $durateMutuo, 'mutuo_reddito'),
+                'mutuo_reddito' => $choice('Reddito familiare', 'Qual è il reddito netto mensile familiare?', [
+                    'fam_2000' => 'Fino a 2.000 €', 'fam_3500' => '2.000 - 3.500 €', 'fam_5000' => '3.500 - 5.000 €', 'fam_oltre' => 'Oltre 5.000 €',
+                ], 'mutuo_intestatari'),
+                'mutuo_intestatari' => $choice('Intestatari', 'Quanti saranno gli intestatari?', ['int_1' => '1 intestatario', 'int_2' => '2 intestatari', 'int_3' => '3 o più'], 'mutuo_tasso'),
+                'mutuo_tasso' => $choice('Tasso', 'Che tipo di tasso preferisce?', ['fisso' => 'Tasso fisso', 'variabile' => 'Tasso variabile', 'nonso' => 'Non so'], 'riepilogo'),
+
+                // Leasing
+                'leasing_bene' => $choice('Bene', 'Che tipo di bene è in leasing?', ['auto' => 'Auto/veicoli', 'strumentale' => 'Bene strumentale', 'immobiliare' => 'Immobiliare'], 'leasing_valore'),
+                'leasing_valore' => $choice('Valore del bene', 'Qual è il valore del bene?', $grandi, 'durata'),
+                'leasing_anticipo' => $choice('Anticipo/maxicanone', 'È previsto un anticipo o maxicanone?', $yn, 'leasing_riscatto'),
+                'leasing_riscatto' => $choice('Riscatto finale', 'È previsto il riscatto finale?', $yn, 'az_forma'),
+
+                // Aziende (anche per il leasing): nessun dato identificativo
+                'az_forma' => $choice('Forma giuridica', 'Qual è la forma giuridica?', [
+                    'ditta' => 'Ditta individuale', 'snc_sas' => 'Snc / Sas', 'srl' => 'Srl', 'spa' => 'Spa', 'professionista' => 'Libero professionista',
+                ], 'az_anzianita'),
+                'az_anzianita' => $choice('Anzianità attività', 'Da quanti anni è attiva?', $anzianita, 'az_fatturato'),
+                'az_fatturato' => $choice('Fatturato', 'Qual è il fatturato dell\'ultimo anno?', [
+                    'fat_100' => 'Fino a 100.000 €', 'fat_500' => '100.000 - 500.000 €', 'fat_2m' => '500.000 - 2 mln €', 'fat_oltre' => 'Oltre 2 mln €',
+                ], ['aziendale' => 'az_importo', 'leasing' => 'riepilogo'], ['next_by' => 'prodotto']),
+                'az_importo' => $choice('Importo', 'Quale importo serve?', $grandi, 'durata'),
+                'az_finalita' => $choice('Finalità', 'Qual è la finalità?', [
+                    'liquidita' => 'Liquidità', 'investimenti' => 'Investimenti', 'macchinari' => 'Acquisto macchinari', 'altro' => 'Altro',
+                ], 'az_garanzie'),
+                'az_garanzie' => $choice('Garanzie', 'Quali garanzie sono disponibili?', [
+                    'fondo_pmi' => 'Fondo Garanzia PMI', 'ipoteca' => 'Ipoteca', 'garante' => 'Garante personale', 'nessuna' => 'Nessuna',
+                ], 'riepilogo'),
+
+                'riepilogo' => $summary(),
+            ],
+        ],
+
+        // Fase 2: dati personali solo dopo l'informativa firmata.
+        'perfezionamento' => [
+            'start' => 'codice',
+            'restart' => 'nome',
+            'nodes' => [
+                'codice' => ['type' => 'code', 'prompt' => 'Inserisci il codice della pratica (es. FIN-2026-0001):', 'save' => false, 'next' => 'conferma_pratica'],
+                'conferma_pratica' => $choice('Conferma', 'È la pratica giusta?', $yn, ['si' => 'informativa', 'no' => 'codice'], ['save' => false, 'prompt_summary' => true]),
+                'informativa' => $file('informativa', 'Per procedere invia l\'informativa privacy firmata dal cliente (foto o PDF).', 'nome', ['skip_if' => 'privacy_received']),
+
+                'nome' => $text('Nome', 'Nome del cliente:', ['required', 'string', 'max:60'], 'cognome'),
+                'cognome' => $text('Cognome', 'Cognome del cliente:', ['required', 'string', 'max:60'], 'codice_fiscale'),
+                'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale:', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'data_nascita', ['upper' => true, 'strip_spaces' => true, 'error' => 'Codice fiscale non valido (16 caratteri), riprova.']),
+                'data_nascita' => $text('Data di nascita', 'Data di nascita (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'luogo_nascita', ['min_age' => 18, 'error' => 'Data non valida: usa il formato gg/mm/aaaa.', 'age_error' => 'Il cliente deve essere maggiorenne: controlla la data di nascita.']),
+                'luogo_nascita' => $text('Luogo di nascita', 'Luogo di nascita:', ['required', 'string', 'max:80'], 'residenza'),
+                'residenza' => $text('Residenza', 'Indirizzo di residenza (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'stato_civile'),
+                'stato_civile' => $choice('Stato civile', 'Stato civile:', ['celibe' => 'Celibe/Nubile', 'coniugato' => 'Coniugato/a', 'separato' => 'Separato/a', 'vedovo' => 'Vedovo/a'], 'documento_tipo'),
+                'documento_tipo' => $choice('Documento', 'Tipo di documento d\'identità:', ['ci' => 'Carta d\'identità', 'patente' => 'Patente', 'passaporto' => 'Passaporto'], 'documento_numero'),
+                'documento_numero' => $text('Numero documento', 'Numero del documento:', ['required', 'string', 'max:30'], 'documento_scadenza'),
+                'documento_scadenza' => $text('Scadenza documento', 'Scadenza del documento (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'telefono', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
+                'telefono' => $text('Telefono', 'Telefono del cliente:', ['required', 'regex:/^\+?\d{8,15}$/'], 'email', ['strip_spaces' => true, 'error' => 'Numero non valido, riprova.']),
+                'email' => $text('Email', 'Email del cliente:', ['required', 'email'], 'iban', ['error' => 'Email non valida, riprova.']),
+                'iban' => $text('IBAN', 'IBAN per l\'erogazione:', ['required', 'regex:/^IT\d{2}[A-Z0-9]{23}$/'], ['aziendale' => 'ragione_sociale', 'leasing' => 'ragione_sociale', '*' => 'datore_lavoro'], ['upper' => true, 'strip_spaces' => true, 'checksum' => 'iban', 'next_by' => 'prodotto', 'error' => 'IBAN non valido (formato o checksum errati), riprova.']),
+
+                'datore_lavoro' => $text('Datore di lavoro / ente', 'Datore di lavoro, ente pensionistico o attività svolta:', ['required', 'string', 'max:120'], 'data_assunzione'),
+                'data_assunzione' => $text('Inizio rapporto', 'Data di inizio rapporto o attività (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'doc_identita', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
+                'ragione_sociale' => $text('Ragione sociale', 'Ragione sociale:', ['required', 'string', 'max:120'], 'partita_iva'),
+                'partita_iva' => $text('Partita IVA', 'Partita IVA (11 cifre):', ['required', 'regex:/^\d{11}$/'], 'doc_identita', ['strip_spaces' => true, 'error' => 'La partita IVA deve avere 11 cifre.']),
+
+                'doc_identita' => $file('documento_identita', 'Invia il documento d\'identità del cliente (foto o PDF).', 'doc_cf'),
+                'doc_cf' => $file('codice_fiscale', 'Invia il codice fiscale del cliente (foto o PDF).', 'doc_reddito'),
+                'doc_reddito' => $file('reddito', 'Invia il documento di reddito (busta paga, CUD, cedolino pensione, dichiarazione o bilancio).', 'riepilogo_p', ['optional' => true]),
+
+                'riepilogo_p' => $summary(['docs' => [
+                    'documento_identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito',
+                ]]),
+            ],
+        ],
+    ],
+];
