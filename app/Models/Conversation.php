@@ -18,6 +18,12 @@ class Conversation extends Model
         ];
     }
 
+    /** Il produttore (agente) il cui telefono coincide con il numero WhatsApp della conversazione. */
+    public function getFornitoreAttribute(): ?Fornitore
+    {
+        return Fornitore::findByWhatsApp($this->wa_number);
+    }
+
     public function loanRequest(): BelongsTo
     {
         return $this->belongsTo(LoanRequest::class);

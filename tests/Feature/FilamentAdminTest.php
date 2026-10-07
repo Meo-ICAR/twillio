@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\Resources\Attachments\Pages\ListAttachments;
 use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\FinanziamentoDocuments\Pages\CreateFinanziamentoDocument;
+use App\Filament\Resources\Fornitori\FornitoreResource;
 use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
 use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
 use App\Filament\Resources\LoanRequests\RelationManagers\AttachmentsRelationManager;
@@ -14,6 +15,7 @@ use App\Jobs\AnalyzeAttachment;
 use App\Models\Attachment;
 use App\Models\Company;
 use App\Models\Conversation;
+use App\Models\Fornitore;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Models\PraticaField;
@@ -87,6 +89,29 @@ class FilamentAdminTest extends TestCase
         foreach (['loan-requests', 'conversations', 'attachments'] as $slug) {
             $this->get("/admin/{$slug}/create")->assertNotFound();
         }
+    }
+
+    public function test_le_conversazioni_mostrano_il_produttore_associato_al_cellulare(): void
+    {
+        Fornitore::create(['name' => 'Agenzia Bianchi', 'tel' => '+39 333 111 2222', 'is_active' => true]);
+        Conversation::create(['wa_number' => '393331112222', 'flow' => 'richiesta', 'node' => 'prodotto', 'data' => [], 'history' => []]);
+        Conversation::create(['wa_number' => '393339999999', 'flow' => 'richiesta', 'node' => 'prodotto', 'data' => [], 'history' => []]);
+        $this->login();
+
+        $this->get('/admin/conversations')->assertOk()->assertSee('Produttore')->assertSee('Agenzia Bianchi')->assertSee('393339999999');
+    }
+
+    public function test_i_produttori_sono_in_anagrafiche_in_sola_lettura(): void
+    {
+        $f = Fornitore::create(['name' => 'Agenzia Bianchi', 'nome' => 'Luca', 'tel' => '3331112222', 'is_active' => true]);
+        $this->login();
+
+        $this->get('/admin/produttori')->assertOk()->assertSee('Agenzia Bianchi')->assertSee('Cellulare');
+        $this->get("/admin/produttori/{$f->id}")->assertOk()->assertSee('Luca');
+        $this->get('/admin/produttori/create')->assertNotFound();
+        $this->get("/admin/produttori/{$f->id}/edit")->assertNotFound();
+        $this->assertSame('Produttori', FornitoreResource::getNavigationLabel());
+        $this->assertSame('Anagrafiche', FornitoreResource::getNavigationGroup());
     }
 
     public function test_la_conversazione_non_mostra_i_dati_in_corso(): void

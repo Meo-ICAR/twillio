@@ -19,6 +19,7 @@ class ConversationsTable
             ->defaultSort('updated_at', 'desc')
             ->columns([
                 TextColumn::make('wa_number')->label('Agente')->searchable(),
+                TextColumn::make('fornitore')->label('Produttore')->placeholder('-')->state(fn ($record) => $record->fornitore?->display_name),
                 TextColumn::make('flow')->label('Percorso')->formatStateUsing(fn (string $state) => self::FLOWS[$state] ?? $state),
                 TextColumn::make('node')->label('Domanda corrente'),
                 TextColumn::make('status')->label('Stato')->badge()->formatStateUsing(fn (string $state) => self::STATUSES[$state] ?? $state),
