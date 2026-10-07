@@ -196,4 +196,30 @@ class RichiestaFlowTest extends ConversationTestCase
         $this->assertSame('mutuo_scopo', Conversation::where('wa_number', $this->agent)->first()->node);
         $this->assertSame('prodotto', Conversation::where('wa_number', '393339998888')->first()->node);
     }
+
+    public function test_un_saluto_a_un_percorso_lasciato_alla_prima_domanda_riporta_al_menu(): void
+    {
+        $this->say('#menu_perfeziona');
+        $this->assertSame('codice', Conversation::first()->node);
+
+        foreach (['ciao', 'Buongiorno', '  SALVE '] as $greeting) {
+            Conversation::query()->update(['status' => 'attiva']);
+            $replies = $this->say($greeting);
+
+            $this->assertSame('list', $replies[0]->kind, $greeting);
+            $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options), $greeting);
+            $this->assertSame('annullata', Conversation::latest('id')->first()->status);
+        }
+    }
+
+    public function test_un_saluto_a_meta_percorso_non_lo_interrompe(): void
+    {
+        $this->say('#menu_richiedi', '#personale');
+
+        $replies = $this->say('ciao');
+
+        $this->assertSame('attiva', Conversation::first()->status);
+        $this->assertSame('importo', Conversation::first()->node);
+        $this->assertStringContainsString('Scegli una delle opzioni', $this->bodies($replies));
+    }
 }

@@ -30,6 +30,8 @@ class ConversationEngine
 {
     private const PRIVACY_WARNING = '⚠️ Non inserire dati identificativi del cliente (nome, codice fiscale, telefono, email, P.IVA). In questa fase servono solo dati di profilo.';
 
+    private const GREETINGS = ['ciao', 'salve', 'buongiorno', 'buonasera', 'hello', 'hi', 'start', 'inizio', 'aiuto', 'help'];
+
     private const ALLOWED_MIME = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'];
 
     /** @var string[] file salvati in questa richiesta, da eliminare se l'invio fallisce */
@@ -115,6 +117,13 @@ class ConversationEngine
         }
         if (! $conv) {
             return $this->fromMenu($m);
+        }
+        // Un saluto a una conversazione appena aperta, a cui non si è ancora risposto, riporta al menu:
+        // altrimenti chi torna dopo un po' si ritrova davanti la prima domanda di un percorso lasciato a metà.
+        if (in_array($command, self::GREETINGS, true) && empty($conv->history)) {
+            $this->close($conv, 'annullata');
+
+            return [$this->menu($m->from)];
         }
         if (! $this->flows->node($conv->flow, $conv->node)) {
             $this->close($conv, 'annullata');
