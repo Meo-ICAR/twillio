@@ -40,4 +40,21 @@ class BrochurePageTest extends TestCase
     {
         $this->get('/')->assertOk()->assertSee('href="/brochure"', false)->assertSee('Scarica la brochure');
     }
+
+    public function test_in_alto_dice_che_sta_accanto_al_crm_e_non_decide(): void
+    {
+        $html = $this->get('/brochure')->getContent();
+
+        $this->assertLessThan(strpos($html, 'Il problema di ogni giorno'), strpos($html, 'Accanto al vostro CRM, non al suo posto'));
+        $this->assertStringContainsString('Non decide e non scarta', $html);
+        $this->assertStringContainsString('nessuna pre-qualifica', strtolower($html));
+    }
+
+    public function test_non_promette_importi_calcolati_da_noi(): void
+    {
+        $html = strtolower($this->get('/brochure')->getContent());
+
+        $this->assertStringNotContainsString('importi ottenibili se avete', $html);
+        $this->assertStringContainsString('preventivatore collegato', $html);
+    }
 }

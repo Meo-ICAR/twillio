@@ -60,8 +60,18 @@
 
     <section class="hero">
         <h1>Meno tempo sulle pratiche.<br>Più tempo per chi porta lavoro.</h1>
-        <p>UnicoAgent è l'assistente WhatsApp che raccoglie le richieste di finanziamento, legge e controlla i documenti con l'intelligenza artificiale e consegna all'istruttoria pratiche già in ordine. Agenti e segnalatori lavorano dal telefono, senza moduli e senza rincorrersi.</p>
-        <div class="tags"><span>WhatsApp, nessuna app da installare</span><span>Controlli AI sui documenti</span><span>Rete di segnalatori</span><span>Si collega al vostro CRM</span></div>
+        <p>UnicoAgent è l'ingresso WhatsApp del vostro CRM: raccoglie le richieste, legge e controlla i documenti con l'intelligenza artificiale e consegna pratiche già in ordine. Voi continuate a lavorare come sempre.</p>
+        <div class="tags"><span>Nessun cambio di processo</span><span>Collegato al vostro CRM</span><span>Controlli AI sui documenti</span><span>Rete di segnalatori</span></div>
+    </section>
+
+    <section class="spot" style="margin-top:22px">
+        <h2 style="margin-top:0">Accanto al vostro CRM, non al suo posto</h2>
+        <p class="lead" style="margin-bottom:14px">Il vostro CRM, il vostro preventivatore e il vostro modo di istruire le pratiche restano quelli di oggi. UnicoAgent sta davanti: raccoglie e controlla, poi consegna.</p>
+        <div class="grid">
+            <div><h3>🔌 Si collega a ciò che avete</h3><p>Preventivo e pratica vanno ai vostri sistemi, fase per fase. Dove non c'è un CRM, arrivano per email all'istruttoria con dati e allegati.</p></div>
+            <div><h3>🧭 Non decide e non scarta</h3><p>Nessun punteggio, nessuna pre-qualifica, nessun rifiuto automatico. Ogni richiesta arriva all'istruttoria, che decide come ha sempre fatto.</p></div>
+            <div><h3>🛡️ L'investimento resta valido</h3><p>Niente migrazioni, niente formazione sul vostro gestionale da rifare. Cambia solo il modo in cui le pratiche vi arrivano: complete e controllate.</p></div>
+        </div>
     </section>
 
     <h2>Il problema di ogni giorno</h2>
@@ -76,7 +86,7 @@
             </ul></div>
         <div class="card after"><h3>Con UnicoAgent</h3>
             <ul class="check">
-                <li>Un solo canale, un codice pratica, uno storico ordinato</li>
+                <li>Un solo canale d'ingresso, un codice pratica, uno storico ordinato</li>
                 <li>I documenti sono controllati appena arrivano, mentre l'agente è ancora lì</li>
                 <li>Dati validati mentre vengono scritti (codice fiscale, IBAN, maggiore età)</li>
                 <li>Ogni segnalatore ha il suo percorso, senza impegnare il vostro team</li>
@@ -89,7 +99,7 @@
         <div class="card"><div class="ico">⏱️</div><h3>Pratiche complete al primo invio</h3><p>Il bot sa quali documenti servono per ogni prodotto e li chiede in ordine. Meno richiami, meno pratiche ferme in attesa di un allegato.</p></div>
         <div class="card"><div class="ico">⌨️</div><h3>Niente ricopiatura</h3><p>I dati letti dai documenti vengono proposti all'agente, che li conferma con un tocco. Le domande già note si saltano.</p></div>
         <div class="card"><div class="ico">🧑‍💼</div><h3>Istruttori sulle pratiche vere</h3><p>La dashboard mostra solo ciò che richiede intervento: documenti rifiutati, informative da verificare, pratiche da prendere in carico.</p></div>
-        <div class="card"><div class="ico">🔁</div><h3>Invio senza passaggi manuali</h3><p>Preventivo e pratica arrivano al vostro CRM, oppure per email con dati e allegati, senza che nessuno debba inoltrarli.</p></div>
+        <div class="card"><div class="ico">🔁</div><h3>Consegna senza passaggi manuali</h3><p>Preventivo e pratica arrivano al vostro CRM, oppure per email con dati e allegati, senza che nessuno debba inoltrarli.</p></div>
         <div class="card"><div class="ico">🛠️</div><h3>Percorsi che cambiate da soli</h3><p>Domande, documenti e controlli si modificano dal pannello, con una copia di prova da collaudare prima di pubblicare.</p></div>
         <div class="card"><div class="ico">🗑️</div><h3>Archivio che si pulisce da solo</h3><p>Le pratiche non perfezionate vengono cancellate dopo il periodo di conservazione, senza lavoro di manutenzione.</p></div>
     </div>
@@ -111,7 +121,7 @@
             <li>Prima dell'invio il sistema attende i controlli ancora in corso</li>
         </ol>
         <ul class="check">
-            <li><strong>La decisione resta alle persone.</strong> L'AI non valuta il merito creditizio, non calcola punteggi e non decide l'esito: lo dà sempre un istruttore abilitato.</li>
+            <li><strong>La decisione resta alle persone.</strong> L'AI non valuta il merito creditizio, non calcola punteggi e non scarta nessuna richiesta: legge e controlla i documenti, l'esito lo dà sempre un istruttore abilitato.</li>
             <li><strong>Privacy per progetto.</strong> La richiesta iniziale è anonima, i dati personali si raccolgono dopo l'informativa firmata e i documenti vanno all'AI solo dopo la sua verifica. I dati sono cifrati.</li>
             <li><strong>Sotto controllo.</strong> Dal pannello l'operatore può approvare o rifiutare ogni documento e vedere cosa ha letto l'AI e quando.</li>
         </ul>
@@ -120,10 +130,10 @@
     <h2>Segnalatori: più canali di ingresso, senza più carico</h2>
     <p class="lead">Non tutti coloro che vi portano un cliente sono agenti convenzionati. UnicoAgent distingue chi scrive e adatta il percorso, così le segnalazioni occasionali non diventano lavoro per il vostro team.</p>
     <div class="grid">
-        <div class="card"><div class="ico">🤝</div><h3>Produttori convenzionati</h3><p>Riconosciuti dal numero di cellulare, vengono salutati per nome. Completano richiesta e perfezionamento e ricevono l'esito, con gli importi ottenibili se avete un preventivatore.</p></div>
-        <div class="card"><div class="ico">📣</div><h3>Segnalatori occasionali</h3><p>Chi non è in anagrafica può comunque segnalare: la richiesta è anonima, quindi non servono dati del cliente. Non vede gli importi e viene invitato a contattare il vostro customer care.</p></div>
+        <div class="card"><div class="ico">🤝</div><h3>Produttori convenzionati</h3><p>Riconosciuti dal numero di cellulare, vengono salutati per nome. Completano richiesta e perfezionamento. Se avete un preventivatore collegato, l'importo che restituisce arriva direttamente a loro; altrimenti la richiesta va all'istruttoria.</p></div>
+        <div class="card"><div class="ico">📣</div><h3>Segnalatori occasionali</h3><p>Chi non è in anagrafica può comunque segnalare: la richiesta è anonima, quindi non servono dati del cliente. Non riceve importi e viene invitato a contattare il vostro customer care, con i vostri recapiti.</p></div>
         <div class="card"><div class="ico">📇</div><h3>Anagrafica che cresce da sola</h3><p>Ogni nuovo numero viene registrato come segnalatore occasionale, non attivo: potete valutare chi merita di diventare produttore.</p></div>
-        <div class="card"><div class="ico">🔒</div><h3>Informazioni al giusto livello</h3><p>Gli importi e il perfezionamento restano per chi è convenzionato; chi segnala vede solo ciò che serve.</p></div>
+        <div class="card"><div class="ico">🔒</div><h3>Informazioni al giusto livello</h3><p>Il perfezionamento e le risposte del preventivatore restano per chi è convenzionato; chi segnala vede solo ciò che serve.</p></div>
     </div>
 
     <h2>Stima il tuo risparmio</h2>
@@ -143,8 +153,9 @@
     </div>
 
     <h2>Si integra con come lavorate</h2>
+    <p class="lead">Per ogni fase scegliete voi dove vanno i dati: al vostro sistema oppure per email. Si cambia dalla scheda azienda, senza interventi sul software.</p>
     <div class="grid">
-        <div class="card"><h3>CRM del committente</h3><p>Preventivo e istruttoria possono essere inviati al vostro CRM. Se non ne avete uno, UnicoAgent manda tutto per email all'istruttoria, con gli allegati.</p></div>
+        <div class="card"><h3>Il vostro CRM, fase per fase</h3><p>Un collegamento per il preventivo e uno per l'istruttoria. Dove non c'è un sistema, la fase viaggia per email all'istruttoria, con tutti gli allegati. Se l'invio non riesce, l'agente lo sa e può riprovare: la pratica non risulta inviata finché non è arrivata.</p></div>
         <div class="card"><h3>Pannello di controllo</h3><p>Pratiche, documenti, conversazioni, produttori e configurazione in un unico pannello, con una dashboard che dice cosa fare adesso.</p></div>
         <div class="card"><h3>Pronto per più aziende</h3><p>L'architettura è predisposta per servire più società dalla stessa installazione.</p></div>
     </div>
