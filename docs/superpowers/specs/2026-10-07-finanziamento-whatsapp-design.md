@@ -139,7 +139,7 @@ non produce documenti legali.
 
 Test automatici (`php artisan test`):
 - motore: un test di conversazione completa per ogni ramo, `indietro`/`annulla`, risposta non
-  valida, deduplica, ripresa dopo 24 ore;
+  valida, ripresa dopo 24 ore;
 - `SensitiveDataGuard`: casi positivi e negativi;
 - fase 2: codice inesistente, di altro agente, già perfezionata; blocco prima dell'informativa;
 - `WhatsAppClient` con `Http::fake()`.
