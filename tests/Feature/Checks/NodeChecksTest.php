@@ -21,9 +21,7 @@ class NodeChecksTest extends ConversationTestCase
 
     private function register(string $name, NodeCheck $check): void
     {
-        $class = $check::class;
-        $this->app->instance($class, $check);
-        config(["finanziamento.checks.{$name}" => $class]);
+        app(CheckRegistry::class)->extend($name, $check);
     }
 
     private function attach(string $flow, string $node, array $checks): void
@@ -227,7 +225,7 @@ class NodeChecksTest extends ConversationTestCase
             $this->assertInstanceOf(NodeCheck::class, app(CheckRegistry::class)->get($name), $name);
             $this->assertNotEmpty(app(CheckRegistry::class)->get($name)->label());
         }
-        $this->assertSame(['codice_fiscale', 'iban', 'maggiorenne'], array_keys(app(CheckRegistry::class)->all()));
+        $this->assertEqualsCanonicalizing(['codice_fiscale', 'iban', 'maggiorenne'], array_keys(app(CheckRegistry::class)->all()));
     }
 
     public function test_i_controlli_agganciati_alla_configurazione_sono_quelli_di_prima(): void

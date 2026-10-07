@@ -7,7 +7,6 @@ use App\Services\Checks\CheckRegistry;
 use App\Services\Flows\FlowRepository;
 use App\Services\Flows\FlowValidator;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -23,6 +22,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 
 /** Le domande di un percorso: si modificano testo, etichetta, opzioni e se si può saltare. */
 class NodesRelationManager extends RelationManager
@@ -81,10 +81,12 @@ class NodesRelationManager extends RelationManager
 
         if (in_array($record->type, ['text', 'choice'], true)) {
             $checks = app(CheckRegistry::class)->all();
-            $fields[] = CheckboxList::make('checks')->label('Controlli sulla risposta')
+            $fields[] = Select::make('checks')->label('Controlli sulla risposta')->multiple()->searchable()
                 ->options(collect($checks)->map(fn ($c) => $c->label())->all())
-                ->descriptions(collect($checks)->map(fn ($c) => $c->description())->all())
-                ->helperText('Se un controllo non è soddisfatto il bot ripete la domanda. Girano nell\'ordine in cui sono già agganciati; i parametri (per esempio l\'età minima) restano quelli impostati.');
+                ->helperText(new HtmlString(
+                    'Se un controllo non è soddisfatto il bot ripete la domanda. Girano nell\'ordine in cui sono già agganciati; i parametri (per esempio l\'età minima) restano quelli impostati.'
+                    .'<br>'.collect($checks)->map(fn ($c) => '<strong>'.e($c->label()).'</strong>: '.e($c->description()))->implode('<br>')
+                ));
         }
 
         if (in_array($record->type, ['choice', 'summary'], true)) {

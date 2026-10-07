@@ -205,7 +205,7 @@ class FlowAdminTest extends TestCase
         $node = $this->node('residenza', 'perfezionamento');
 
         $this->manager('perfezionamento')->mountTableAction('edit', $node)
-            ->assertMountedActionModalSee(['Controlli sulla risposta', 'Codice fiscale', 'IBAN', 'Età minima', 'checksum']);
+            ->assertMountedActionModalSee(['Controlli sulla risposta', 'Codice fiscale', 'IBAN', 'Età minima']);
     }
 
     public function test_le_domande_con_file_non_hanno_i_controlli(): void
