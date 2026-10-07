@@ -186,6 +186,25 @@
     class codice_fiscale,cognome,nome,luogo_nascita,residenza,documento_numero,documento_scadenza,telefono,email,iban,datore_lavoro,data_assunzione,ragione_sociale,partita_iva text
     class verifica_cf check
     class riepilogo_p summary
+</pre></div></section><section data-zoom="1"><h2>Stato Pratiche → Carica documenti (anche in giorni diversi)</h2><p class="meta">4 domande</p><div class="tools"><button type="button" data-zoom-out>−</button><button type="button" data-zoom-in>+</button><button type="button" data-zoom-reset>100%</button><span class="level"></span></div><div class="scroll"><pre class="mermaid">flowchart TD
+    pratica[&quot;Scegli la pratica:&quot;]
+    dettaglio[&quot;Cosa vuoi fare?&quot;]
+    tipo[&quot;Quale documento vuoi inviare?&quot;]
+    upload[[&quot;Invia la foto o il PDF del documento, un file alla volta. Un file n…&quot;]]
+    pratica --&gt; dettaglio
+    dettaglio --&gt;|&quot;Carica documenti&quot;| tipo
+    dettaglio --&gt;|&quot;Altra pratica&quot;| pratica
+    tipo --&gt;|&quot;Ho finito&quot;| dettaglio
+    tipo --&gt;|&quot;Altre risposte&quot;| upload
+    upload --&gt; tipo
+    classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
+    classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600
+    classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
+    classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
+    class pratica,dettaglio,tipo choice
+    class upload file
 </pre></div></section>
 </main>
 <script type="module">

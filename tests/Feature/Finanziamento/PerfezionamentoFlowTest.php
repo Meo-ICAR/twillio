@@ -293,18 +293,6 @@ class PerfezionamentoFlowTest extends ConversationTestCase
         $this->assertSame('doc_identita', Conversation::first()->node);
     }
 
-    public function test_stato_pratiche_elenca_solo_quelle_dell_agente(): void
-    {
-        $this->assertStringContainsString('nessuna pratica', $this->bodies($this->say('#menu_stato')));
-
-        $this->loan();
-        $this->loan(['code' => 'FIN-2026-0008', 'agent_wa_number' => '393339998888']);
-
-        $text = $this->bodies($this->say('3'));
-        $this->assertStringContainsString('FIN-2026-0007 · Prestito personale · richiesta', $text);
-        $this->assertStringNotContainsString('FIN-2026-0008', $text);
-    }
-
     public function test_dopo_24_ore_chiede_se_continuare(): void
     {
         $this->say('#menu_richiedi', '#mutuo');

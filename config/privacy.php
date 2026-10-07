@@ -27,9 +27,11 @@ return [
             'status' => 'attivo',
         ],
         [
-            'name' => 'Fornitore di intelligenza artificiale [da completare]',
-            'role' => 'Estrazione dei dati dai documenti inviati, sempre con conferma dell\'agente',
+            'name' => 'Anthropic (Claude API)',
+            'role' => 'Lettura automatica dei documenti inviati (estrazione dei dati), sempre con controllo dell\'agente e dell\'istruttore',
             'location' => '[da completare]',
+            // Lo stato segue la configurazione: "attivo" solo se è impostata la chiave ANTHROPIC_API_KEY.
+            'active_when' => 'services.anthropic.key',
             'status' => 'previsto',
         ],
     ],

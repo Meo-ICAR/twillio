@@ -8,6 +8,7 @@ class FlowGraph
     private const TITLES = [
         'richiesta' => 'Richiedi Finanziamento (fase 1, anonima)',
         'perfezionamento' => 'Perfeziona Finanziamento (fase 2, dopo l\'informativa)',
+        'documenti' => 'Stato Pratiche → Carica documenti (anche in giorni diversi)',
     ];
 
     private const SHAPES = [

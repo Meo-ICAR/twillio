@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Filament\Resources\Attachments\Pages\ListAttachments;
 use App\Filament\Resources\Companies\Pages\EditCompany;
 use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
+use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
+use App\Filament\Resources\LoanRequests\RelationManagers\AttachmentsRelationManager;
 use App\Models\Attachment;
 use App\Models\Company;
 use App\Models\Conversation;
@@ -185,5 +187,27 @@ class FilamentAdminTest extends TestCase
             ->assertSee('Dati difformi da verificare')
             ->assertSee('darebbe')
             ->assertSee('Bianchi');
+    }
+
+    public function test_l_allegato_mostra_l_esito_del_controllo_e_le_difformita(): void
+    {
+        $loan = $this->loan();
+        $a = Attachment::create([
+            'loan_request_id' => $loan->id, 'kind' => 'documento_identita', 'path' => 'pratiche/x.jpg', 'mime' => 'image/jpeg',
+            'status' => 'difforme', 'received_at' => now(),
+            'analysis' => ['fields' => ['surname' => 'BIANCHI'], 'discrepancies' => ['Cognome: sul documento «BIANCHI», dichiarato «Rossi»']],
+        ]);
+        $this->login();
+
+        $this->get("/admin/attachments/{$a->id}")->assertOk()
+            ->assertSee('Difforme')
+            ->assertSee('Difformità')
+            ->assertSee('sul documento')
+            ->assertSee('BIANCHI');
+        $this->get('/admin/attachments')->assertOk()->assertSee('Difforme');
+
+        Livewire::test(AttachmentsRelationManager::class, [
+            'ownerRecord' => $loan, 'pageClass' => ViewLoanRequest::class,
+        ])->assertCanSeeTableRecords([$a])->assertTableColumnFormattedStateSet('status', 'Difforme', record: $a);
     }
 }

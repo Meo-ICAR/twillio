@@ -1,0 +1,19 @@
+flowchart TD
+    pratica["Scegli la pratica:"]
+    dettaglio["Cosa vuoi fare?"]
+    tipo["Quale documento vuoi inviare?"]
+    upload[["Invia la foto o il PDF del documento, un file alla volta. Un file n…"]]
+    pratica --> dettaglio
+    dettaglio -->|"Carica documenti"| tipo
+    dettaglio -->|"Altra pratica"| pratica
+    tipo -->|"Ho finito"| dettaglio
+    tipo -->|"Altre risposte"| upload
+    upload --> tipo
+    classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
+    classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600
+    classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
+    classDef check fill:#f0e9ff,stroke:#6b46c1,color:#2a1a52
+    class pratica,dettaglio,tipo choice
+    class upload file

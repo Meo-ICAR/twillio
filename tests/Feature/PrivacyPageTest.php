@@ -82,4 +82,13 @@ class PrivacyPageTest extends TestCase
             $this->assertStringNotContainsString($claim, $html);
         }
     }
+
+    public function test_i_destinatari_citano_il_fornitore_ai_solo_quando_e_attivo(): void
+    {
+        $this->get('/privacy')->assertOk()->assertDontSee('Anthropic');
+
+        config(['services.anthropic.key' => 'sk-test']);
+
+        $this->get('/privacy')->assertOk()->assertSee('Anthropic')->assertSee('lettura automatica dei documenti');
+    }
 }

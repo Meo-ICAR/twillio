@@ -165,5 +165,26 @@ return [
                 ]]),
             ],
         ],
+        // Da "Stato Pratiche": si sceglie la pratica e si caricano (anche in giorni diversi) i documenti mancanti o da correggere.
+        'documenti' => [
+            'start' => 'pratica',
+            'restart' => 'pratica',
+            'nodes' => [
+                'pratica' => [
+                    'type' => 'choice', 'label' => 'Pratica', 'prompt' => 'Scegli la pratica:', 'options_from' => 'agent_loans',
+                    'prompt_with' => 'loans_list', 'binds_loan' => true, 'save' => false, 'next' => 'dettaglio',
+                ],
+                'dettaglio' => $choice('Azione', 'Cosa vuoi fare?', ['carica' => 'Carica documenti', 'altra' => 'Altra pratica'], ['carica' => 'tipo', 'altra' => 'pratica'], [
+                    'prompt_with' => 'doc_checklist', 'guards' => ['carica' => 'privacy_received'], 'save' => false,
+                ]),
+                'tipo' => $choice('Documento', 'Quale documento vuoi inviare?', [
+                    'documento_identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito', 'fine' => 'Ho finito',
+                ], ['fine' => 'dettaglio', '*' => 'upload']),
+                'upload' => [
+                    'type' => 'file', 'kind_from' => 'tipo', 'prompt' => 'Invia la foto o il PDF del documento, un file alla volta. Un file nuovo sostituisce quello precedente nella verifica.',
+                    'next' => 'tipo', 'save' => false, 'ack' => true, 'analyze' => true,
+                ],
+            ],
+        ],
     ],
 ];

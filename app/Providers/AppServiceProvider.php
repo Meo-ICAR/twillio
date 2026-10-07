@@ -6,6 +6,7 @@ use Anthropic\Client;
 use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
 use App\Services\Documents\NullDocumentReader;
+use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,7 +21,11 @@ class AppServiceProvider extends ServiceProvider
             $key = config('services.anthropic.key');
 
             return filled($key)
-                ? new AnthropicDocumentReader(new Client(apiKey: $key), config('services.anthropic.model'))
+                ? new AnthropicDocumentReader(new Client(apiKey: $key, requestOptions: [
+                    // Il timeout lo impone il client HTTP (PSR-18), non l'SDK.
+                    'transporter' => new GuzzleClient(['timeout' => 90, 'connect_timeout' => 10]),
+                    'maxRetries' => 1,
+                ]), config('services.anthropic.model'))
                 : new NullDocumentReader;
         });
     }

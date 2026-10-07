@@ -61,9 +61,10 @@ class FlowGraphTest extends TestCase
         $html = (new FlowGraph)->html();
 
         $this->assertStringContainsString('<pre class="mermaid">', $html);
-        $this->assertSame(2, substr_count($html, '<pre class="mermaid">'));
+        $this->assertSame(3, substr_count($html, '<pre class="mermaid">'));
         $this->assertStringContainsString('Richiedi Finanziamento', $html);
         $this->assertStringContainsString('Perfeziona Finanziamento', $html);
+        $this->assertStringContainsString('Carica documenti', $html);
         $this->assertStringContainsString('domande', $html);
     }
 
@@ -84,10 +85,10 @@ class FlowGraphTest extends TestCase
         $html = (new FlowGraph)->html();
 
         $this->assertSame(1, substr_count($html, 'data-zoom="0.3"'));
-        $this->assertSame(1, substr_count($html, 'data-zoom="1"'));
+        $this->assertSame(2, substr_count($html, 'data-zoom="1"'));
         $this->assertLessThan(strpos($html, 'data-zoom="1"'), strpos($html, 'data-zoom="0.3"'));
         foreach (['data-zoom-in', 'data-zoom-out', 'data-zoom-reset'] as $control) {
-            $this->assertSame(2, substr_count($html, '<button type="button" '.$control.'>'), $control);
+            $this->assertSame(3, substr_count($html, '<button type="button" '.$control.'>'), $control);
         }
         $this->assertStringContainsString('el.style.zoom', $html);
     }

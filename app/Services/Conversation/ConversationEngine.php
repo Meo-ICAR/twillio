@@ -2,10 +2,13 @@
 
 namespace App\Services\Conversation;
 
+use App\Jobs\AnalyzeAttachment;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
+use App\Services\Documents\DocumentReader;
 use App\Services\Whatsapp\WhatsAppClient;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -22,6 +25,7 @@ class ConversationEngine
     public function __construct(
         private SensitiveDataGuard $guard,
         private WhatsAppClient $client,
+        private DocumentReader $reader,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -78,7 +82,7 @@ class ConversationEngine
         return match ($choice) {
             'menu_richiedi' => $this->start($m->from, 'richiesta'),
             'menu_perfeziona' => $this->start($m->from, 'perfezionamento'),
-            'menu_stato' => $this->stato($m->from),
+            'menu_stato' => $this->startDocuments($m->from),
             default => [$this->menu()],
         };
     }
@@ -125,30 +129,64 @@ class ConversationEngine
         $history = $conv->history ?? [];
         $history[] = $conv->node;
 
+        if ($def['binds_loan'] ?? false) {
+            $loan = LoanRequest::where('code', $value)->where('agent_wa_number', $conv->wa_number)->firstOrFail();
+            $conv->loan_request_id = $loan->id;
+            $conv->setRelation('loanRequest', $loan);
+        }
+
         $next = $this->nextNode($def, $conv, $data, $value);
         $conv->update(['data' => $data, 'history' => $history, 'node' => $next]);
 
-        return $this->prompt($conv);
+        $replies = $this->prompt($conv);
+        if ($def['type'] === 'file' && ($def['ack'] ?? false)) {
+            $note = '✅ Documento ricevuto.'.($this->reader->enabled() ? ' Lo controllo e ti scrivo l\'esito tra poco.' : '');
+            array_unshift($replies, Reply::text($note));
+        }
+
+        return $replies;
     }
 
     /** @return array{0: ?string, 1: ?string, 2?: array<string,string>} [valore, errore, dati ricavati] */
     private function read(Conversation $conv, array $def, IncomingMessage $m): array
     {
         return match ($def['type']) {
-            'choice', 'summary' => $this->readChoice($def, $m),
+            'choice', 'summary' => $this->readChoice($conv, $def, $m),
             'text' => $this->readText($def, $m),
             'code' => $this->readCode($conv, $m),
             'file' => $this->readFile($conv, $def, $m),
         };
     }
 
-    private function readChoice(array $def, IncomingMessage $m): array
+    private function readChoice(Conversation $conv, array $def, IncomingMessage $m): array
     {
-        $value = $m->replyId ?? $this->matchOption($def['options'], (string) $m->text);
+        $options = $this->optionsFor($conv, $def);
+        $value = $m->replyId ?? $this->matchOption($options, (string) $m->text);
 
-        return $value !== null && isset($def['options'][$value])
-            ? [$value, null]
-            : [null, 'Scegli una delle opzioni proposte.'];
+        if ($value === null || ! isset($options[$value])) {
+            return [null, 'Scegli una delle opzioni proposte.'];
+        }
+        if (($def['guards'][$value] ?? null) === 'privacy_received' && ! $conv->loanRequest?->privacy_received_at) {
+            return [null, 'Per caricare i documenti serve prima l\'informativa firmata dal cliente: usa Perfeziona Finanziamento.'];
+        }
+
+        return [$value, null];
+    }
+
+    /** Opzioni di un nodo: fisse da config oppure ricavate dai dati (le pratiche dell'agente). */
+    private function optionsFor(Conversation $conv, array $def): array
+    {
+        if (($def['options_from'] ?? null) === 'agent_loans') {
+            return $this->agentLoans($conv->wa_number)->mapWithKeys(fn (LoanRequest $l) => [$l->code => $l->code])->all();
+        }
+
+        return $def['options'] ?? [];
+    }
+
+    /** @return Collection<int,LoanRequest> */
+    private function agentLoans(string $waNumber)
+    {
+        return LoanRequest::where('agent_wa_number', $waNumber)->latest('id')->limit(10)->get();
     }
 
     private function readText(array $def, IncomingMessage $m): array
@@ -376,12 +414,18 @@ class ConversationEngine
         if (($def['show_difformita'] ?? false) && $def['type'] === 'choice' && ! empty($data['_difformita'])) {
             $body = "⚠️ I dati non coincidono con il codice fiscale:\n• ".implode("\n• ", $data['_difformita'])."\n\n".$body;
         }
+        if (($def['prompt_with'] ?? null) === 'loans_list') {
+            $body .= "\n\n".$this->agentLoans($conv->wa_number)->map(fn (LoanRequest $l) => $this->loanLine($l))->implode("\n");
+        }
+        if (($def['prompt_with'] ?? null) === 'doc_checklist' && $conv->loanRequest) {
+            $body = $this->checklist($conv->loanRequest)."\n\n".$body;
+        }
         if ($def['prompt_summary'] ?? false) {
             $body = $this->describe($conv->loanRequest->answers, 'richiesta')."\n\n".$body;
         }
 
         return match ($def['type']) {
-            'choice' => [Reply::choice($body, $def['options'])],
+            'choice' => [Reply::choice($body, $this->optionsFor($conv, $def))],
             'summary' => [Reply::text($this->summary($conv, $def)), Reply::choice($def['prompt'], $def['options'])],
             'file' => [Reply::text($body.(($def['optional'] ?? false) ? "\n\nScrivi «salta» per saltare." : ''))],
             default => [Reply::text($body)],
@@ -467,31 +511,64 @@ class ConversationEngine
         }
 
         $loan = $conv->loanRequest;
-        $path = "pratiche/{$loan->code}/{$def['kind']}-".Str::random(8).'.'.self::ALLOWED_MIME[$m->mime];
+        $kind = isset($def['kind_from']) ? ($conv->data[$def['kind_from']] ?? null) : $def['kind'];
+        $path = "pratiche/{$loan->code}/{$kind}-".Str::random(8).'.'.self::ALLOWED_MIME[$m->mime];
         Storage::disk('local')->put($path, $file['body']);
         $this->storedPaths[] = $path;
-        $loan->attachments()->create([
-            'kind' => $def['kind'], 'path' => $path, 'mime' => $m->mime,
+        $attachment = $loan->attachments()->create([
+            'kind' => $kind, 'path' => $path, 'mime' => $m->mime,
             'wa_media_id' => $m->mediaId, 'received_at' => now(),
         ]);
-        if ($def['kind'] === 'informativa') {
+        if ($def['analyze'] ?? false) {
+            AnalyzeAttachment::dispatchAfterResponse($attachment->id);
+        }
+        if ($kind === 'informativa') {
             $loan->update(['privacy_received_at' => now(), 'status' => 'informativa_ricevuta']);
         }
 
         return ['ricevuto', null];
     }
 
-    private function stato(string $from): array
+    /** "Stato Pratiche": elenco delle pratiche dell'agente, da cui si caricano i documenti. */
+    private function startDocuments(string $from): array
     {
-        $loans = LoanRequest::where('agent_wa_number', $from)->latest('id')->limit(10)->get();
-        if ($loans->isEmpty()) {
+        if ($this->agentLoans($from)->isEmpty()) {
             return [Reply::text('Non hai ancora nessuna pratica.')];
         }
 
-        $products = config('finanziamento.flows.richiesta.nodes.prodotto.options');
-        $lines = $loans->map(fn ($l) => "• {$l->code} · ".($products[$l->product] ?? $l->product).' · '.str_replace('_', ' ', $l->status));
+        return $this->start($from, 'documenti');
+    }
 
-        return [Reply::text("📂 *Le tue pratiche*\n\n".$lines->implode("\n"))];
+    private function loanLine(LoanRequest $loan): string
+    {
+        return "• {$loan->code} · ".(LoanRequest::productLabels()[$loan->product] ?? $loan->product).' · '.str_replace('_', ' ', $loan->status);
+    }
+
+    /** Dettaglio della pratica con i documenti ricevuti e il loro esito (conta l'ultimo file di ogni tipo). */
+    private function checklist(LoanRequest $loan): string
+    {
+        $labels = ['documento_identita' => 'Documento d\'identità', 'codice_fiscale' => 'Codice fiscale', 'reddito' => 'Documento di reddito'];
+        $latest = $loan->attachments()->whereIn('kind', array_keys($labels))->orderBy('id')->get()->keyBy('kind');
+
+        $lines = [];
+        foreach ($labels as $kind => $label) {
+            $lines[] = match ($latest[$kind]->status ?? null) {
+                null => "➖ {$label}: mancante",
+                'verificato' => "✅ {$label}: verificato",
+                'difforme' => "⚠️ {$label}: da correggere",
+                'non_leggibile' => "⚠️ {$label}: non leggibile",
+                default => "📎 {$label}: ricevuto",
+            };
+        }
+
+        $text = '📂 *'.$loan->code.'* · '.(LoanRequest::productLabels()[$loan->product] ?? $loan->product)
+            .' · '.str_replace('_', ' ', $loan->status)."\n\n*Documenti*\n".implode("\n", $lines);
+
+        if (! $loan->privacy_received_at) {
+            $text .= "\n\nPer caricare documenti serve prima l'informativa firmata: usa Perfeziona Finanziamento.";
+        }
+
+        return $text;
     }
 
     private function isStale(Conversation $conv): bool

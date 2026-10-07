@@ -93,6 +93,9 @@
             <li>Il personale autorizzato del Titolare, tramite un'area riservata ad accesso protetto.</li>
             <li>I soggetti (banche e intermediari finanziari) ai quali il Titolare, su richiesta dell'interessato, presenta la richiesta di finanziamento.</li>
             <li>{{ $responsabile }}, in qualità di Responsabile, per le sole copie di backup e senza accesso ai dati.</li>
+            @if (filled(config('services.anthropic.key')))
+                <li>Anthropic, fornitore di intelligenza artificiale, per la lettura automatica dei documenti inviati. Le differenze trovate sono segnalate all'agente e valutate da una persona.</li>
+            @endif
             <li>Il fornitore del servizio WhatsApp (Meta Platforms), per il trasporto dei messaggi scambiati con il servizio. Questo può comportare trasferimenti verso Paesi extra SEE, regolati dalle garanzie adottate dal fornitore.</li>
         </ul>
 

@@ -31,7 +31,7 @@ class FinanziamentoConfigTest extends TestCase
                 $this->assertNotEmpty($node['prompt'] ?? null, "$flow.$name senza prompt");
                 $this->assertLessThanOrEqual(900, mb_strlen($node['prompt']), "$flow.$name prompt troppo lungo");
 
-                if (in_array($node['type'], ['choice', 'summary'], true)) {
+                if (in_array($node['type'], ['choice', 'summary'], true) && ! isset($node['options_from'])) {
                     $this->assertLessThanOrEqual(10, count($node['options']), "$flow.$name troppe opzioni");
                     foreach ($node['options'] as $id => $title) {
                         $this->assertLessThanOrEqual(24, mb_strlen($title), "$flow.$name.$id titolo troppo lungo");
@@ -41,7 +41,7 @@ class FinanziamentoConfigTest extends TestCase
                     $this->assertNotEmpty($node['rules'] ?? null, "$flow.$name senza regole");
                 }
                 if ($node['type'] === 'file') {
-                    $this->assertNotEmpty($node['kind'] ?? null, "$flow.$name senza kind");
+                    $this->assertNotEmpty($node['kind'] ?? $node['kind_from'] ?? null, "$flow.$name senza kind");
                 }
                 if ($node['type'] !== 'summary') {
                     $this->assertArrayHasKey('next', $node, "$flow.$name senza next");

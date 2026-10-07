@@ -57,7 +57,7 @@ class CompliancePageTest extends TestCase
         $html = $this->get('/compliance')->assertOk()
             ->assertSee('WhatsApp Business Platform')
             ->assertSee('Meta Platforms')
-            ->assertSee('Fornitore di intelligenza artificiale')
+            ->assertSee('Anthropic')
             ->assertSee('Previsto')
             ->assertSee('non sono ancora attive')
             ->assertSee('addestrare')
@@ -119,5 +119,18 @@ class CompliancePageTest extends TestCase
     public function test_e_stampabile(): void
     {
         $this->get('/compliance')->assertSee('@media print', false);
+    }
+
+    public function test_con_la_chiave_ai_la_pagina_dichiara_l_ai_attiva_e_il_fornitore_attivo(): void
+    {
+        config(['services.anthropic.key' => 'sk-test']);
+
+        $this->get('/compliance')->assertOk()
+            ->assertSee('Anthropic')
+            ->assertSee('Attivo')
+            ->assertDontSee('Previsto')
+            ->assertDontSee('non sono ancora attive')
+            ->assertSee('lettura automatica dei documenti')
+            ->assertSee('tenuto per contratto');
     }
 }

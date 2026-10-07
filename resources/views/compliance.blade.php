@@ -4,7 +4,14 @@
     $giorni = (int) config('privacy.retention_days');
     $statusLabel = ['ottenuta' => 'Ottenuta', 'in_corso' => 'In corso', 'prevista' => 'Prevista', 'attivo' => 'Attivo', 'previsto' => 'Previsto'];
     $certifications = config('privacy.certifications');
-    $subprocessors = config('privacy.subprocessors');
+    $aiActive = filled(config('services.anthropic.key'));
+    $subprocessors = collect(config('privacy.subprocessors'))->map(function ($sub) {
+        if (isset($sub['active_when'])) {
+            $sub['status'] = filled(config($sub['active_when'])) ? 'attivo' : 'previsto';
+        }
+
+        return $sub;
+    })->all();
 @endphp
 <!doctype html>
 <html lang="it">
@@ -85,7 +92,7 @@
                 <div class="branches">
                     <div class="step"><b>Database cifrato</b>Dati personali cifrati a riposo.</div>
                     <div class="step"><b>Archivio privato</b>Documenti non raggiungibili da internet.</div>
-                    <div class="step planned"><b>Fornitore AI (previsto)</b>Estrazione dei dati dai documenti, con conferma dell'agente.</div>
+                    <div class="step {{ $aiActive ? '' : 'planned' }}"><b>Anthropic (Claude API){{ $aiActive ? '' : ' · previsto' }}</b>Lettura automatica dei documenti, con controllo dell'agente e dell'istruttore.</div>
                     <div class="step"><b>Pannello riservato</b>Consultazione da parte del personale autorizzato.</div>
                 </div>
             </div>
@@ -118,13 +125,13 @@
                 <li><strong>Conservazione:</strong> le pratiche non perfezionate sono cancellate automaticamente, con i loro file, dopo {{ $giorni }} giorni dalla richiesta.</li>
                 <li><strong>Cancellazione:</strong> eliminando una pratica dal pannello si eliminano anche i documenti collegati.</li>
                 <li><strong>Diritti degli interessati:</strong> accesso, rettifica, cancellazione, limitazione, portabilità e opposizione si esercitano presso il Titolare, che dispone degli strumenti per darvi seguito.</li>
-                <li><strong>Uso dei dati:</strong> i dati servono solo a istruire la pratica. Non sono usati per pubblicità né ceduti a terzi per finalità proprie. Le funzioni di intelligenza artificiale non sono ancora attive e nessun dato è usato per addestrare modelli; ai fornitori AI sarà richiesto per contratto di non usarli a questo scopo.</li>
+                <li><strong>Uso dei dati:</strong> i dati servono solo a istruire la pratica. Non sono usati per pubblicità né ceduti a terzi per finalità proprie. @if ($aiActive)La lettura automatica dei documenti con intelligenza artificiale è attiva: il fornitore AI è tenuto per contratto a non usare i dati per addestrare i modelli.@else Le funzioni di intelligenza artificiale non sono ancora attive e nessun dato è usato per addestrare modelli; ai fornitori AI sarà richiesto per contratto di non usarli a questo scopo.@endif</li>
             </ul>
         </section>
 
         <section>
             <h2><span class="n">04</span>Intelligenza artificiale e decisioni</h2>
-            <p>L'intelligenza artificiale è prevista soltanto per leggere i documenti inviati (ad esempio documento d'identità o certificati), ricavarne i dati e confrontarli con quelli dichiarati. Ogni dato estratto viene mostrato all'agente, che lo conferma o lo corregge.</p>
+            <p>L'intelligenza artificiale {{ $aiActive ? 'è usata' : 'è prevista' }} soltanto per leggere i documenti inviati (ad esempio documento d'identità o certificati), ricavarne i dati e confrontarli con quelli dichiarati. Ogni dato estratto viene mostrato all'agente, che lo conferma o lo corregge.</p>
             <ul>
                 <li>Il servizio non valuta il merito creditizio, non calcola punteggi e non decide sull'esito del finanziamento.</li>
                 <li>L'esito è sempre dato da un istruttore, agente abilitato OAM: la decisione resta sempre di una persona.</li>
@@ -197,11 +204,11 @@
             <div class="grid" style="grid-template-columns:1fr 1fr">
                 <div class="card">
                     <h3>Già attivo</h3>
-                    <p>Richiesta anonima · informativa prima dei dati personali · cancellazione automatica · dati cifrati · decisione sempre affidata a un istruttore.</p>
+                    <p>Richiesta anonima · informativa prima dei dati personali · cancellazione automatica · dati cifrati · decisione sempre affidata a un istruttore@if ($aiActive) · lettura automatica dei documenti con controllo umano@endif.</p>
                 </div>
                 <div class="card">
                     <h3>In arrivo</h3>
-                    <p>Lettura dei documenti con intelligenza artificiale (con conferma dell'agente) · certificazioni previste · aggiornamento di questa pagina all'attivazione.</p>
+                    <p>@if ($aiActive)Certificazioni previste · aggiornamenti di questa pagina a ogni novità.@else Lettura dei documenti con intelligenza artificiale (con conferma dell'agente) · certificazioni previste · aggiornamento di questa pagina all'attivazione.@endif</p>
                 </div>
             </div>
         </section>

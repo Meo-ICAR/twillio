@@ -29,6 +29,9 @@ class AnalyzeAttachment
 
     public function handle(DocumentReader $reader, DocumentChecker $checker, WhatsAppClient $client): void
     {
+        // Parte dopo la risposta al webhook: il limite di 30 secondi del web non basta per leggere un documento.
+        @set_time_limit(150);
+
         $attachment = Attachment::with('loanRequest')->find($this->attachmentId);
         if (! $attachment || $attachment->kind === 'informativa' || ! $reader->enabled()) {
             return;

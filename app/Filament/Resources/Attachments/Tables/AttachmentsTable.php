@@ -13,6 +13,16 @@ use Illuminate\Support\Facades\Storage;
 
 class AttachmentsTable
 {
+    public const STATUSES = [
+        'ricevuto' => 'Ricevuto',
+        'verificato' => 'Verificato',
+        'difforme' => 'Difforme',
+        'non_leggibile' => 'Non leggibile',
+        'non_analizzato' => 'Non analizzato',
+    ];
+
+    public const COLORS = ['verificato' => 'success', 'difforme' => 'danger', 'non_leggibile' => 'warning', 'non_analizzato' => 'gray'];
+
     public const KINDS = [
         'informativa' => 'Informativa privacy',
         'documento_identita' => 'Documento d\'identità',
@@ -27,11 +37,14 @@ class AttachmentsTable
             ->columns([
                 TextColumn::make('loanRequest.code')->label('Pratica')->searchable(),
                 TextColumn::make('kind')->label('Tipo')->formatStateUsing(fn (string $state) => self::KINDS[$state] ?? $state),
+                TextColumn::make('status')->label('Esito')->badge()->color(fn (string $state) => self::COLORS[$state] ?? 'gray')
+                    ->formatStateUsing(fn (string $state) => self::STATUSES[$state] ?? $state),
                 TextColumn::make('mime')->label('Formato'),
                 TextColumn::make('received_at')->label('Ricevuto il')->dateTime()->sortable(),
             ])
             ->filters([
                 SelectFilter::make('kind')->label('Tipo')->options(self::KINDS),
+                SelectFilter::make('status')->label('Esito')->options(self::STATUSES),
             ])
             ->recordActions([ViewAction::make(), self::downloadAction()]);
     }
