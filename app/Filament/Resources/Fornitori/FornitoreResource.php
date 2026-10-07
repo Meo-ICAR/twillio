@@ -36,6 +36,8 @@ class FornitoreResource extends Resource
 
     protected static ?string $pluralModelLabel = 'produttori';
 
+    protected static ?string $slug = 'produttori';
+
     protected static ?string $recordTitleAttribute = 'name';
 
     public static function canCreate(): bool
