@@ -1,8 +1,12 @@
 <?php
 
 use App\Services\Checks\CodiceFiscaleCheck;
+use App\Services\Checks\DatiCoerentiCheck;
+use App\Services\Checks\EstraiDatiCheck;
 use App\Services\Checks\IbanCheck;
+use App\Services\Checks\InformativaFirmataCheck;
 use App\Services\Checks\MaggiorenneCheck;
+use App\Services\Checks\TipoDocumentoCheck;
 
 // Alberi delle conversazioni WhatsApp. Solo dati: nessuna closure salvata (compatibile con config:cache).
 // Limiti WhatsApp: titolo opzione max 24 caratteri, max 10 opzioni per nodo.
@@ -37,6 +41,19 @@ return [
         'codice_fiscale' => CodiceFiscaleCheck::class,
         'iban' => IbanCheck::class,
         'maggiorenne' => MaggiorenneCheck::class,
+        // Controlli sui documenti caricati (non istantanei: girano dopo la risposta al webhook).
+        'tipo_documento' => TipoDocumentoCheck::class,
+        'dati_coerenti' => DatiCoerentiCheck::class,
+        'estrai_dati' => EstraiDatiCheck::class,
+        'informativa_firmata' => InformativaFirmataCheck::class,
+    ],
+
+    // Controlli sui documenti predefiniti per tipo di lettura (campo ai_kind del catalogo), se il passo non ne ha di suoi.
+    'document_checks' => [
+        'identita' => ['tipo_documento', 'dati_coerenti', 'estrai_dati'],
+        'codice_fiscale' => ['tipo_documento', 'dati_coerenti', 'estrai_dati'],
+        'reddito' => ['tipo_documento', 'dati_coerenti'],
+        'informativa' => ['informativa_firmata'],
     ],
 
     'menu' => [

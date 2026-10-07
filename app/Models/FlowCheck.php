@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\Checks\Check;
 use App\Services\Checks\CheckRegistry;
-use App\Services\Checks\NodeCheck;
+use App\Services\Checks\DocumentCheck;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -30,9 +31,15 @@ class FlowCheck extends Model
         return Str::snake(Str::beforeLast(class_basename($class), 'Check'));
     }
 
-    public function instance(): ?NodeCheck
+    public function instance(): ?Check
     {
-        return class_exists($this->class) && is_subclass_of($this->class, NodeCheck::class) ? app($this->class) : null;
+        return class_exists($this->class) && is_subclass_of($this->class, Check::class) ? app($this->class) : null;
+    }
+
+    /** Controllo su un documento caricato (altrimenti su una risposta). */
+    public function isDocumentCheck(): bool
+    {
+        return $this->instance() instanceof DocumentCheck;
     }
 
     public function label(): string

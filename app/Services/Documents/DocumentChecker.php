@@ -12,6 +12,7 @@ class DocumentChecker
         'documento_identita' => ['identita', 'documento d\'identità'],
         'codice_fiscale' => ['codice_fiscale', 'tessera del codice fiscale'],
         'reddito' => ['reddito', 'documento di reddito'],
+        'informativa' => ['informativa', 'informativa privacy firmata'],
     ];
 
     private const DETECTED = [
@@ -23,19 +24,33 @@ class DocumentChecker
     ];
 
     /**
+     * Tutti i controlli in sequenza: leggibilità, tipo e coerenza con i dati noti.
+     *
      * @param  array<string,mixed>  $extracted  dati letti dal documento
-     * @param  array<string,mixed>  $personal  dati personali dichiarati sulla pratica
+     * @param  array<string,mixed>  $personal  dati già noti sulla pratica
      * @return list<string> difformità in italiano, vuoto se tutto coincide
      */
     public function check(string $kind, array $extracted, array $personal, ?string $today = null): array
     {
+        return $this->readabilityIssues($extracted)
+            ?: $this->typeIssues($kind, $extracted)
+            ?: $this->matchIssues($kind, $extracted, $personal, $today);
+    }
+
+    /** @return list<string> */
+    public function readabilityIssues(array $extracted): array
+    {
+        return ($extracted['legible'] ?? true)
+            ? []
+            : ['Il documento non è leggibile: invia una foto più nitida, senza riflessi e con tutto il documento inquadrato.'];
+    }
+
+    /** @return list<string> */
+    public function typeIssues(string $kind, array $extracted): array
+    {
         [$expectedType, $expectedLabel] = self::EXPECTED[$kind] ?? [null, $kind];
-
-        if (! ($extracted['legible'] ?? true)) {
-            return ['Il documento non è leggibile: invia una foto più nitida, senza riflessi e con tutto il documento inquadrato.'];
-        }
-
         $detected = $extracted['kind_detected'] ?? null;
+
         if ($detected === 'altro') {
             return ["Non riconosco il file come {$expectedLabel}: controlla di aver inviato il documento giusto."];
         }
@@ -43,6 +58,16 @@ class DocumentChecker
             return ['Il file sembra un '.(self::DETECTED[$detected] ?? $detected).", non un {$expectedLabel}."];
         }
 
+        return [];
+    }
+
+    /**
+     * @param  array<string,mixed>  $declared  dati già noti sulla pratica
+     * @return list<string>
+     */
+    public function matchIssues(string $kind, array $extracted, array $declared, ?string $today = null): array
+    {
+        $personal = $declared;
         $issues = [];
         $issues = array_merge($issues, $this->compareNames('Cognome', $extracted['surname'] ?? null, $personal['cognome'] ?? null));
         $issues = array_merge($issues, $this->compareNames('Nome', $extracted['name'] ?? null, $personal['nome'] ?? null));

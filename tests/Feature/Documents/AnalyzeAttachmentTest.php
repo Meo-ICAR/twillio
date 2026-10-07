@@ -159,16 +159,35 @@ class AnalyzeAttachmentTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_l_informativa_e_gli_allegati_spariti_vengono_ignorati(): void
+    public function test_gli_allegati_spariti_vengono_ignorati(): void
     {
         $this->useReader($this->fields());
+
+        AnalyzeAttachment::dispatchSync(99999);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_l_informativa_nostra_e_firmata_viene_accettata(): void
+    {
+        $this->useReader(['kind_detected' => 'informativa', 'legible' => true, 'matches_template' => true, 'signed' => true]);
         $a = $this->attachment('informativa');
 
         AnalyzeAttachment::dispatchSync($a->id);
-        AnalyzeAttachment::dispatchSync(99999);
 
-        $this->assertSame('ricevuto', $a->fresh()->status);
-        Http::assertNothingSent();
+        $this->assertSame('verificato', $a->fresh()->status);
+        Http::assertSent(fn (Request $r) => str_contains($r['text']['body'], 'è il nostro modulo ed è firmato'));
+    }
+
+    public function test_l_informativa_non_firmata_non_viene_accettata_e_si_dice_perche(): void
+    {
+        $this->useReader(['kind_detected' => 'informativa', 'legible' => true, 'matches_template' => true, 'signed' => false]);
+        $a = $this->attachment('informativa');
+
+        AnalyzeAttachment::dispatchSync($a->id);
+
+        $this->assertSame('difforme', $a->fresh()->status);
+        Http::assertSent(fn (Request $r) => str_contains($r['text']['body'], 'non la posso accettare') && str_contains($r['text']['body'], 'firmata'));
     }
 
     private function withSlot(string $code = 'documento_identita'): array

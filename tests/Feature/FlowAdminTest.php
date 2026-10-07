@@ -208,13 +208,44 @@ class FlowAdminTest extends TestCase
             ->assertMountedActionModalSee(['Controlli sulla risposta', 'Codice fiscale', 'IBAN', 'Età minima']);
     }
 
-    public function test_le_domande_con_file_non_hanno_i_controlli(): void
+    public function test_le_domande_con_file_hanno_i_controlli_sul_documento_non_quelli_sulla_risposta(): void
     {
         $node = $this->node('doc_identita', 'perfezionamento');
 
         $this->manager('perfezionamento')->mountTableAction('edit', $node)
-            ->assertMountedActionModalSee('Testo della domanda')
-            ->assertMountedActionModalDontSee('Controlli sulla risposta');
+            ->assertMountedActionModalSee(['Controlli sul documento', 'Tipo di documento', 'Informativa firmata'])
+            ->assertMountedActionModalDontSee(['Controlli sulla risposta', 'Età minima']);
+    }
+
+    public function test_le_domande_di_testo_non_offrono_i_controlli_sui_documenti(): void
+    {
+        $node = $this->node('residenza', 'perfezionamento');
+
+        $this->manager('perfezionamento')->mountTableAction('edit', $node)
+            ->assertMountedActionModalSee('Età minima')
+            ->assertMountedActionModalDontSee(['Tipo di documento', 'Controlli sul documento']);
+    }
+
+    public function test_si_aggancia_un_controllo_sul_documento_a_una_domanda_con_file(): void
+    {
+        $node = $this->node('doc_identita', 'perfezionamento');
+
+        $this->manager('perfezionamento')->callTableAction('edit', $node, data: ['prompt' => $node->prompt, 'checks' => ['tipo_documento', 'estrai_dati']])->assertHasNoTableActionErrors();
+
+        $this->assertSame(['tipo_documento', 'estrai_dati'], $node->fresh()->checks);
+        $this->assertSame(['tipo_documento', 'estrai_dati'], app(FlowRepository::class)->node('perfezionamento', 'doc_identita')['checks']);
+    }
+
+    public function test_un_controllo_sulla_risposta_non_si_aggancia_a_un_file_e_viceversa(): void
+    {
+        $file = $this->node('doc_identita', 'perfezionamento');
+        $text = $this->node('residenza', 'perfezionamento');
+
+        $this->manager('perfezionamento')->callTableAction('edit', $file, data: ['prompt' => $file->prompt, 'checks' => ['iban']]);
+        $this->manager('perfezionamento')->callTableAction('edit', $text, data: ['prompt' => $text->prompt, 'checks' => ['tipo_documento']]);
+
+        $this->assertNull($file->fresh()->checks);
+        $this->assertNull($text->fresh()->checks);
     }
 
     private function jumpsOf(string $code, string $flow = 'richiesta'): array

@@ -40,19 +40,21 @@ class FlowCheckAdminTest extends TestCase
             ->assertSee('IBAN')
             ->assertSee('Età minima')
             ->assertSee('perfezionamento.iban')
-            ->assertSee('checksum');
+            ->assertSee('checksum')
+            ->assertSee('Tipo di documento')
+            ->assertSee('Informativa firmata');
         $this->get('/admin/flow-checks/create')->assertNotFound();
     }
 
     public function test_il_pulsante_cerca_nuovi_controlli_riporta_nell_elenco_quelli_mancanti(): void
     {
         $this->check('iban')->delete();
-        $this->assertSame(2, FlowCheck::count());
+        $this->assertSame(6, FlowCheck::count());
 
         Livewire::test(ListFlowChecks::class)->callAction(TestAction::make('cercaNuovi'))->assertHasNoActionErrors();
 
         $this->assertSame(IbanCheck::class, FlowCheck::where('code', 'iban')->value('class'));
-        $this->assertSame(3, FlowCheck::count());
+        $this->assertSame(7, FlowCheck::count());
     }
 
     public function test_si_disattiva_un_controllo_non_usato_e_sparisce_dalla_select(): void

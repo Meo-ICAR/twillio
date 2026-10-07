@@ -79,12 +79,17 @@ class NodesRelationManager extends RelationManager
                 ->helperText('L\'agente può scrivere «salta» per non rispondere. Serve un\'uscita predefinita: non vale per le domande con salti diversi per ogni risposta.'),
         ];
 
-        if (in_array($record->type, ['text', 'choice'], true)) {
-            $checks = app(CheckRegistry::class)->all();
-            $fields[] = Select::make('checks')->label('Controlli sulla risposta')->multiple()->searchable()
+        if (in_array($record->type, ['text', 'choice', 'file'], true)) {
+            // Sulle risposte girano i controlli sulle risposte; sui file, quelli sui documenti.
+            $isFile = $record->type === 'file';
+            $checks = $isFile ? app(CheckRegistry::class)->documentChecks() : app(CheckRegistry::class)->nodeChecks();
+            $fields[] = Select::make('checks')->label($isFile ? 'Controlli sul documento' : 'Controlli sulla risposta')->multiple()->searchable()
                 ->options(collect($checks)->map(fn ($c) => $c->label())->all())
                 ->helperText(new HtmlString(
-                    'Se un controllo non è soddisfatto il bot ripete la domanda. Girano nell\'ordine in cui sono già agganciati; i parametri (per esempio l\'età minima) restano quelli impostati.'
+                    ($isFile
+                        ? 'Girano dopo il caricamento, non subito: l\'agente intanto prosegue. Se non ne scegli nessuno valgono quelli predefiniti del tipo di documento. Il primo che non passa ferma gli altri.'
+                        : 'Se un controllo non è soddisfatto il bot ripete la domanda.')
+                    .' Girano nell\'ordine in cui sono già agganciati; i parametri (per esempio l\'età minima) restano quelli impostati.'
                     .'<br>'.collect($checks)->map(fn ($c) => '<strong>'.e($c->label()).'</strong>: '.e($c->description()))->implode('<br>')
                 ));
         }

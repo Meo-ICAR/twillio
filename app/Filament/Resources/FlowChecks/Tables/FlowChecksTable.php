@@ -18,6 +18,7 @@ class FlowChecksTable
             ->defaultSort('sort_order')
             ->columns([
                 TextColumn::make('code')->label('Codice')->searchable(),
+                TextColumn::make('tipo')->label('Su')->badge()->state(fn (FlowCheck $record) => $record->isDocumentCheck() ? 'Documento' : 'Risposta'),
                 TextColumn::make('nome')->label('Controllo')->state(fn (FlowCheck $record) => $record->label()),
                 TextColumn::make('descrizione')->label('Cosa fa')->wrap()->state(fn (FlowCheck $record) => $record->description()),
                 TextColumn::make('usato')->label('Usato in')->bulleted()->listWithLineBreaks()->placeholder('nessuna domanda')

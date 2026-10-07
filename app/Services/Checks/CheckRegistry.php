@@ -14,10 +14,10 @@ class CheckRegistry
     /** @var array<string,string>|null codice => classe, solo controlli attivi, in ordine */
     private ?array $classes = null;
 
-    /** @var array<string,NodeCheck> controlli aggiunti a runtime con extend() */
+    /** @var array<string,Check> controlli aggiunti a runtime con extend() */
     private array $extensions = [];
 
-    public function get(string $name): ?NodeCheck
+    public function get(string $name): ?Check
     {
         if (isset($this->extensions[$name])) {
             return $this->extensions[$name];
@@ -28,7 +28,7 @@ class CheckRegistry
         return $class && class_exists($class) ? app($class) : null;
     }
 
-    /** @return array<string,NodeCheck> codice => controllo, solo gli attivi */
+    /** @return array<string,Check> codice => controllo, solo gli attivi */
     public function all(): array
     {
         $checks = [];
@@ -42,9 +42,21 @@ class CheckRegistry
     }
 
     /** Aggiunge un controllo senza passare dalla tabella (utile per pacchetti e prove). */
-    public function extend(string $name, NodeCheck $check): void
+    public function extend(string $name, Check $check): void
     {
         $this->extensions[$name] = $check;
+    }
+
+    /** @return array<string,NodeCheck> i controlli sulle risposte */
+    public function nodeChecks(): array
+    {
+        return array_filter($this->all(), fn (Check $c) => $c instanceof NodeCheck);
+    }
+
+    /** @return array<string,DocumentCheck> i controlli sui documenti */
+    public function documentChecks(): array
+    {
+        return array_filter($this->all(), fn (Check $c) => $c instanceof DocumentCheck);
     }
 
     public function forget(): void
@@ -53,16 +65,16 @@ class CheckRegistry
     }
 
     /**
-     * Classi che implementano NodeCheck nella cartella dei controlli.
+     * Classi che implementano NodeCheck o DocumentCheck nella cartella dei controlli.
      *
-     * @return list<class-string<NodeCheck>>
+     * @return list<class-string<Check>>
      */
     public function discover(): array
     {
         $found = [];
         foreach (glob(app_path('Services/Checks/*.php')) as $file) {
             $class = 'App\\Services\\Checks\\'.basename($file, '.php');
-            if (class_exists($class) && (new \ReflectionClass($class))->isInstantiable() && is_subclass_of($class, NodeCheck::class)) {
+            if (class_exists($class) && (new \ReflectionClass($class))->isInstantiable() && is_subclass_of($class, Check::class)) {
                 $found[] = $class;
             }
         }

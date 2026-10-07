@@ -16,12 +16,16 @@ Set "legible" to false when the photo is too blurry, cut off or covered to read 
 Set "kind_detected" to what the document really is: identita (identity card, passport, driving licence),
 codice_fiscale (tax code card or health card), reddito (payslip, pension slip, CUD, tax return, balance sheet),
 informativa (a privacy notice), or altro (anything else).
+For a privacy notice: set "matches_template" to true only if it is the form titled "Informativa sul trattamento dei dati personali"
+with a "Per presa visione" block (name line and date/signature line); set "signed" to true only if a handwritten or digital signature
+is visibly present in the signature area, false if the area is empty, and null if you cannot tell. For any other document leave both null.
 TXT;
 
     private const LABELS = [
         'documento_identita' => 'documento d\'identità (carta d\'identità, passaporto o patente)',
         'codice_fiscale' => 'tessera del codice fiscale o tessera sanitaria',
         'reddito' => 'documento di reddito (busta paga, cedolino pensione, CUD, dichiarazione o bilancio)',
+        'informativa' => 'informativa privacy da far firmare al cliente (modulo «Informativa sul trattamento dei dati personali»)',
     ];
 
     private const MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -91,6 +95,8 @@ TXT;
             'period' => $text,
             'net_amount' => $text,
             'notes' => $text,
+            'matches_template' => ['type' => ['boolean', 'null']],
+            'signed' => ['type' => ['boolean', 'null']],
         ];
 
         return ['type' => 'object', 'properties' => $properties, 'required' => array_keys($properties), 'additionalProperties' => false];

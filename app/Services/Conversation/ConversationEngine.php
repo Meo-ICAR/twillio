@@ -9,6 +9,7 @@ use App\Models\PraticaDocument;
 use App\Models\User;
 use App\Services\Checks\CheckContext;
 use App\Services\Checks\CheckRegistry;
+use App\Services\Checks\NodeCheck;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Whatsapp\WhatsAppClient;
@@ -448,7 +449,7 @@ class ConversationEngine
             $params = is_array($entry) ? array_diff_key($entry, ['name' => 1]) : [];
 
             $check = $this->checks->get($name);
-            if (! $check) {
+            if (! $check instanceof NodeCheck) {
                 Log::error('Controllo sconosciuto agganciato a una domanda', ['check' => $name]);
 
                 return ['error' => 'Il controllo di questa risposta non è disponibile al momento. Riprova più tardi o scrivi «menu».', 'derived' => []];
@@ -472,7 +473,7 @@ class ConversationEngine
         $keys = [];
         foreach ($def['checks'] ?? [] as $entry) {
             $check = $this->checks->get(is_array($entry) ? $entry['name'] : $entry);
-            $keys = array_merge($keys, $check?->derives() ?? []);
+            $keys = array_merge($keys, $check instanceof NodeCheck ? $check->derives() : []);
         }
 
         return array_values(array_unique($keys));
@@ -681,7 +682,7 @@ class ConversationEngine
         ]);
         $slot?->update(['status' => 'ricevuto', 'received_at' => now()]);
         if ($def['analyze'] ?? false) {
-            AnalyzeAttachment::dispatchAfterResponse($attachment->id);
+            AnalyzeAttachment::dispatchAfterResponse($attachment->id, ! empty($def['checks']) ? $def['checks'] : null);
         }
         if ($kind === 'informativa') {
             $loan->update(['privacy_received_at' => now(), 'status' => 'informativa_ricevuta']);

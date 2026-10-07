@@ -225,7 +225,7 @@ class NodeChecksTest extends ConversationTestCase
             $this->assertInstanceOf(NodeCheck::class, app(CheckRegistry::class)->get($name), $name);
             $this->assertNotEmpty(app(CheckRegistry::class)->get($name)->label());
         }
-        $this->assertEqualsCanonicalizing(['codice_fiscale', 'iban', 'maggiorenne'], array_keys(app(CheckRegistry::class)->all()));
+        $this->assertEqualsCanonicalizing(['codice_fiscale', 'iban', 'maggiorenne'], array_keys(app(CheckRegistry::class)->nodeChecks()));
     }
 
     public function test_i_controlli_agganciati_alla_configurazione_sono_quelli_di_prima(): void

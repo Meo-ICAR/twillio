@@ -5,6 +5,8 @@ namespace App\Services\Flows;
 use App\Models\Flow;
 use App\Models\FlowNode;
 use App\Services\Checks\CheckRegistry;
+use App\Services\Checks\DocumentCheck;
+use App\Services\Checks\NodeCheck;
 
 /** Controlli che impediscono di salvare un albero che bloccherebbe gli agenti o che WhatsApp rifiuterebbe. */
 class FlowValidator
@@ -58,15 +60,28 @@ class FlowValidator
         $errors = array_merge($errors, $this->jumpErrors($node, $options, $jumps, $jumpBy));
 
         if ($checks) {
-            if (! in_array($node->type, ['text', 'choice'], true)) {
-                $errors[] = 'I controlli si agganciano solo a domande di testo o a scelta.';
+            $registry = app(CheckRegistry::class);
+            $expected = match ($node->type) {
+                'text', 'choice' => NodeCheck::class,
+                'file' => DocumentCheck::class,
+                default => null,
+            };
+
+            if ($expected === null) {
+                $errors[] = 'I controlli si agganciano solo a domande di testo, a scelta o a file.';
             }
             foreach ($checks as $entry) {
                 $name = is_array($entry) ? ($entry['name'] ?? null) : $entry;
+                $check = is_string($name) && $name !== '' ? $registry->get($name) : null;
+
                 if (! is_string($name) || $name === '') {
                     $errors[] = 'Un controllo agganciato non ha il nome.';
-                } elseif (! app(CheckRegistry::class)->get($name)) {
+                } elseif (! $check) {
                     $errors[] = "Il controllo «{$name}» non esiste.";
+                } elseif ($expected !== null && ! $check instanceof $expected) {
+                    $errors[] = $expected === DocumentCheck::class
+                        ? "Il controllo «{$name}» è per le risposte, non per i documenti."
+                        : "Il controllo «{$name}» è per i documenti, non per le risposte.";
                 }
             }
         }

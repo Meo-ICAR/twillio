@@ -10,14 +10,8 @@ namespace App\Services\Checks;
  * prosegue; se restituisce false la domanda viene ripetuta con il messaggio del controllo
  * (`$ctx->fail('...')`) oppure, se non ne ha uno, con quello della domanda.
  */
-interface NodeCheck
+interface NodeCheck extends Check
 {
-    /** Nome mostrato nel pannello. */
-    public function label(): string;
-
-    /** Cosa controlla, in una frase, mostrata nel pannello. */
-    public function description(): string;
-
     /**
      * Chiavi dei dati che il controllo ricava con `$ctx->set()`.
      * Si azzerano quando la domanda viene rifatta o l'agente torna indietro.
