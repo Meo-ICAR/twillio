@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Finanziamento;
 
+use App\Mail\LoanSubmissionMail;
+use App\Models\Company;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
@@ -9,6 +11,7 @@ use App\Services\Crm\CrmGateway;
 use App\Services\Crm\SimulatedCrmGateway;
 use Database\Seeders\DocumentCatalogSeeder;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class InvioCrmTest extends ConversationTestCase
 {
@@ -17,6 +20,7 @@ class InvioCrmTest extends ConversationTestCase
 
     private function loanAtSummary(): LoanRequest
     {
+        Company::create(['name' => 'H', 'url_istruttoria' => 'https://crm.example.com/pratiche']);
         $this->seed(DocumentCatalogSeeder::class);
         $loan = LoanRequest::create(['code' => 'FIN-2026-0007', 'agent_wa_number' => $this->agent, 'product' => 'personale',
             'status' => 'informativa_ricevuta', 'privacy_received_at' => now(), 'answers' => ['prodotto' => 'personale']]);
@@ -98,5 +102,36 @@ class InvioCrmTest extends ConversationTestCase
 
         $this->assertNotSame('perfezionata', $loan->fresh()->status);
         Log::shouldHaveReceived('error')->withArgs(fn ($m, $c = []) => ! str_contains(json_encode([$m, $c]), 'Mario'))->once();
+    }
+
+    public function test_senza_crm_per_l_istruttoria_la_pratica_va_per_email(): void
+    {
+        Company::query()->delete();
+        $this->gateway(500);
+        $loan = $this->loanAtSummary();
+        Company::query()->update(['url_istruttoria' => null]);
+
+        $body = $this->bodies($this->say('#conferma'));
+
+        $this->assertStringContainsString('inviata in istruttoria', $body);
+        $this->assertSame([], $this->sent, 'il CRM non è chiamato');
+        Mail::assertSent(LoanSubmissionMail::class);
+        $this->assertSame('perfezionata', $loan->fresh()->status);
+        $this->assertNotNull($loan->fresh()->emailed_at);
+    }
+
+    public function test_se_la_mail_non_parte_la_pratica_non_si_perfeziona(): void
+    {
+        $loan = $this->loanAtSummary();
+        Company::query()->update(['url_istruttoria' => null]);
+        config(['finanziamento.mail.to' => null]);
+
+        $body = $this->bodies($this->say('#conferma'));
+
+        $this->assertStringContainsString('Invio pratica fallito', $body);
+        $this->assertSame('informativa_ricevuta', $loan->fresh()->status);
+        $this->assertNull($loan->fresh()->personal);
+        $this->assertNull($loan->fresh()->perfected_at);
+        $this->assertSame('attiva', Conversation::first()->status);
     }
 }

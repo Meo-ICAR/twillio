@@ -14,6 +14,7 @@ use App\Services\Checks\CheckRegistry;
 use App\Services\Checks\NodeCheck;
 use App\Services\Crm\CrmGateway;
 use App\Services\Crm\LoanEmailSender;
+use App\Services\Crm\QuoteEmailSender;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Loans\LoanEstimator;
@@ -46,6 +47,7 @@ class ConversationEngine
         private LoanEstimator $estimator,
         private CrmGateway $crm,
         private LoanEmailSender $mailer,
+        private QuoteEmailSender $quoteMailer,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -695,14 +697,22 @@ class ConversationEngine
     /** Importi ottenibili per i produttori; chi non lo è (segnalatore occasionale) è invitato a chiamare la company. */
     private function outcomeText(LoanRequest $loan, string $waNumber): string
     {
+        $company = Company::current();
+
         if (Fornitore::isProducer($waNumber)) {
+            // Senza preventivatore (CRM) i dati vanno per email all'istruttoria, che risponderà.
+            if (! $company?->hasQuoteCrm()) {
+                return $this->quoteMailer->send($loan)
+                    ? '📨 Ho inoltrato la richiesta all\'istruttoria: ti ricontatteranno con l\'esito.'
+                    : '⚠️ Non sono riuscito a inoltrare la richiesta all\'istruttoria: contattala indicando il codice pratica.';
+            }
+
             $range = $this->estimator->estimate($loan);
 
             return '💶 Importo ottenibile: da *'.number_format($range['min'], 0, ',', '.').' €* a *'.number_format($range['max'], 0, ',', '.').' €*.';
         }
 
         Fornitore::registerOccasional($waNumber);
-        $company = Company::current();
         $contacts = array_filter([
             $company?->customer_care_phone ? "📞 {$company->customer_care_phone}" : null,
             $company?->customer_care_email ? "✉️ {$company->customer_care_email}" : null,
@@ -717,17 +727,31 @@ class ConversationEngine
         $loan = $conv->loanRequest;
         $data = $conv->data ?? [];
 
-        // Se il CRM non accetta la pratica resta tutto com'è: l'agente può riprovare dal riepilogo.
-        if ($this->submitToCrm($loan, $data) !== 200) {
+        // Con un CRM per l'istruttoria si chiama il CRM, altrimenti si manda una email con dati e allegati.
+        // Se l'invio non riesce resta tutto com'è: l'agente può riprovare dal riepilogo.
+        $viaCrm = Company::current()?->hasSubmissionCrm() ?? false;
+        if ($viaCrm ? $this->submitToCrm($loan, $data) !== 200 : ! $this->mailLoan($loan, $data)) {
             return [Reply::text('⚠️ Invio pratica fallito, riprovare o contattare Istruttoria.'), ...$this->prompt($conv)];
         }
 
         $loan->update(['personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now()]);
         $this->close($conv, 'completata');
-        // L'esito della mail non cambia ciò che vede l'agente: se non parte, si può forzare dal pannello.
-        $this->mailer->send($loan->fresh());
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
+    }
+
+    /** La pratica viene salvata per prima: la mail legge i dati dalla pratica; se non parte si annulla il salvataggio. */
+    private function mailLoan(LoanRequest $loan, array $data): bool
+    {
+        $before = $loan->only(['personal', 'status', 'perfected_at']);
+        $loan->update(['personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now()]);
+        if ($this->mailer->send($loan)) {
+            return true;
+        }
+
+        $loan->update($before);
+
+        return false;
     }
 
     private function submitToCrm(LoanRequest $loan, array $data): int

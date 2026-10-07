@@ -12,6 +12,7 @@ class CompanyForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
+            ->columnSpanFull(),
             Section::make('Titolare del trattamento')
                 ->description('Questi dati compaiono nell\'informativa privacy pubblica (/privacy).')
                 ->columns(2)
@@ -25,6 +26,10 @@ class CompanyForm
                     TextInput::make('customer_care_email')->label('Email del customer care')->email()->maxLength(255),
                     TextInput::make('istruttoria_email')->label('Email dell\'istruttoria')->email()->maxLength(255)
                         ->helperText('Riceve i dati della pratica e gli allegati quando viene inviata in istruttoria.'),
+                    TextInput::make('url_preventivatore')->label('URL del preventivatore (CRM)')->url()->maxLength(255)
+                        ->helperText('Se vuoto, i dati del preventivo vengono mandati per email all\'istruttoria.'),
+                    TextInput::make('url_istruttoria')->label('URL dell\'istruttoria (CRM)')->url()->maxLength(255)
+                        ->helperText('Se vuoto, la pratica con gli allegati viene mandata per email all\'istruttoria.'),
                     Textarea::make('retention_perfected')
                         ->label('Conservazione delle pratiche perfezionate')
                         ->helperText('Per quanto tempo e perché vengono conservati i dati delle pratiche perfezionate.')

@@ -7,6 +7,7 @@ use App\Services\Conversation\IncomingMessage;
 use Database\Seeders\FlowSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -20,6 +21,9 @@ abstract class ConversationTestCase extends TestCase
     {
         parent::setUp();
         Storage::fake('local');
+        // Senza CRM configurato i dati vanno per email all'istruttoria: nei test la posta è finta e la casella c'è.
+        Mail::fake();
+        config(['finanziamento.mail.to' => 'istruttoria@example.com']);
         // Tutti i test del dialogo girano sull'albero letto dal database (importato dalla configurazione).
         $this->seed(FlowSeeder::class);
         config(['services.whatsapp.token' => 'TOK', 'services.whatsapp.phone_number_id' => '555']);

@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Finanziamento;
 
+use App\Mail\QuoteMail;
 use App\Models\Company;
 use App\Models\Fornitore;
 use App\Models\LoanRequest;
 use App\Services\Loans\LoanEstimator;
 use App\Services\Loans\RandomLoanEstimator;
+use Illuminate\Support\Facades\Mail;
 
 class ImportiOttenibiliTest extends ConversationTestCase
 {
@@ -36,6 +38,7 @@ class ImportiOttenibiliTest extends ConversationTestCase
     public function test_un_produttore_riceve_l_importo_minimo_e_massimo(): void
     {
         $this->fixedEstimator();
+        Company::create(['name' => 'Hassisto Srl', 'url_preventivatore' => 'https://crm.example.com/preventivi']);
         Fornitore::create(['name' => 'Agenzia Bianchi', 'tel' => '+39 333 111 2222', 'is_active' => true]);
 
         $body = $this->bodies($this->say(...self::FLOW));
@@ -113,5 +116,43 @@ class ImportiOttenibiliTest extends ConversationTestCase
         Fornitore::create(['name' => 'Ex agente', 'nome' => 'Mara', 'tel' => '3331112222', 'is_active' => false]);
 
         $this->assertSame(config('finanziamento.menu.body'), $this->say('ciao')[0]->body);
+    }
+
+    public function test_senza_preventivatore_i_dati_vanno_per_email_e_non_si_danno_importi(): void
+    {
+        $this->fixedEstimator();
+        Fornitore::create(['name' => 'Agenzia Bianchi', 'tel' => '3331112222', 'is_active' => true]);
+
+        $body = $this->bodies($this->say(...self::FLOW));
+
+        $this->assertStringContainsString('inoltrato la richiesta all\'istruttoria', $body);
+        $this->assertStringNotContainsString('Importo ottenibile', $body);
+        Mail::assertSent(QuoteMail::class, function ($m) {
+            $m->assertHasTo('istruttoria@example.com');
+            $m->assertSeeInHtml('Prestito personale');
+
+            return $m->hasSubject('Preventivo FIN-2026-0001 · Prestito personale');
+        });
+    }
+
+    public function test_senza_preventivatore_e_senza_casella_l_agente_e_avvisato(): void
+    {
+        config(['finanziamento.mail.to' => null]);
+        Fornitore::create(['name' => 'Agenzia Bianchi', 'tel' => '3331112222', 'is_active' => true]);
+
+        $body = $this->bodies($this->say(...self::FLOW));
+
+        $this->assertStringContainsString('Non sono riuscito a inoltrare', $body);
+        Mail::assertNothingSent();
+    }
+
+    public function test_con_il_preventivatore_non_parte_nessuna_email(): void
+    {
+        Company::create(['name' => 'H', 'url_preventivatore' => 'https://crm.example.com/p']);
+        Fornitore::create(['name' => 'Agenzia Bianchi', 'tel' => '3331112222', 'is_active' => true]);
+
+        $this->say(...self::FLOW);
+
+        Mail::assertNothingSent();
     }
 }
