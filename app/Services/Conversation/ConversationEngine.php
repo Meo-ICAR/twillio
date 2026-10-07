@@ -226,6 +226,10 @@ class ConversationEngine
             $data[$conv->node] = $value;
         }
         $data = array_merge($data, $extra);
+        // La risposta chiede di rifare un'altra domanda: il suo dato (e quelli ricavati) non vale più, così non viene saltata.
+        if ($reask = $def['reask'][$value] ?? null) {
+            $data = $this->forgetAnswer($conv, $reask, $data);
+        }
         if ($def['type'] === 'review') {
             $data = $this->applyReview($conv, (string) $value, $data);
         }
@@ -620,14 +624,26 @@ class ConversationEngine
         }
 
         $previous = array_pop($history);
-        $data = $conv->data ?? [];
-        unset($data[$previous]);
-        foreach ($this->derivedKeys($this->def($conv->flow, $previous)) as $key) {
-            unset($data[$key]);
-        }
+        $data = $this->forgetAnswer($conv, $previous, $conv->data ?? []);
         $conv->update(['node' => $previous, 'history' => $history, 'data' => $data]);
 
         return $this->prompt($conv);
+    }
+
+    /**
+     * Toglie dai dati la risposta a una domanda e ciò che ne era stato ricavato.
+     *
+     * @param  array<string,mixed>  $data
+     * @return array<string,mixed>
+     */
+    private function forgetAnswer(Conversation $conv, string $node, array $data): array
+    {
+        unset($data[$node]);
+        foreach ($this->derivedKeys($this->def($conv->flow, $node)) as $key) {
+            unset($data[$key]);
+        }
+
+        return $data;
     }
 
     private function finish(Conversation $conv, string $value): array
