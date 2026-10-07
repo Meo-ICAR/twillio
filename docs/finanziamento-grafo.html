@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grafo delle domande del bot</title>
+<style>
+  :root { color-scheme: light dark; --bg:#f7f8fa; --fg:#1b2430; --muted:#5b6675; --card:#fff; --line:#dde2e8; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10151c; --fg:#e6ebf1; --muted:#9aa6b5; --card:#18202a; --line:#2a3542; } }
+  body { margin:0; padding:24px 16px 48px; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:1200px; margin:0 auto; }
+  h1 { margin:0 0 4px; font-size:1.6rem; }
+  h2 { margin:32px 0 4px; font-size:1.2rem; }
+  .meta, .legend { color:var(--muted); margin:0 0 12px; font-size:.9rem; }
+  .scroll { overflow:auto; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  pre.mermaid { margin:0; text-align:center; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Grafo delle domande del bot</h1>
+  <p class="legend">Rettangolo = scelta · parallelogramma = testo libero · doppio bordo = file o codice · ovale = riepilogo e conferma. Generato da <code>config/finanziamento.php</code> con <code>php artisan finanziamento:graph</code>.</p>
+  <section><h2>Richiedi Finanziamento (fase 1, anonima)</h2><p class="meta">37 domande</p><div class="scroll"><pre class="mermaid">flowchart TD
+    prodotto[&quot;Che tipo di finanziamento vuoi richiedere?&quot;]
+    importo[&quot;Quale importo ti serve?&quot;]
+    durata[&quot;Su quale durata?&quot;]
+    lavoro[&quot;Qual è la situazione lavorativa del cliente?&quot;]
+    contratto[&quot;Che tipo di contratto ha?&quot;]
+    anzianita[&quot;Da quanto lavora presso l#39;attuale datore?&quot;]
+    reddito[&quot;Qual è il reddito netto mensile?&quot;]
+    dimensione_azienda[&quot;Quanti dipendenti ha l#39;azienda?&quot;]
+    ente_pensione[&quot;Da quale ente riceve la pensione?&quot;]
+    pensione_netta[&quot;Qual è la pensione netta mensile?&quot;]
+    anni_attivita[&quot;Da quanti anni svolge l#39;attività?&quot;]
+    reddito_autonomo[&quot;Qual è il reddito dell#39;ultima dichiarazione (mensile netto)?&quot;]
+    impegni[&quot;Ci sono finanziamenti in corso?&quot;]
+    rata[&quot;A quanto ammonta la rata mensile totale?&quot;]
+    crif[&quot;Ci sono segnalazioni in CRIF o protesti?&quot;]
+    quote_cedute[&quot;Ci sono quote dello stipendio già cedute?&quot;]
+    bene[&quot;Quale bene si vuole acquistare?&quot;]
+    prezzo_bene[&quot;Qual è il prezzo del bene?&quot;]
+    anticipo[&quot;È previsto un anticipo?&quot;]
+    mutuo_scopo[&quot;Qual è lo scopo del mutuo?&quot;]
+    mutuo_valore[&quot;Qual è il valore dell#39;immobile?&quot;]
+    mutuo_ltv[&quot;Quale quota del valore vuoi finanziare?&quot;]
+    durata_mutuo[&quot;Su quale durata?&quot;]
+    mutuo_reddito[&quot;Qual è il reddito netto mensile familiare?&quot;]
+    mutuo_intestatari[&quot;Quanti saranno gli intestatari?&quot;]
+    mutuo_tasso[&quot;Che tipo di tasso preferisce?&quot;]
+    leasing_bene[&quot;Che tipo di bene è in leasing?&quot;]
+    leasing_valore[&quot;Qual è il valore del bene?&quot;]
+    leasing_anticipo[&quot;È previsto un anticipo o maxicanone?&quot;]
+    leasing_riscatto[&quot;È previsto il riscatto finale?&quot;]
+    az_forma[&quot;Qual è la forma giuridica?&quot;]
+    az_anzianita[&quot;Da quanti anni è attiva?&quot;]
+    az_fatturato[&quot;Qual è il fatturato dell#39;ultimo anno?&quot;]
+    az_importo[&quot;Quale importo serve?&quot;]
+    az_finalita[&quot;Qual è la finalità?&quot;]
+    az_garanzie[&quot;Quali garanzie sono disponibili?&quot;]
+    riepilogo([&quot;Riepilogo e conferma&quot;])
+    prodotto --&gt;|&quot;Prestito personale / Cessione del quinto / Finalizzato (beni)&quot;| importo
+    prodotto --&gt;|&quot;Mutuo&quot;| mutuo_scopo
+    prodotto --&gt;|&quot;Leasing&quot;| leasing_bene
+    prodotto --&gt;|&quot;Finanziamento aziendale&quot;| az_forma
+    importo --&gt; durata
+    durata --&gt;|&quot;Prestito personale / Cessione del quinto / Finalizzato (beni)&quot;| lavoro
+    durata --&gt;|&quot;Leasing&quot;| leasing_anticipo
+    durata --&gt;|&quot;Finanziamento aziendale&quot;| az_finalita
+    lavoro --&gt;|&quot;Dipendente privato / Dipendente pubblico&quot;| contratto
+    lavoro --&gt;|&quot;Pensionato&quot;| ente_pensione
+    lavoro --&gt;|&quot;Autonomo&quot;| anni_attivita
+    lavoro --&gt;|&quot;Altre risposte&quot;| impegni
+    contratto --&gt; anzianita
+    anzianita --&gt; reddito
+    reddito --&gt;|&quot;Cessione del quinto&quot;| dimensione_azienda
+    reddito --&gt;|&quot;Altre risposte&quot;| impegni
+    dimensione_azienda --&gt; impegni
+    ente_pensione --&gt; pensione_netta
+    pensione_netta --&gt; impegni
+    anni_attivita --&gt; reddito_autonomo
+    reddito_autonomo --&gt; impegni
+    impegni --&gt;|&quot;Sì&quot;| rata
+    impegni --&gt;|&quot;No&quot;| crif
+    rata --&gt; crif
+    crif --&gt;|&quot;Cessione del quinto&quot;| quote_cedute
+    crif --&gt;|&quot;Finalizzato (beni)&quot;| bene
+    crif --&gt;|&quot;Altre risposte&quot;| riepilogo
+    quote_cedute --&gt; riepilogo
+    bene --&gt; prezzo_bene
+    prezzo_bene --&gt; anticipo
+    anticipo --&gt; riepilogo
+    mutuo_scopo --&gt; mutuo_valore
+    mutuo_valore --&gt; mutuo_ltv
+    mutuo_ltv --&gt; durata_mutuo
+    durata_mutuo --&gt; mutuo_reddito
+    mutuo_reddito --&gt; mutuo_intestatari
+    mutuo_intestatari --&gt; mutuo_tasso
+    mutuo_tasso --&gt; riepilogo
+    leasing_bene --&gt; leasing_valore
+    leasing_valore --&gt; durata
+    leasing_anticipo --&gt; leasing_riscatto
+    leasing_riscatto --&gt; az_forma
+    az_forma --&gt; az_anzianita
+    az_anzianita --&gt; az_fatturato
+    az_fatturato --&gt;|&quot;Finanziamento aziendale&quot;| az_importo
+    az_fatturato --&gt;|&quot;Leasing&quot;| riepilogo
+    az_importo --&gt; durata
+    az_finalita --&gt; az_garanzie
+    az_garanzie --&gt; riepilogo
+    classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
+    classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600
+    classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
+    class prodotto,importo,durata,lavoro,contratto,anzianita,reddito,dimensione_azienda,ente_pensione,pensione_netta,anni_attivita,reddito_autonomo,impegni,rata,crif,quote_cedute,bene,prezzo_bene,anticipo,mutuo_scopo,mutuo_valore,mutuo_ltv,durata_mutuo,mutuo_reddito,mutuo_intestatari,mutuo_tasso,leasing_bene,leasing_valore,leasing_anticipo,leasing_riscatto,az_forma,az_anzianita,az_fatturato,az_importo,az_finalita,az_garanzie choice
+    class riepilogo summary
+</pre></div></section><section><h2>Perfeziona Finanziamento (fase 2, dopo l&#039;informativa)</h2><p class="meta">24 domande</p><div class="scroll"><pre class="mermaid">flowchart TD
+    codice[[&quot;Inserisci il codice della pratica (es. FIN-2026-0001):&quot;]]
+    conferma_pratica[&quot;È la pratica giusta?&quot;]
+    informativa[[&quot;Per procedere invia l#39;informativa privacy firmata dal cliente (foto…&quot;]]
+    nome[/&quot;Nome del cliente:&quot;/]
+    cognome[/&quot;Cognome del cliente:&quot;/]
+    codice_fiscale[/&quot;Codice fiscale:&quot;/]
+    data_nascita[/&quot;Data di nascita (gg/mm/aaaa):&quot;/]
+    luogo_nascita[/&quot;Luogo di nascita:&quot;/]
+    residenza[/&quot;Indirizzo di residenza (via, numero, CAP, città):&quot;/]
+    stato_civile[&quot;Stato civile:&quot;]
+    documento_tipo[&quot;Tipo di documento d#39;identità:&quot;]
+    documento_numero[/&quot;Numero del documento:&quot;/]
+    documento_scadenza[/&quot;Scadenza del documento (gg/mm/aaaa):&quot;/]
+    telefono[/&quot;Telefono del cliente:&quot;/]
+    email[/&quot;Email del cliente:&quot;/]
+    iban[/&quot;IBAN per l#39;erogazione:&quot;/]
+    datore_lavoro[/&quot;Datore di lavoro, ente pensionistico o attività svolta:&quot;/]
+    data_assunzione[/&quot;Data di inizio rapporto o attività (gg/mm/aaaa):&quot;/]
+    ragione_sociale[/&quot;Ragione sociale:&quot;/]
+    partita_iva[/&quot;Partita IVA (11 cifre):&quot;/]
+    doc_identita[[&quot;Invia il documento d#39;identità del cliente (foto o PDF).&quot;]]
+    doc_cf[[&quot;Invia il codice fiscale del cliente (foto o PDF).&quot;]]
+    doc_reddito[[&quot;Invia il documento di reddito (busta paga, CUD, cedolino pensione,…&quot;]]
+    riepilogo_p([&quot;Riepilogo e conferma&quot;])
+    codice --&gt; conferma_pratica
+    conferma_pratica --&gt;|&quot;Sì&quot;| informativa
+    conferma_pratica --&gt;|&quot;No&quot;| codice
+    informativa --&gt; nome
+    nome --&gt; cognome
+    cognome --&gt; codice_fiscale
+    codice_fiscale --&gt; data_nascita
+    data_nascita --&gt; luogo_nascita
+    luogo_nascita --&gt; residenza
+    residenza --&gt; stato_civile
+    stato_civile --&gt; documento_tipo
+    documento_tipo --&gt; documento_numero
+    documento_numero --&gt; documento_scadenza
+    documento_scadenza --&gt; telefono
+    telefono --&gt; email
+    email --&gt; iban
+    iban --&gt;|&quot;Finanziamento aziendale / Leasing&quot;| ragione_sociale
+    iban --&gt;|&quot;Altre risposte&quot;| datore_lavoro
+    datore_lavoro --&gt; data_assunzione
+    data_assunzione --&gt; doc_identita
+    ragione_sociale --&gt; partita_iva
+    partita_iva --&gt; doc_identita
+    doc_identita --&gt; doc_cf
+    doc_cf --&gt; doc_reddito
+    doc_reddito --&gt; riepilogo_p
+    classDef choice fill:#e8f3ff,stroke:#2b6cb0,color:#12263f
+    classDef text fill:#fff4e0,stroke:#c77700,color:#3d2600
+    classDef file fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef code fill:#ffe8ec,stroke:#c0392b,color:#3d0e08
+    classDef summary fill:#e6f6ea,stroke:#2f855a,color:#0f2d1a
+    class codice code
+    class conferma_pratica,stato_civile,documento_tipo choice
+    class informativa,doc_identita,doc_cf,doc_reddito file
+    class nome,cognome,codice_fiscale,data_nascita,luogo_nascita,residenza,documento_numero,documento_scadenza,telefono,email,iban,datore_lavoro,data_assunzione,ragione_sociale,partita_iva text
+    class riepilogo_p summary
+</pre></div></section>
+</main>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', flowchart: { useMaxWidth: false, htmlLabels: true } });
+</script>
+</body>
+</html>
