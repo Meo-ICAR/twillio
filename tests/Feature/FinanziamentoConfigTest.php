@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Checks\NodeCheck;
 use Tests\TestCase;
 
 class FinanziamentoConfigTest extends TestCase
@@ -71,6 +72,22 @@ class FinanziamentoConfigTest extends TestCase
         $this->assertSame([], array_intersect($forbidden, array_keys(config('finanziamento.flows.richiesta.nodes'))));
         foreach (config('finanziamento.flows.richiesta.nodes') as $name => $node) {
             $this->assertNotContains($node['type'], ['text', 'file'], "richiesta.$name non deve essere testo libero o file");
+        }
+    }
+
+    public function test_i_controlli_agganciati_alle_domande_sono_registrati(): void
+    {
+        foreach (config('finanziamento.checks') as $name => $class) {
+            $this->assertInstanceOf(NodeCheck::class, app($class), $name);
+        }
+
+        foreach (config('finanziamento.flows') as $flow => $def) {
+            foreach ($def['nodes'] as $name => $node) {
+                foreach ($node['checks'] ?? [] as $entry) {
+                    $check = is_array($entry) ? $entry['name'] : $entry;
+                    $this->assertArrayHasKey($check, config('finanziamento.checks'), "$flow.$name: controllo «{$check}» non registrato");
+                }
+            }
         }
     }
 }

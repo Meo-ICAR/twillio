@@ -31,7 +31,7 @@ class FlowValidatorTest extends TestCase
 
     private function errors(FlowNode $node, ?string $prompt = null, ?array $options = null, ?bool $skippable = null): array
     {
-        return app(FlowValidator::class)->nodeErrors($node, $prompt ?? $node->prompt, $options ?? $this->titles($node), $skippable ?? $node->skippable);
+        return app(FlowValidator::class)->nodeErrors($node, $prompt ?? $node->prompt, $options ?? $this->titles($node), $skippable ?? $node->skippable, $node->checks ?? []);
     }
 
     public function test_l_albero_importato_non_ha_errori(): void
@@ -111,5 +111,31 @@ class FlowValidatorTest extends TestCase
         $flow->update(['header' => str_repeat('x', 1001)]);
 
         $this->assertNotEmpty(app(FlowValidator::class)->flowErrors($flow->fresh()));
+    }
+
+    public function test_i_controlli_agganciati_devono_esistere_e_stare_su_domande_di_testo_o_scelta(): void
+    {
+        $validator = app(FlowValidator::class);
+        $text = $this->node('perfezionamento', 'residenza');
+        $file = $this->node('perfezionamento', 'doc_identita');
+        $choice = $this->node('richiesta', 'importo');
+
+        $this->assertSame([], $validator->nodeErrors($text, $text->prompt, [], false, ['iban', ['name' => 'maggiorenne', 'anni' => 18]]));
+        $this->assertSame([], $validator->nodeErrors($choice, $choice->prompt, $this->titles($choice), false, ['iban']));
+
+        $unknown = $validator->nodeErrors($text, $text->prompt, [], false, ['non_esiste']);
+        $this->assertNotEmpty($unknown);
+        $this->assertStringContainsString('non_esiste', implode(' ', $unknown));
+
+        $this->assertNotEmpty($validator->nodeErrors($file, $file->prompt, [], false, ['iban']), 'su un file non ha senso');
+        $this->assertNotEmpty($validator->nodeErrors($text, $text->prompt, [], false, [['anni' => 18]]), 'manca il nome');
+    }
+
+    public function test_l_albero_importato_ha_controlli_validi_in_ogni_domanda(): void
+    {
+        foreach (FlowNode::whereNotNull('checks')->get() as $node) {
+            $this->assertSame([], $this->errors($node), "{$node->flow->code}.{$node->code}");
+        }
+        $this->assertGreaterThanOrEqual(2, FlowNode::whereNotNull('checks')->count());
     }
 }

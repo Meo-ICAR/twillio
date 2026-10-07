@@ -6,11 +6,13 @@ use App\Jobs\AnalyzeAttachment;
 use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
+use App\Services\Checks\CheckContext;
+use App\Services\Checks\CheckRegistry;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Whatsapp\WhatsAppClient;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -29,6 +31,7 @@ class ConversationEngine
         private WhatsAppClient $client,
         private DocumentReader $reader,
         private FlowRepository $flows,
+        private CheckRegistry $checks,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -118,16 +121,23 @@ class ConversationEngine
 
         $result = $this->read($conv, $def, $m);
         [$value, $error] = $result;
-        $extra = $result[2] ?? [];
+        $extra = [];
         if ($value === null) {
             return [Reply::text($error), ...$this->prompt($conv)];
+        }
+        if (! empty($def['checks']) && in_array($def['type'], ['text', 'choice'], true)) {
+            $checked = $this->runChecks($def, (string) $value, $conv->data ?? []);
+            if ($checked['error'] !== null) {
+                return [Reply::text($checked['error']), ...$this->prompt($conv)];
+            }
+            $extra = $checked['derived'];
         }
         if ($def['type'] === 'summary') {
             return $this->finish($conv, $value);
         }
 
         $data = $conv->data ?? [];
-        foreach ($def['derives'] ?? [] as $key) {
+        foreach ($this->derivedKeys($def) as $key) {
             unset($data[$key]);
         }
         if ($def['save'] ?? true) {
@@ -246,12 +256,6 @@ class ConversationEngine
         if (! Validator::make(['v' => $value], ['v' => $def['rules']])->passes()) {
             return [null, $error];
         }
-        if (($def['checksum'] ?? null) === 'iban' && ! Iban::isValid($value)) {
-            return [null, $error];
-        }
-        if (($def['derive'] ?? null) === 'codice_fiscale') {
-            return $this->deriveFromCodiceFiscale($def, $value, $error);
-        }
 
         return [$value, null];
     }
@@ -340,24 +344,49 @@ class ConversationEngine
         throw new \LogicException("Controllo sconosciuto: {$def['check']}");
     }
 
-    /** @return array{0: ?string, 1: ?string, 2?: array<string,string>} */
-    private function deriveFromCodiceFiscale(array $def, string $value, string $error): array
+    /**
+     * Esegue in ordine i controlli agganciati alla domanda: il primo che restituisce false ferma tutto
+     * e la domanda si ripete. I dati ricavati si tengono solo se passano tutti.
+     *
+     * @return array{error: ?string, derived: array<string,string>}
+     */
+    private function runChecks(array $def, string $value, array $data): array
     {
-        $info = CodiceFiscale::parse($value);
-        if (! $info) {
-            return [null, $error];
+        $ctx = new CheckContext($data);
+
+        foreach ($def['checks'] as $entry) {
+            $name = is_array($entry) ? $entry['name'] : $entry;
+            $params = is_array($entry) ? array_diff_key($entry, ['name' => 1]) : [];
+
+            $check = $this->checks->get($name);
+            if (! $check) {
+                Log::error('Controllo sconosciuto agganciato a una domanda', ['check' => $name]);
+
+                return ['error' => 'Il controllo di questa risposta non è disponibile al momento. Riprova più tardi o scrivi «menu».', 'derived' => []];
+            }
+
+            if (! $check->passes($value, $ctx->withParams($params))) {
+                return ['error' => $ctx->error() ?? $def['error'] ?? 'Risposta non valida, riprova.', 'derived' => []];
+            }
         }
 
-        $birth = Carbon::createFromFormat('!d/m/Y', $info['birth_date']);
-        if (isset($def['min_age']) && $birth->gt(today()->subYears($def['min_age']))) {
-            return [null, $def['age_error'] ?? 'Il cliente non ha l\'età richiesta.'];
+        return ['error' => null, 'derived' => $ctx->derived()];
+    }
+
+    /**
+     * Chiavi dei dati ricavati dai controlli della domanda.
+     *
+     * @return list<string>
+     */
+    private function derivedKeys(array $def): array
+    {
+        $keys = [];
+        foreach ($def['checks'] ?? [] as $entry) {
+            $check = $this->checks->get(is_array($entry) ? $entry['name'] : $entry);
+            $keys = array_merge($keys, $check?->derives() ?? []);
         }
 
-        return [$value, null, array_filter([
-            'data_nascita' => $info['birth_date'],
-            'sesso' => $info['sex'],
-            'luogo_nascita' => $info['place'],
-        ])];
+        return array_values(array_unique($keys));
     }
 
     private function back(Conversation $conv): array
@@ -370,7 +399,7 @@ class ConversationEngine
         $previous = array_pop($history);
         $data = $conv->data ?? [];
         unset($data[$previous]);
-        foreach ($this->def($conv->flow, $previous)['derives'] ?? [] as $key) {
+        foreach ($this->derivedKeys($this->def($conv->flow, $previous)) as $key) {
             unset($data[$key]);
         }
         $conv->update(['node' => $previous, 'history' => $history, 'data' => $data]);

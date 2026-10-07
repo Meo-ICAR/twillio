@@ -1,5 +1,9 @@
 <?php
 
+use App\Services\Checks\CodiceFiscaleCheck;
+use App\Services\Checks\IbanCheck;
+use App\Services\Checks\MaggiorenneCheck;
+
 // Alberi delle conversazioni WhatsApp. Solo dati: nessuna closure salvata (compatibile con config:cache).
 // Limiti WhatsApp: titolo opzione max 24 caratteri, max 10 opzioni per nodo.
 
@@ -27,6 +31,13 @@ $summary = fn (array $extra = []) => array_merge([
 ], $extra);
 
 return [
+
+    // Controlli sulle risposte: nome => classe (App\Services\Checks\NodeCheck). Si agganciano alle domande dal pannello.
+    'checks' => [
+        'codice_fiscale' => CodiceFiscaleCheck::class,
+        'iban' => IbanCheck::class,
+        'maggiorenne' => MaggiorenneCheck::class,
+    ],
 
     'menu' => [
         'body' => 'Ciao! Benvenuto nel servizio agenti. Cosa vuoi fare?',
@@ -128,9 +139,10 @@ return [
 
                 // Dal codice fiscale si ricavano data, sesso e luogo di nascita; poi si verifica che cognome e nome siano coerenti.
                 'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale del cliente (da qui ricavo data e luogo di nascita):', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'cognome', [
-                    'upper' => true, 'strip_spaces' => true, 'derive' => 'codice_fiscale', 'derives' => ['data_nascita', 'sesso', 'luogo_nascita'], 'min_age' => 18,
+                    'upper' => true, 'strip_spaces' => true,
                     'error' => 'Codice fiscale non valido (16 caratteri), riprova.',
-                    'age_error' => 'Dal codice fiscale il cliente risulta minorenne: controlla il codice.',
+                    // Ricava data, sesso e luogo di nascita; poi controlla l'età sulla data ricavata.
+                    'checks' => ['codice_fiscale', ['name' => 'maggiorenne', 'campo' => 'data_nascita', 'anni' => 18, 'messaggio' => 'Dal codice fiscale il cliente risulta minorenne: controlla il codice.']],
                 ]),
                 'cognome' => $text('Cognome', 'Cognome del cliente:', ['required', 'string', 'max:60'], 'nome', ['show_derived' => true, 'skip_if' => 'filled:cognome']),
                 'nome' => $text('Nome', 'Nome del cliente:', ['required', 'string', 'max:60'], 'verifica_cf', ['skip_if' => 'filled:nome']),
@@ -147,7 +159,7 @@ return [
                 'documento_scadenza' => $text('Scadenza documento', 'Scadenza del documento (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'telefono', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
                 'telefono' => $text('Telefono', 'Telefono del cliente:', ['required', 'regex:/^\+?\d{8,15}$/'], 'email', ['strip_spaces' => true, 'error' => 'Numero non valido, riprova.']),
                 'email' => $text('Email', 'Email del cliente:', ['required', 'email'], 'iban', ['error' => 'Email non valida, riprova.']),
-                'iban' => $text('IBAN', 'IBAN per l\'erogazione:', ['required', 'regex:/^IT\d{2}[A-Z0-9]{23}$/'], ['aziendale' => 'ragione_sociale', 'leasing' => 'ragione_sociale', '*' => 'datore_lavoro'], ['upper' => true, 'strip_spaces' => true, 'checksum' => 'iban', 'next_by' => 'prodotto', 'error' => 'IBAN non valido (formato o checksum errati), riprova.']),
+                'iban' => $text('IBAN', 'IBAN per l\'erogazione:', ['required', 'regex:/^IT\d{2}[A-Z0-9]{23}$/'], ['aziendale' => 'ragione_sociale', 'leasing' => 'ragione_sociale', '*' => 'datore_lavoro'], ['upper' => true, 'strip_spaces' => true, 'checks' => ['iban'], 'next_by' => 'prodotto', 'error' => 'IBAN non valido (formato o checksum errati), riprova.']),
 
                 'datore_lavoro' => $text('Datore di lavoro / ente', 'Datore di lavoro, ente pensionistico o attività svolta:', ['required', 'string', 'max:120'], 'data_assunzione'),
                 'data_assunzione' => $text('Inizio rapporto', 'Data di inizio rapporto o attività (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'doc_identita', ['error' => 'Data non valida: usa il formato gg/mm/aaaa.']),

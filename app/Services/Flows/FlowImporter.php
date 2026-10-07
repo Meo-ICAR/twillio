@@ -15,7 +15,7 @@ class FlowImporter
     ];
 
     /** Colonne della domanda: tutto il resto va in `params`. */
-    private const COLUMNS = ['type', 'label', 'prompt', 'options', 'next', 'save', 'skippable'];
+    private const COLUMNS = ['type', 'label', 'prompt', 'options', 'next', 'save', 'skippable', 'checks'];
 
     /**
      * @param  bool  $force  se vero ripristina i percorsi già presenti, perdendo le modifiche fatte a mano
@@ -55,6 +55,7 @@ class FlowImporter
                         'next_to' => is_string($next) ? $next : null,
                         'next_map' => is_array($next) ? $next : null,
                         'params' => array_diff_key($node, array_flip(self::COLUMNS)) ?: null,
+                        'checks' => $node['checks'] ?? null,
                     ]);
 
                     $position = 0;

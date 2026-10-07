@@ -154,4 +154,65 @@ class FlowAdminTest extends TestCase
 
         $this->manager()->assertCanSeeTableRecords($first, inOrder: true)->assertSee('prodotto')->assertTableColumnExists('skippable');
     }
+
+    public function test_si_aggancia_un_controllo_a_una_domanda_dal_pannello(): void
+    {
+        $node = $this->node('residenza', 'perfezionamento');
+        $this->assertNull($node->checks);
+
+        $this->manager('perfezionamento')->callTableAction('edit', $node, data: ['prompt' => $node->prompt, 'checks' => ['iban']])->assertHasNoTableActionErrors();
+
+        $this->assertSame(['iban'], $node->fresh()->checks);
+        $this->assertSame(['iban'], app(FlowRepository::class)->node('perfezionamento', 'residenza')['checks']);
+    }
+
+    public function test_modificare_una_domanda_conserva_i_parametri_dei_controlli_gia_agganciati(): void
+    {
+        $node = $this->node('codice_fiscale', 'perfezionamento');
+        $before = $node->checks;
+        $this->assertSame('maggiorenne', $before[1]['name']);
+
+        $this->manager('perfezionamento')->callTableAction('edit', $node, data: ['prompt' => 'Codice fiscale del cliente?', 'checks' => ['codice_fiscale', 'maggiorenne']]);
+
+        $this->assertSame($before, $node->fresh()->checks, 'età minima e campo restano com\'erano');
+        $this->assertSame('Codice fiscale del cliente?', $node->fresh()->prompt);
+    }
+
+    public function test_si_toglie_un_controllo_e_si_possono_togliere_tutti(): void
+    {
+        $node = $this->node('codice_fiscale', 'perfezionamento');
+
+        $this->manager('perfezionamento')->callTableAction('edit', $node, data: ['prompt' => $node->prompt, 'checks' => ['codice_fiscale']]);
+        $this->assertSame(['codice_fiscale'], $node->fresh()->checks);
+
+        $this->manager('perfezionamento')->callTableAction('edit', $node->fresh(), data: ['prompt' => $node->prompt, 'checks' => []]);
+        $this->assertNull($node->fresh()->checks);
+        $this->assertArrayNotHasKey('checks', app(FlowRepository::class)->node('perfezionamento', 'codice_fiscale'));
+    }
+
+    public function test_un_controllo_che_non_esiste_non_si_salva(): void
+    {
+        $node = $this->node('residenza', 'perfezionamento');
+
+        $this->manager('perfezionamento')->callTableAction('edit', $node, data: ['prompt' => $node->prompt, 'checks' => ['non_esiste']]);
+
+        $this->assertNull($node->fresh()->checks);
+    }
+
+    public function test_la_scheda_della_domanda_elenca_i_controlli_disponibili_con_la_loro_descrizione(): void
+    {
+        $node = $this->node('residenza', 'perfezionamento');
+
+        $this->manager('perfezionamento')->mountTableAction('edit', $node)
+            ->assertMountedActionModalSee(['Controlli sulla risposta', 'Codice fiscale', 'IBAN', 'Età minima', 'checksum']);
+    }
+
+    public function test_le_domande_con_file_non_hanno_i_controlli(): void
+    {
+        $node = $this->node('doc_identita', 'perfezionamento');
+
+        $this->manager('perfezionamento')->mountTableAction('edit', $node)
+            ->assertMountedActionModalSee('Testo della domanda')
+            ->assertMountedActionModalDontSee('Controlli sulla risposta');
+    }
 }

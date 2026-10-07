@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\Flows\RelationManagers;
 
 use App\Models\FlowNode;
+use App\Services\Checks\CheckRegistry;
 use App\Services\Flows\FlowValidator;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -54,6 +56,7 @@ class NodesRelationManager extends RelationManager
                         'prompt' => $record->prompt,
                         'label' => $record->label,
                         'skippable' => $record->skippable,
+                        'checks' => collect($record->checks ?? [])->map(fn ($e) => is_array($e) ? $e['name'] : $e)->all(),
                         'options' => $record->options->map(fn ($o) => ['code' => $o->code, 'title' => $o->title, 'existing' => true])->all(),
                     ])
                     ->using(fn (FlowNode $record, array $data) => $this->save($record, $data)),
@@ -69,6 +72,14 @@ class NodesRelationManager extends RelationManager
             Toggle::make('skippable')->label('Si può saltare')
                 ->helperText('L\'agente può scrivere «salta» per non rispondere. Serve un\'uscita predefinita: non vale per le domande con salti diversi per ogni risposta.'),
         ];
+
+        if (in_array($record->type, ['text', 'choice'], true)) {
+            $checks = app(CheckRegistry::class)->all();
+            $fields[] = CheckboxList::make('checks')->label('Controlli sulla risposta')
+                ->options(collect($checks)->map(fn ($c) => $c->label())->all())
+                ->descriptions(collect($checks)->map(fn ($c) => $c->description())->all())
+                ->helperText('Se un controllo non è soddisfatto il bot ripete la domanda. Girano nell\'ordine in cui sono già agganciati; i parametri (per esempio l\'età minima) restano quelli impostati.');
+        }
 
         if (in_array($record->type, ['choice', 'summary'], true)) {
             $fields[] = Repeater::make('options')->label('Opzioni di risposta')->reorderable()->maxItems(FlowValidator::MAX_OPTIONS)
@@ -92,7 +103,8 @@ class NodesRelationManager extends RelationManager
         $codes = $items->pluck('code')->map(fn ($c) => (string) $c);
         $options = $items->mapWithKeys(fn ($o) => [(string) $o['code'] => trim((string) $o['title'])])->all();
 
-        $errors = app(FlowValidator::class)->nodeErrors($record, (string) $data['prompt'], $options, (bool) ($data['skippable'] ?? false));
+        $checks = $this->mergeChecks($record, $data);
+        $errors = app(FlowValidator::class)->nodeErrors($record, (string) $data['prompt'], $options, (bool) ($data['skippable'] ?? false), $checks ?? ($record->checks ?? []));
         if ($codes->count() !== $codes->unique()->count()) {
             $errors[] = 'Due opzioni hanno lo stesso codice.';
         }
@@ -103,12 +115,12 @@ class NodesRelationManager extends RelationManager
             throw new Halt;
         }
 
-        DB::transaction(function () use ($record, $data, $options) {
+        DB::transaction(function () use ($record, $data, $options, $checks) {
             $record->update([
                 'prompt' => $data['prompt'],
                 'label' => filled($data['label'] ?? null) ? $data['label'] : null,
                 'skippable' => (bool) ($data['skippable'] ?? false),
-            ]);
+            ] + ($checks !== null ? ['checks' => $checks ?: null] : []));
 
             if (in_array($record->type, ['choice', 'summary'], true)) {
                 $existing = $record->options()->get()->keyBy('code');
@@ -125,5 +137,25 @@ class NodesRelationManager extends RelationManager
         });
 
         return $record->fresh();
+    }
+
+    /**
+     * Controlli da salvare, nell'ordine in cui erano agganciati; quelli nuovi si aggiungono in fondo.
+     * Chi era già agganciato conserva i suoi parametri. Restituisce null se il modulo non gestisce i controlli (domande a file, codice, riepilogo).
+     *
+     * @return list<string|array<string,mixed>>|null
+     */
+    private function mergeChecks(FlowNode $record, array $data): ?array
+    {
+        if (! array_key_exists('checks', $data)) {
+            return null;
+        }
+
+        $selected = array_values($data['checks'] ?? []);
+        $current = collect($record->checks ?? [])->mapWithKeys(fn ($e) => [is_array($e) ? $e['name'] : $e => $e]);
+
+        return $current->only($selected)->values()
+            ->merge(collect($selected)->diff($current->keys())->values())
+            ->all();
     }
 }

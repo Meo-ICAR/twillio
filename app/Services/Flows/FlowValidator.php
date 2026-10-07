@@ -4,6 +4,7 @@ namespace App\Services\Flows;
 
 use App\Models\Flow;
 use App\Models\FlowNode;
+use App\Services\Checks\CheckRegistry;
 
 /** Controlli che impediscono di salvare un albero che bloccherebbe gli agenti o che WhatsApp rifiuterebbe. */
 class FlowValidator
@@ -20,9 +21,10 @@ class FlowValidator
      * Errori della domanda con i valori che si vogliono salvare.
      *
      * @param  array<string,string>  $options  codice => titolo
+     * @param  array<int,string|array<string,mixed>>  $checks  controlli agganciati: nome, oppure ['name' => ..., ...parametri]
      * @return list<string>
      */
-    public function nodeErrors(FlowNode $node, string $prompt, array $options, bool $skippable): array
+    public function nodeErrors(FlowNode $node, string $prompt, array $options, bool $skippable, array $checks = []): array
     {
         $errors = [];
 
@@ -54,6 +56,20 @@ class FlowValidator
                 $missing = array_diff(array_map('strval', array_keys($options)), array_map('strval', array_keys($node->next_map)));
                 if ($missing) {
                     $errors[] = 'Queste opzioni non hanno un salto configurato: '.implode(', ', $missing).'. Aggiungile anche ai salti della domanda.';
+                }
+            }
+        }
+
+        if ($checks) {
+            if (! in_array($node->type, ['text', 'choice'], true)) {
+                $errors[] = 'I controlli si agganciano solo a domande di testo o a scelta.';
+            }
+            foreach ($checks as $entry) {
+                $name = is_array($entry) ? ($entry['name'] ?? null) : $entry;
+                if (! is_string($name) || $name === '') {
+                    $errors[] = 'Un controllo agganciato non ha il nome.';
+                } elseif (! app(CheckRegistry::class)->get($name)) {
+                    $errors[] = "Il controllo «{$name}» non esiste.";
                 }
             }
         }

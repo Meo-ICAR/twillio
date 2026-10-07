@@ -86,6 +86,9 @@ class FlowRepository
         } elseif ($node->next_to !== null) {
             $def['next'] = $node->next_to;
         }
+        if (filled($node->checks)) {
+            $def['checks'] = $node->checks;
+        }
         if (! $node->save) {
             $def['save'] = false;
         }
