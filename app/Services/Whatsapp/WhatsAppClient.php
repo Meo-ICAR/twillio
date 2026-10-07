@@ -3,6 +3,7 @@
 namespace App\Services\Whatsapp;
 
 use App\Services\Conversation\Reply;
+use App\Services\SystemHealth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -14,6 +15,8 @@ class WhatsAppClient
     {
         $response = Http::withToken(config('services.whatsapp.token'))->timeout(10)->connectTimeout(5)
             ->post(self::BASE.'/'.config('services.whatsapp.phone_number_id').'/messages', $this->payload($to, $reply));
+
+        SystemHealth::recordWhatsApp($response->successful(), $response->status());
 
         if ($response->failed()) {
             Log::error('Errore invio WhatsApp', (array) $response->json());

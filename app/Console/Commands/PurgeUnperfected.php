@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\LoanRequest;
+use App\Services\SystemHealth;
 use Illuminate\Console\Command;
 
 class PurgeUnperfected extends Command
@@ -27,6 +28,7 @@ class PurgeUnperfected extends Command
         // La cancellazione di una pratica chiude anche le sue conversazioni aperte (vedi LoanRequest::booted).
         $expired->get()->each(fn (LoanRequest $loan) => $loan->delete());
 
+        SystemHealth::recordPurge();
         $this->info("Cancellate {$count} pratiche non perfezionate da oltre {$days} giorni.");
 
         return self::SUCCESS;
