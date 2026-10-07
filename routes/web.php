@@ -15,6 +15,8 @@ Route::get('/', function () {
 
 Route::get('/grafo-domande', fn () => response((new FlowGraph)->html()));
 
+Route::get('/compliance', fn () => view('compliance', ['company' => Company::current()]));
+
 Route::get('/privacy', fn () => view('privacy', ['company' => Company::current()]));
 
 Route::get('/test-whatsapp', function () {

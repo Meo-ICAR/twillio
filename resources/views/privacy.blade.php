@@ -122,7 +122,7 @@
     </main>
 
     <footer>
-        <a href="/">← Torna alla home</a>
+        <a href="/">← Torna alla home</a> · <a href="/compliance">Trasparenza e conformità</a>
     </footer>
 </div>
 </body>
