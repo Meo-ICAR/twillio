@@ -115,6 +115,11 @@ class ConversationEngine
 
             return $command === 'annulla' ? [Reply::text('Operazione annullata.'), $this->menu($m->from)] : [$this->menu($m->from)];
         }
+        // Una conversazione lasciata alla prima domanda da più di un'ora è abbandonata: si riparte dal menu.
+        if ($conv && empty($conv->history) && $conv->updated_at->lt(now()->subMinutes(Conversation::UNTOUCHED_MINUTES))) {
+            $this->close($conv, 'annullata');
+            $conv = null;
+        }
         if (! $conv) {
             return $this->fromMenu($m);
         }
