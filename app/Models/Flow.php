@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Services\Flows\FlowRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** Un percorso di conversazione con le sue domande. */
 class Flow extends Model
 {
+    use BelongsToCompany;
+
     protected $guarded = [];
 
     protected static function booted(): void

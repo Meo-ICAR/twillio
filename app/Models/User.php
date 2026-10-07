@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Support\Phone;
 use Database\Factories\UserFactory;
@@ -17,6 +18,8 @@ use Illuminate\Notifications\Notifiable;
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
+    use BelongsToCompany;
+
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Services\Flows\FlowRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Un'opzione di risposta di una domanda a scelta. */
 class FlowNodeOption extends Model
 {
+    use BelongsToCompany;
+
     protected $guarded = [];
 
     protected static function booted(): void

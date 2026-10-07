@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Fornitore extends Model
 {
-    use HasUuids, SoftDeletes;
+    use BelongsToCompany, HasUuids, SoftDeletes;
 
     protected $table = 'fornitoris';
 
@@ -75,6 +76,11 @@ class Fornitore extends Model
 
         return static::active()->whereNotNull('tel')->get()
             ->first(fn (self $f) => self::nationalNumber($f->tel) === $wanted);
+    }
+
+    public static function companyColumn(): string
+    {
+        return 'tenant_company_id';
     }
 
     public const OCCASIONAL_TYPE = 'Segnalatore occasionale';

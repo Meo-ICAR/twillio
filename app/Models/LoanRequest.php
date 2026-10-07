@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Jobs\AnalyzeAttachment;
+use App\Models\Concerns\BelongsToCompany;
 use App\Services\Flows\FlowRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,6 +12,8 @@ use Illuminate\Support\Str;
 
 class LoanRequest extends Model
 {
+    use BelongsToCompany;
+
     public const STATUSES = [
         'richiesta' => 'Richiesta',
         'in_attesa_informativa' => 'In attesa di informativa',

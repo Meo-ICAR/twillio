@@ -12,8 +12,9 @@ class CompanyForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            ->columnSpanFull(),
+
             Section::make('Titolare del trattamento')
+                ->columnSpanFull()
                 ->description('Questi dati compaiono nell\'informativa privacy pubblica (/privacy).')
                 ->columns(2)
                 ->schema([
@@ -21,6 +22,13 @@ class CompanyForm
                     TextInput::make('address')->label('Sede')->maxLength(255)->columnSpanFull(),
                     TextInput::make('email')->label('Email per la privacy')->email()->maxLength(255),
                     TextInput::make('dpo_email')->label('Email del DPO (se nominato)')->email()->maxLength(255),
+
+                    Textarea::make('retention_perfected')
+                        ->label('Conservazione delle pratiche perfezionate')
+                        ->helperText('Per quanto tempo e perché vengono conservati i dati delle pratiche perfezionate.')
+                        ->rows(4)
+                        ->columnSpanFull(),
+
                     TextInput::make('customer_care_phone')->label('Telefono del customer care')->tel()->maxLength(40)
                         ->helperText('Indicato a chi non è un produttore convenzionato (segnalatore occasionale).'),
                     TextInput::make('customer_care_email')->label('Email del customer care')->email()->maxLength(255),
@@ -30,11 +38,7 @@ class CompanyForm
                         ->helperText('Se vuoto, i dati del preventivo vengono mandati per email all\'istruttoria.'),
                     TextInput::make('url_istruttoria')->label('URL dell\'istruttoria (CRM)')->url()->maxLength(255)
                         ->helperText('Se vuoto, la pratica con gli allegati viene mandata per email all\'istruttoria.'),
-                    Textarea::make('retention_perfected')
-                        ->label('Conservazione delle pratiche perfezionate')
-                        ->helperText('Per quanto tempo e perché vengono conservati i dati delle pratiche perfezionate.')
-                        ->rows(4)
-                        ->columnSpanFull(),
+
                 ]),
         ]);
     }
