@@ -28,16 +28,30 @@ La richiesta è anonima e contiene solo fasce, quindi si fanno **due simulazioni
 | `Data_assunzione` | oggi meno gli anni di anzianità dello scenario, al 1° gennaio |
 | `Data_decorrenza` (solo Cessione/Delega) | 2 mesi dopo la data della richiesta |
 | `Durata` | la durata scelta dal produttore (se non è tra quelle ammesse dal servizio, la più vicina ammessa) |
-| `Importo_rata` (Cessione/Delega) | `reddito_mensile × 13,5 ÷ 12 ÷ 5` (un quinto del reddito annuo su 13,5 mensilità, spalmato su 12 mesi) |
+| `Importo_rata` (Cessione/Delega) | `reddito_mensile ÷ 5` (le fasce di reddito sono mensili) |
 | `Importo_richiesto`, `Reddito_richiedenti` (Prestito) | estremo della fascia importo e della fascia reddito dello scenario |
-| `Sesso` | valore predefinito configurabile (non è raccolto nella richiesta anonima) |
+| `Sesso` | risposta alla nuova domanda; se non risponde, **M** (predefinito configurabile) |
 | `Rinnovo` | sempre `NO`; i campi del rinnovo non si inviano |
 | `Provvigione` | non gestita; non inviata (o 0 se il servizio la esige) |
 
 Formati: date `MM-GG-ANNO`, decimali con la virgola, come da PDF.
 
-## Domanda aggiunta alla richiesta
-Fascia d'età del cliente (per esempio *Fino a 30 · 30-40 · 40-50 · 50-60 · Oltre 60*), per `personale` e `quinto`, dopo la durata. Il Finalizzato la salta.
+## Domande aggiunte alla richiesta
+Per `personale` e `quinto`, dopo la durata (il Finalizzato le salta):
+- **Fascia d'età** del cliente.
+- **Sesso** (M / F); se si salta, vale M.
+
+## Fasce chiuse per Cessione e Prestito
+Per questi due prodotti le fasce non sono più aperte ("Fino a…", "Oltre…"): ognuna ha un estremo basso e uno alto realistici, e le etichette mostrate al produttore cambiano di conseguenza. Valori proposti, da confermare:
+
+| Fascia | Opzioni (estremi in euro / anni) |
+|---|---|
+| Età | 20-30 · 30-40 · 40-50 · 50-60 · 60-75 |
+| Anzianità | 0-1 · 1-3 · 3-10 · 10-35 anni |
+| Reddito netto mensile | 500-1.000 · 1.000-1.500 · 1.500-2.000 · 2.000-3.000 · 3.000-5.000 |
+| Importo (solo Prestito) | 1.000-5.000 · 5.000-10.000 · 10.000-20.000 · 20.000-35.000 · 35.000-50.000 |
+
+Le altre linee di prodotto (mutuo, leasing, aziendale, finalizzato) conservano le loro fasce.
 
 ## Tabelle
 Tutte configurabili e compilate da un seeder, così quando arriva il tracciato cambiano i dati e non il codice.
@@ -46,7 +60,7 @@ Tutte configurabili e compilate da un seeder, così quando arriva il tracciato c
 - `quote_employment_types`: gli 11 valori di `Tipo_rapporto` e i contratti con cui sono ammessi (i pensionati solo con Cessione e Prestito).
 - `quote_durations`: durate ammesse per contratto (Cessione/Delega 24-120; Prestito anche 12).
 - `quote_employment_map`: risposte del produttore → `Tipo_rapporto`.
-- `quote_band_bounds`: per ogni codice di fascia (età, anzianità, reddito, importo) estremo basso e alto. I valori iniziali sono **ipotesi**, da tarare. Per le fasce aperte (*Oltre 3.000 €*, *Oltre 10 anni*, *Fino a 1.000 €*) l'estremo mancante è un valore convenzionale.
+- `quote_band_bounds`: per ogni codice di fascia (età, anzianità, reddito, importo) estremo basso e alto. I valori iniziali sono quelli della tabella sopra, da tarare.
 - `quote_simulations`: per ogni richiesta e scenario, i dati inviati, la risposta grezza e gli importi erogati minimo e massimo, per audit.
 
 ## Componenti
@@ -62,4 +76,4 @@ Chiamate simulate con `Http::fake` e una risposta XML di esempio: scenari e date
 Provvigione, rinnovo, mutuo, finalizzato, leasing e aziendale; invio della pratica al CRM (resta `CrmGateway`).
 
 ## Punti aperti con la software house
-Struttura XML della risposta e codifica della richiesta (form o XML) · significato di `Data_decorrenza` · sesso necessario? · `Importo_richiesto` descritto come "rata" · "Mutuo" citato ma non previsto · sezione 3.3 citata per la durata della Cessione.
+Struttura XML della risposta e codifica della richiesta (form o XML) · significato di `Data_decorrenza` · `Importo_richiesto` descritto come "rata" · "Mutuo" citato ma non previsto · sezione 3.3 citata per la durata della Cessione.
