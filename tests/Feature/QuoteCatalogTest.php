@@ -54,6 +54,22 @@ class QuoteCatalogTest extends TestCase
         $this->assertSame('Privato SPA', QuoteEmploymentMap::where('lavoro', 'dip_priv')->where('dimensione_azienda', 'oltre15')->value('tipo_rapporto'));
     }
 
+    public function test_la_mappatura_ha_anche_il_valore_per_il_lead(): void
+    {
+        $this->assertSame('Privato', QuoteEmploymentMap::where('tipo_rapporto', 'Privato SPA')->value('lead_tipologia'));
+        $this->assertSame('Privato altra forma', QuoteEmploymentMap::where('tipo_rapporto', 'Privato Altra forma')->value('lead_tipologia'));
+        $this->assertSame('Pensionato altri enti', QuoteEmploymentMap::where('tipo_rapporto', 'Pensionato INPDAP')->value('lead_tipologia'));
+        $this->assertSame('Pensionato INPS', QuoteEmploymentMap::where('tipo_rapporto', 'Pensionato INPS')->value('lead_tipologia'));
+    }
+
+    public function test_la_riga_piu_specifica_vince(): void
+    {
+        $this->assertSame('Privato SPA', QuoteEmploymentMap::resolve(['lavoro' => 'dip_priv', 'dimensione_azienda' => 'oltre15'])->tipo_rapporto);
+        $this->assertSame('Privato Altra forma', QuoteEmploymentMap::resolve(['lavoro' => 'dip_priv'])->tipo_rapporto);
+        $this->assertSame('Pensionato INPDAP', QuoteEmploymentMap::resolve(['lavoro' => 'pensionato', 'ente_pensione' => 'exinpdap'])->tipo_rapporto);
+        $this->assertNull(QuoteEmploymentMap::resolve(['lavoro' => 'sconosciuto']));
+    }
+
     /** @return array{0:int,1:int} */
     private function bounds(string $dimension, string $code): array
     {

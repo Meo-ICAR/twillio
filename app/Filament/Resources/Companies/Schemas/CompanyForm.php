@@ -47,6 +47,8 @@ class CompanyForm
                         ->helperText('Fornita con il servizio di simulazione; serve solo se il preventivatore è quello Mediafacile.'),
                     TextInput::make('url_istruttoria')->label('URL dell\'istruttoria (CRM)')->url()->maxLength(255)
                         ->helperText('Se vuoto, la pratica con gli allegati viene mandata per email all\'istruttoria.'),
+                    TextInput::make('istruttoria_passkey')->label('Passkey dell\'istruttoria (CRM)')->password()->revealable()->maxLength(255)
+                        ->helperText('Fornita con il servizio di caricamento lead; serve solo se il CRM è quello Mediafacile.'),
 
                 ]),
                   Section::make('Contratto')

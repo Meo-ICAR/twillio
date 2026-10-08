@@ -8,10 +8,17 @@ use App\Models\QuoteDuration;
 use App\Models\QuoteEmploymentMap;
 use App\Models\QuoteEmploymentType;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 /** Liste valori della specifica Mediafacile 3.8 e ipotesi di mappatura/fasce, da tarare. Ripetibile. */
 class QuoteCatalogSeeder extends Seeder
 {
+    private const LEAD = [
+            'Pubblico' => 'Pubblico', 'Privato Altra forma' => 'Privato altra forma', 'Privato SPA' => 'Privato',
+            'Privato Small Business' => 'Privato small business', 'Pensionato INPS' => 'Pensionato INPS',
+            'Pensionato INPDAP' => 'Pensionato altri enti', 'Pensionato altri enti' => 'Pensionato altri enti',
+        ];
+
     public function run(): void
     {
         foreach ([
@@ -54,7 +61,11 @@ class QuoteCatalogSeeder extends Seeder
             ['autonomo', null, null, 'Privato Small Business', 0],
             ['altro', null, null, 'Privato Altra forma', 0],
         ] as [$lavoro, $ente, $dimensione, $rapporto, $priority]) {
-            QuoteEmploymentMap::create(['lavoro' => $lavoro, 'ente_pensione' => $ente, 'dimensione_azienda' => $dimensione, 'tipo_rapporto' => $rapporto, 'priority' => $priority]);
+            $row = ['lavoro' => $lavoro, 'ente_pensione' => $ente, 'dimensione_azienda' => $dimensione, 'tipo_rapporto' => $rapporto, 'priority' => $priority];
+            if (Schema::hasColumn('quote_employment_map', 'lead_tipologia')) {
+                $row['lead_tipologia'] = self::LEAD[$rapporto];
+            }
+            QuoteEmploymentMap::create($row);
         }
 
         foreach ([

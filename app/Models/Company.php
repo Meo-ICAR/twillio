@@ -18,6 +18,7 @@ class Company extends Model
         return [
             'is_trial' => 'boolean',
             'preventivatore_passkey' => 'encrypted',
+            'istruttoria_passkey' => 'encrypted',
             'trialend_at' => 'date',
             'trial_activated_at' => 'date',
             'activated_at' => 'date',

@@ -49,6 +49,7 @@ class LoanRequest extends Model
             'privacy_received_at' => 'datetime',
             'privacy_verified_at' => 'datetime',
             'perfected_at' => 'datetime',
+            'documents_archived_at' => 'datetime',
             'direct_contact' => 'boolean',
             'customer_phone' => 'encrypted',
             'customer_email' => 'encrypted',
