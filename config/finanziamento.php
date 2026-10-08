@@ -94,6 +94,15 @@ return [
         ],
     ],
 
+    // Preventivatore: driver `random` (simulazione) o `mediafacile` (servizio di simulazione, specifica 3.8).
+    'quote' => [
+        'driver' => env('QUOTE_DRIVER', 'random'),
+        'timeout' => 15,
+        'default_sex' => 'M',
+        // Anzianità assunta quando non è chiesta (pensionati).
+        'default_seniority_years' => 20,
+    ],
+
     // CRM del committente: codice HTTP restituito dalla simulazione (CRM_SIMULATED_STATUS=500 per provare l'errore).
     'crm' => ['simulated_status' => (int) env('CRM_SIMULATED_STATUS', 200)],
 
