@@ -4,7 +4,7 @@
 
 **Goal:** A pratica perfezionata, caricare il lead sul CRM Mediafacile (GET, senza documenti) e archiviare in background i documenti su SharePoint tramite una funzione di caricamento finta.
 
-**Architecture:** `MediafacileLeadGateway` implementa l'interfaccia `CrmGateway` già usata da `completePerfezionamento`; `LeadParameters` costruisce i parametri dai dati della pratica. Un job `ArchiveLoanDocuments` in coda cicla gli allegati e li passa a `SharePointUploader` (oggi `LoggingSharePointUploader`, da sostituire con le routine reali). Una nuova domanda nel perfezionamento raccoglie la provincia.
+**Architecture:** `MediafacileLeadGateway` implementa l'interfaccia `CrmGateway` già usata da `completePerfezionamento`; `LeadParameters` costruisce i parametri dai dati della pratica. Un job `ArchiveLoanDocuments` in coda cicla gli allegati e li passa a `SharePointUploader` (oggi `LoggingSharePointUploader`, da sostituire con le routine reali). Città e provincia si ricavano dall'indirizzo di residenza con l'elenco ISTAT dei comuni già nel progetto (`ResidenceResolver`): nessuna domanda in più.
 
 **Tech Stack:** Laravel 13, Eloquent, Http client, SimpleXML, code Laravel, PHPUnit (SQLite in memoria), Filament.
 
@@ -12,7 +12,7 @@
 
 ## Global Constraints
 - Nessun documento va al CRM: il parametro `file` non si invia mai.
-- GET con i parametri nella query: `Passkey`, `cognome`, `nome`, `data_nascita` (`MM-GG-ANNO`), `tipologia`, `importo_richiesto` (decimali con la virgola), `residenza_citta`, `residenza_provincia`, `cellulare`, `email`, `fonte`, `annotazioni`.
+- GET con i parametri nella query: `Passkey`, `cognome`, `nome`, `data_nascita` (`MM-GG-ANNO`), `tipologia`, `importo_richiesto` (decimali con la virgola), `residenza_citta`, `residenza_provincia` (omessa se non ricavabile), `cellulare`, `email`, `fonte`, `annotazioni`.
 - `fonte` = `unicoagent` (fisso, `finanziamento.lead.fonte`).
 - `Stato` che comincia con `OK` → il gateway restituisce 200 e salva `IDUU` in `loan_requests.crm_lead_id`; ogni altro esito (KO, XML non valido, HTTP non 2xx, timeout, passkey o URL mancanti) → un codice diverso da 200.
 - Nei log solo il tipo di errore: mai dati personali, mai il contenuto dei file.
@@ -24,9 +24,9 @@
 - Nella suite restano 3 fallimenti preesistenti in `FilamentAdminTest` (produttori): non vanno corretti qui, ma vanno nominati nel report.
 
 ## Review Focus
-1. Indirizzo di residenza senza virgole (es. «Via Roma 1»): la città è l'intero testo; con virgole è l'ultimo segmento → Task 3.
+1. Indirizzo senza virgole («Via Roma 1 20100 Milano»), con accenti («Forlì»), con sigla esplicita («Roma (RM)»): città e provincia giuste → Task 2.
 2. Data di nascita non valida o assente: il parametro si omette, nessuna eccezione → Task 3.
-3. Provincia scritta per esteso o minuscola («Milano», «mi»): la prima si rifiuta e si richiede, la seconda diventa `MI` → Task 2.
+3. Comune omonimo in più province (es. «Castro») senza sigla, o comune sconosciuto: la provincia si omette, nessuna eccezione, nessuna provincia inventata → Task 2.
 4. Risposta `KO - …`, XML non valido, HTTP 500, timeout: il perfezionamento non avviene e l'agente può riprovare; `crm_lead_id` resta vuoto → Task 3.
 5. Passkey o URL mancanti con driver `mediafacile`: nessuna chiamata, esito diverso da 200 → Task 3.
 6. Allegato rifiutato, file mancante sul disco o pratica di prova: non si carica; un caricamento che lancia un'eccezione non lascia `documents_archived_at` valorizzato → Task 4.
@@ -213,232 +213,164 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: Domanda sulla provincia di residenza
+### Task 2: Città e provincia dall'indirizzo di residenza
 
 **Files:**
-- Modify: `config/finanziamento.php` (nodo `residenza`, nuovo nodo `residenza_provincia`)
-- Create: `database/migrations/2026_10_08_000005_add_residenza_provincia_to_perfezionamento.php`
-- Modify (test esistenti): `tests/Feature/ContattiClienteTest.php`, `Finanziamento/PerfezionamentoFlowTest.php`, `Finanziamento/InvioCrmTest.php`, `Finanziamento/DocumentiPrimaTest.php`
-- Test: `tests/Feature/Finanziamento/ResidenzaProvinciaTest.php`, `tests/Feature/Flows/ResidenzaProvinciaMigrationTest.php`
+- Create: `app/Services/Crm/ResidenceResolver.php`
+- Test: `tests/Feature/Crm/ResidenceResolverTest.php`
 
 **Interfaces:**
-- Produces: chiave `residenza_provincia` nei dati del perfezionamento (sigla maiuscola di 2 lettere), letta dal Task 3.
+- Consumes: `database/data/codici-catastali.json` (codice catastale → «Nome (SIGLA)»).
+- Produces (usato dal Task 3): `ResidenceResolver::resolve(string $address): array{city: string, province: ?string}`.
 
-- [ ] **Step 1: Scrivere i test che falliscono**
-
-`tests/Feature/Finanziamento/ResidenzaProvinciaTest.php`:
+- [ ] **Step 1: Scrivere il test che fallisce** (`tests/Feature/Crm/ResidenceResolverTest.php`)
 
 ```php
 <?php
 
-namespace Tests\Feature\Finanziamento;
+namespace Tests\Feature\Crm;
 
-use App\Models\Company;
-use App\Models\Conversation;
-use App\Models\LoanRequest;
-use App\Models\PraticaDocument;
-use Database\Seeders\DocumentCatalogSeeder;
+use App\Services\Crm\ResidenceResolver;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
-class ResidenzaProvinciaTest extends ConversationTestCase
+class ResidenceResolverTest extends TestCase
 {
-    private function afterResidenza(): array
+    #[DataProvider('addresses')]
+    public function test_ricava_citta_e_provincia(string $address, string $city, ?string $province): void
     {
-        Company::create(['name' => 'H']);
-        $this->seed(DocumentCatalogSeeder::class);
-        $loan = LoanRequest::create(['code' => 'FIN-2026-0007', 'agent_wa_number' => $this->agent, 'product' => 'personale',
-            'status' => 'informativa_ricevuta', 'privacy_received_at' => now(), 'answers' => ['prodotto' => 'personale']]);
-        PraticaDocument::populate($loan)->each->update(['status' => 'ricevuto']);
-
-        return $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 20100, Milano');
+        $this->assertSame(['city' => $city, 'province' => $province], ResidenceResolver::resolve($address));
     }
 
-    public function test_dopo_la_residenza_si_chiede_la_provincia(): void
+    public static function addresses(): array
     {
-        $replies = $this->afterResidenza();
-
-        $this->assertStringContainsString('Provincia di residenza', $this->bodies($replies));
-    }
-
-    public function test_una_provincia_per_esteso_si_rifiuta_e_si_richiede(): void
-    {
-        $this->afterResidenza();
-
-        $replies = $this->say('Milano');
-
-        $this->assertStringContainsString('sigla della provincia', $this->bodies($replies));
-        $this->assertArrayNotHasKey('residenza_provincia', Conversation::first()->data);
-    }
-
-    public function test_la_sigla_minuscola_diventa_maiuscola_e_si_passa_allo_stato_civile(): void
-    {
-        $this->afterResidenza();
-
-        $replies = $this->say('mi');
-
-        $this->assertSame('MI', Conversation::first()->data['residenza_provincia']);
-        $this->assertArrayHasKey('celibe', end($replies)->options);
+        return [
+            'con virgole' => ['Via Roma 1, 20100, Milano', 'Milano', 'MI'],
+            'senza virgole' => ['Via Roma 1 20100 Milano', 'Milano', 'MI'],
+            'nome di più parole' => ['Via Garibaldi 5, 20097, San Donato Milanese', 'San Donato Milanese', 'MI'],
+            'accenti e maiuscole' => ['via dante 2, 47100, FORLI', 'Forlì', 'FC'],
+            'sigla tra parentesi' => ['Via X 1, 00100, Roma (RM)', 'Roma', 'RM'],
+            'sigla dopo il nome' => ['Via X 1, Roma rm', 'Roma', 'RM'],
+            'alias' => ['Via X 1, 42100, Reggio Emilia', "Reggio nell'Emilia", 'RE'],
+            'omonimo senza sigla' => ['Via X 1, Castro', 'Castro', null],
+            'omonimo con sigla' => ['Via X 1, Castro (LE)', 'Castro', 'LE'],
+            'sigla non di quel comune' => ['Via X 1, Milano (RM)', 'Milano', 'MI'],
+            'comune sconosciuto' => ['Via X 1, 99999, Cittàinventata', 'Cittàinventata', null],
+            'solo via' => ['Via Roma 1', 'Via Roma 1', null],
+            'vuoto' => ['', '', null],
+        ];
     }
 }
 ```
 
-`tests/Feature/Flows/ResidenzaProvinciaMigrationTest.php` (stesso schema di `ContattoDirettoMigrationTest`):
+Run: `php artisan test --compact --filter=ResidenceResolverTest`
+Expected: FAIL (classe assente).
+
+- [ ] **Step 2: Implementare**
 
 ```php
 <?php
 
-namespace Tests\Feature\Flows;
+namespace App\Services\Crm;
 
-use App\Models\Flow;
-use App\Models\FlowNode;
-use App\Services\Flows\FlowCloner;
-use App\Services\Flows\FlowRepository;
-use Database\Seeders\FlowSeeder;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
+use Illuminate\Support\Str;
 
-class ResidenzaProvinciaMigrationTest extends TestCase
+/**
+ * Città e provincia dall'indirizzo di residenza («via, numero, CAP, città»), con l'elenco ISTAT dei comuni
+ * già nel progetto. La provincia si omette se il nome è in più province senza sigla esplicita, o se il comune è sconosciuto.
+ */
+final class ResidenceResolver
 {
-    use RefreshDatabase;
+    /** Nomi scritti in modo diverso dall'elenco ISTAT (chiavi normalizzate). */
+    private const ALIASES = ['reggio emilia' => 'reggio nell emilia'];
 
-    private function migrate(): void
+    private const MAX_WORDS = 6;
+
+    /** @var array<string,array{name: string, provinces: list<string>}>|null nome normalizzato => comune */
+    private static ?array $index = null;
+
+    /** @return array{city: string, province: ?string} */
+    public static function resolve(string $address): array
     {
-        (require database_path('migrations/2026_10_08_000005_add_residenza_provincia_to_perfezionamento.php'))->up();
-        app(FlowRepository::class)->forget();
-    }
-
-    /** Riporta l'albero com'era: senza il passo, con la residenza che va dritta allo stato civile. */
-    private function age(Flow $flow): void
-    {
-        $flow->nodes()->where('code', 'residenza_provincia')->firstOrFail()->delete();
-        $flow->nodes()->where('code', 'residenza')->firstOrFail()->jumps()->where('when_value', '*')->update(['go_to' => 'stato_civile']);
-        $flow->nodes()->orderBy('sort_order')->pluck('code')->each(fn ($code, $i) => $flow->nodes()->where('code', $code)->update(['sort_order' => $i + 1]));
-    }
-
-    private function production(): Flow
-    {
-        return Flow::where('code', 'perfezionamento')->where('is_test', false)->firstOrFail();
-    }
-
-    public function test_un_albero_vecchio_diventa_uguale_alla_configurazione(): void
-    {
-        $this->seed(FlowSeeder::class);
-        $this->age($this->production());
-        app(FlowRepository::class)->forget();
-        $this->assertNotEquals(config('finanziamento.flows.perfezionamento'), app(FlowRepository::class)->flow('perfezionamento'));
-
-        $this->migrate();
-
-        $this->assertEquals(config('finanziamento.flows.perfezionamento'), app(FlowRepository::class)->flow('perfezionamento'));
-        $this->assertSame(array_keys(config('finanziamento.flows.perfezionamento.nodes')), array_keys(app(FlowRepository::class)->flow('perfezionamento')['nodes']));
-    }
-
-    public function test_vale_per_la_copia_di_prova_ed_e_ripetibile(): void
-    {
-        $this->seed(FlowSeeder::class);
-        $this->age($this->production());
-        app(FlowCloner::class)->createTestCopy($this->production());
-
-        $this->migrate();
-        $this->migrate();
-
-        $this->assertSame(2, FlowNode::where('code', 'residenza_provincia')->count(), 'uno per versione, nessun doppione');
-    }
-
-    public function test_un_salto_cambiato_a_mano_non_si_tocca(): void
-    {
-        $this->seed(FlowSeeder::class);
-        $flow = $this->production();
-        $this->age($flow);
-        $flow->nodes()->where('code', 'residenza')->first()->jumps()->where('when_value', '*')->update(['go_to' => 'telefono']);
-
-        $this->migrate();
-
-        $this->assertSame('telefono', $flow->nodes()->where('code', 'residenza')->first()->jumps()->where('when_value', '*')->value('go_to'));
-    }
-}
-```
-
-Run: `php artisan test --compact --filter='ResidenzaProvincia'`
-Expected: FAIL.
-
-- [ ] **Step 2: Configurazione** — in `config/finanziamento.php`, flusso `perfezionamento`: il nodo `residenza` ora va a `residenza_provincia` e subito dopo si aggiunge il nuovo nodo:
-
-```php
-                'residenza' => $text('Residenza', 'Indirizzo di residenza (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'residenza_provincia'),
-                'residenza_provincia' => $text('Provincia di residenza', 'Provincia di residenza (sigla, es. MI):', ['required', 'regex:/^[A-Za-z]{2}$/'], 'stato_civile', ['upper' => true, 'strip_spaces' => true, 'error' => 'Scrivi la sigla della provincia (due lettere, es. MI).']),
-```
-
-- [ ] **Step 3: Migrazione `2026_10_08_000005_add_residenza_provincia_to_perfezionamento.php`**
-
-```php
-<?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
-
-return new class extends Migration
-{
-    private const COLUMNS = ['type', 'label', 'prompt', 'options', 'next', 'next_by', 'save', 'skippable', 'can_modify', 'checks'];
-
-    /**
-     * Dopo l'indirizzo di residenza il bot chiede la provincia (sigla). Aggiunge il passo agli alberi già importati
-     * (produzione e prove) senza toccare altre modifiche. Ripetibile.
-     */
-    public function up(): void
-    {
-        $node = config('finanziamento.flows.perfezionamento.nodes.residenza_provincia');
-        if (! $node) {
-            return;
+        $parts = array_map('trim', explode(',', $address));
+        $segment = (string) end($parts);
+        if ($segment === '') {
+            return ['city' => '', 'province' => null];
         }
 
-        foreach (DB::table('flows')->where('code', 'perfezionamento')->get() as $flow) {
-            $residenza = DB::table('flow_nodes')->where('flow_id', $flow->id)->where('code', 'residenza')->first();
-            if (! $residenza) {
+        [$text, $explicit] = self::splitProvince($segment);
+        $words = explode(' ', self::normalize($text));
+
+        for ($n = min(self::MAX_WORDS, count($words)); $n >= 1; $n--) {
+            $key = implode(' ', array_slice($words, -$n));
+            $place = self::index()[self::ALIASES[$key] ?? $key] ?? null;
+            if (! $place) {
                 continue;
             }
 
-            if (! DB::table('flow_nodes')->where('flow_id', $flow->id)->where('code', 'residenza_provincia')->exists()) {
-                DB::table('flow_nodes')->where('flow_id', $flow->id)->where('sort_order', '>', $residenza->sort_order)->increment('sort_order');
+            $provinces = $place['provinces'];
+            $province = $explicit && in_array($explicit, $provinces, true) ? $explicit : (count($provinces) === 1 ? $provinces[0] : null);
 
-                $params = array_diff_key($node, array_flip(self::COLUMNS));
-                $id = DB::table('flow_nodes')->insertGetId([
-                    'flow_id' => $flow->id, 'code' => 'residenza_provincia', 'type' => 'text', 'label' => $node['label'], 'prompt' => $node['prompt'],
-                    'sort_order' => $residenza->sort_order + 1, 'skippable' => false, 'save' => true, 'jump_by' => 'answer',
-                    'params' => $params ? json_encode($params, JSON_UNESCAPED_UNICODE) : null,
-                    'created_at' => now(), 'updated_at' => now(),
-                ]);
-                DB::table('flow_node_jumps')->insert(['flow_node_id' => $id, 'when_value' => '*', 'go_to' => $node['next'], 'sort_order' => 1, 'created_at' => now(), 'updated_at' => now()]);
-            }
-
-            // La residenza porta al nuovo passo solo se andava ancora allo stato civile (se è stata cambiata a mano non si tocca).
-            DB::table('flow_node_jumps')->where('flow_node_id', $residenza->id)->where('when_value', '*')->where('go_to', 'stato_civile')
-                ->update(['go_to' => 'residenza_provincia', 'updated_at' => now()]);
+            return ['city' => $place['name'], 'province' => $province];
         }
+
+        return ['city' => $text, 'province' => $explicit && in_array($explicit, self::provinces(), true) ? $explicit : null];
     }
 
-    public function down(): void
+    /** «Roma (RM)» o «Roma RM» → [«Roma», «RM»]; senza sigla valida → [testo, null]. */
+    private static function splitProvince(string $segment): array
     {
-        // Non si torna indietro: l'albero si ripristina dalla configurazione.
+        if (preg_match('/^(.*?)\s*\(?([A-Za-z]{2})\)?$/u', $segment, $m) && in_array(strtoupper($m[2]), self::provinces(), true) && trim($m[1]) !== '') {
+            return [trim($m[1]), strtoupper($m[2])];
+        }
+
+        return [$segment, null];
     }
-};
+
+    private static function normalize(string $text): string
+    {
+        return trim(preg_replace('/[^a-z0-9]+/', ' ', strtolower(Str::ascii($text))));
+    }
+
+    /** @return list<string> */
+    private static function provinces(): array
+    {
+        return array_values(array_unique(array_merge(...array_map(fn ($p) => $p['provinces'], array_values(self::index())))));
+    }
+
+    /** @return array<string,array{name: string, provinces: list<string>}> */
+    private static function index(): array
+    {
+        if (self::$index === null) {
+            $index = [];
+            foreach (json_decode((string) file_get_contents(__DIR__.'/../../../database/data/codici-catastali.json'), true) as $label) {
+                if (! preg_match('/^(.*) \(([A-Z]{2})\)$/', $label, $m)) {
+                    continue;
+                }
+                $key = self::normalize($m[1]);
+                $index[$key]['name'] ??= $m[1];
+                if (! in_array($m[2], $index[$key]['provinces'] ?? [], true)) {
+                    $index[$key]['provinces'][] = $m[2];
+                }
+            }
+            self::$index = $index;
+        }
+
+        return self::$index;
+    }
+}
 ```
 
-Se `FlowNode` non salva `params` come JSON in questo modo (verificare con `grep -n "params" app/Models/FlowNode.php`), usare lo stesso formato del cast del modello: l'uguaglianza con la configurazione nel primo test lo dimostra.
+- [ ] **Step 3: Verificare che passi**
 
-- [ ] **Step 4: Aggiornare i test esistenti** — tra la residenza e lo stato civile ora c'è la provincia:
+Run: `php artisan test --compact --filter=ResidenceResolverTest`
+Expected: PASS (13 casi). Se «sigla non di quel comune» o «solo via» non coincidono, correggere l'implementazione (non il test): una sigla che non è una provincia del comune si ignora; «Via Roma 1» non contiene comuni riconosciuti nella sua coda («1», «roma 1»: la coda «1» non è un comune; «Roma 1» no) e resta com'è. Attenzione al caso «solo via»: la coda di una parola è «1», nessuna corrispondenza, quindi `city` = testo.
 
-```bash
-sed -i "s/'#celibe'/'MI', '#celibe'/" tests/Feature/ContattiClienteTest.php tests/Feature/Finanziamento/PerfezionamentoFlowTest.php tests/Feature/Finanziamento/InvioCrmTest.php tests/Feature/Finanziamento/DocumentiPrimaTest.php
-```
-
-Eseguire `php artisan test --compact --filter='ResidenzaProvincia|ContattiClienteTest|PerfezionamentoFlowTest|InvioCrmTest|DocumentiPrimaTest|FlowRepositoryTest|FlowValidatorTest|FlowConfigExporterTest'`. Se un test usava `'#celibe'` senza passare dalla residenza (per esempio come unica risposta di un passo già avanzato) ora fallisce: correggerlo togliendo il `'MI'` aggiunto in quella riga.
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git -c core.fileMode=false add -A
-git -c core.fileMode=false commit -m "feat: domanda sulla provincia di residenza nel perfezionamento
+git -c core.fileMode=false commit -m "feat: città e provincia dall'indirizzo di residenza
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ```
@@ -453,7 +385,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 - Test: `tests/Feature/Crm/LeadParametersTest.php`, `tests/Feature/Crm/MediafacileLeadGatewayTest.php`, `tests/Feature/Finanziamento/InvioLeadMediafacileTest.php`
 
 **Interfaces:**
-- Consumes: `QuoteEmploymentMap::resolve` e `lead_tipologia` (Task 1), `residenza_provincia` (Task 2), `QuoteBandBound` (esistente).
+- Consumes: `QuoteEmploymentMap::resolve` e `lead_tipologia` (Task 1), `ResidenceResolver::resolve` (Task 2), `QuoteBandBound` (esistente).
 - Produces: `LeadParameters::build(LoanRequest $loan, array $personal): array<string,string>` (senza `Passkey`, senza valori vuoti); `MediafacileLeadGateway implements CrmGateway` (`submit(): int`, 200 solo con `Stato` `OK…`, salva `crm_lead_id`).
 
 - [ ] **Step 1: Scrivere i test che falliscono**
@@ -488,7 +420,7 @@ class LeadParametersTest extends TestCase
     {
         return $override + [
             'cognome' => 'Rossi', 'nome' => 'Mario', 'data_nascita' => '01/01/1980', 'residenza' => 'Via Roma 1, 20100, Milano',
-            'residenza_provincia' => 'MI', 'telefono' => '+393331234567', 'email' => 'mario@example.com',
+            'telefono' => '+393331234567', 'email' => 'mario@example.com',
             'codice_fiscale' => 'RSSMRA80A01H501U', 'iban' => 'IT60X0542811101000000123456', 'documento_numero' => 'AB123456',
         ];
     }
@@ -529,10 +461,14 @@ class LeadParametersTest extends TestCase
         $this->assertSame('Pensionato altri enti', LeadParameters::build($this->loan(['lavoro' => 'pensionato', 'ente_pensione' => 'exinpdap']), $this->personal())['tipologia']);
     }
 
-    public function test_la_citta_e_l_ultimo_segmento_oppure_tutto_il_testo(): void
+    public function test_citta_e_provincia_vengono_dalla_residenza(): void
     {
-        $this->assertSame('Roma', LeadParameters::build($this->loan(), $this->personal(['residenza' => 'Via A 1, 00100 , Roma ']))['residenza_citta']);
-        $this->assertSame('Via Roma 1', LeadParameters::build($this->loan(), $this->personal(['residenza' => 'Via Roma 1']))['residenza_citta']);
+        $p = LeadParameters::build($this->loan(), $this->personal(['residenza' => 'Via Garibaldi 5, 20097, San Donato Milanese']));
+        $this->assertSame(['San Donato Milanese', 'MI'], [$p['residenza_citta'], $p['residenza_provincia']]);
+
+        $p = LeadParameters::build($this->loan(), $this->personal(['residenza' => 'Via X 1, Castro']));
+        $this->assertSame('Castro', $p['residenza_citta']);
+        $this->assertArrayNotHasKey('residenza_provincia', $p, 'omonimo senza sigla: nessuna provincia inventata');
     }
 
     public function test_una_data_non_valida_o_assente_si_omette(): void
@@ -583,7 +519,7 @@ class MediafacileLeadGatewayTest extends TestCase
 
     private function personal(): array
     {
-        return ['cognome' => 'Rossi', 'nome' => 'Mario', 'data_nascita' => '01/01/1980', 'residenza' => 'Via Roma 1, Milano', 'residenza_provincia' => 'MI', 'telefono' => '+393331234567', 'email' => 'mario@example.com'];
+        return ['cognome' => 'Rossi', 'nome' => 'Mario', 'data_nascita' => '01/01/1980', 'residenza' => 'Via Roma 1, Milano', 'telefono' => '+393331234567', 'email' => 'mario@example.com'];
     }
 
     private function company(array $override = []): Company
@@ -677,7 +613,7 @@ class InvioLeadMediafacileTest extends ConversationTestCase
         $loan = LoanRequest::create(['code' => 'FIN-2026-0007', 'agent_wa_number' => $this->agent, 'product' => 'personale',
             'status' => 'informativa_ricevuta', 'privacy_received_at' => now(), 'answers' => ['prodotto' => 'personale', 'importo' => 'imp_5k', 'durata' => 'm24', 'lavoro' => 'dip_priv']]);
         PraticaDocument::populate($loan)->each->update(['status' => 'ricevuto']);
-        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, Milano', 'MI', '#celibe', '#ci',
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, Milano', '#celibe', '#ci',
             'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
 
         return $loan;
@@ -747,6 +683,7 @@ final class LeadParameters
     {
         $answers = $loan->answers ?? [];
         $band = QuoteBandBound::where('dimension', 'importo')->where('code', $answers['importo'] ?? '')->first();
+        $residence = ResidenceResolver::resolve((string) ($personal['residenza'] ?? ''));
 
         return array_filter([
             'cognome' => $personal['cognome'] ?? null,
@@ -754,8 +691,8 @@ final class LeadParameters
             'data_nascita' => self::birthDate($personal['data_nascita'] ?? null),
             'tipologia' => QuoteEmploymentMap::resolve($answers)?->lead_tipologia,
             'importo_richiesto' => $band ? number_format($band->high, 2, ',', '') : null,
-            'residenza_citta' => self::city((string) ($personal['residenza'] ?? '')),
-            'residenza_provincia' => isset($personal['residenza_provincia']) ? strtoupper($personal['residenza_provincia']) : null,
+            'residenza_citta' => $residence['city'],
+            'residenza_provincia' => $residence['province'],
             'cellulare' => $personal['telefono'] ?? null,
             'email' => $personal['email'] ?? null,
             'fonte' => (string) config('finanziamento.lead.fonte', 'unicoagent'),
@@ -771,14 +708,6 @@ final class LeadParameters
         }
 
         return Carbon::createFromDate((int) $m[3], (int) $m[2], (int) $m[1])->format('m-d-Y');
-    }
-
-    /** Ultimo segmento dell'indirizzo (separato da virgole); senza virgole, tutto il testo. */
-    private static function city(string $address): string
-    {
-        $parts = array_map('trim', explode(',', $address));
-
-        return (string) end($parts);
     }
 
     private static function notes(LoanRequest $loan, array $answers, ?QuoteBandBound $band): string
@@ -1070,7 +999,7 @@ class ArchiviazioneDopoPerfezionamentoTest extends ConversationTestCase
         $loan = LoanRequest::create(['code' => 'FIN-2026-0007', 'agent_wa_number' => $this->agent, 'product' => 'personale',
             'status' => 'informativa_ricevuta', 'privacy_received_at' => now(), 'answers' => ['prodotto' => 'personale']]);
         PraticaDocument::populate($loan)->each->update(['status' => 'ricevuto']);
-        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1', 'MI', '#celibe', '#ci',
+        $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1', '#celibe', '#ci',
             'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
 
         return $loan;
