@@ -101,7 +101,7 @@ class ImportiOttenibiliTest extends ConversationTestCase
         $replies = $this->say('ciao');
 
         $this->assertStringStartsWith('Ciao Luca!', $replies[0]->body);
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
     }
 
     public function test_senza_referente_si_usa_la_denominazione(): void

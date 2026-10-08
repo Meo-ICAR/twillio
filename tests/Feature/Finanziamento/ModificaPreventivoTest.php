@@ -133,7 +133,7 @@ class ModificaPreventivoTest extends ConversationTestCase
 
         $replies = $this->say('#vai_menu');
 
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
     }
 
     public function test_un_dato_non_modificabile_che_cambia_il_percorso_chiede_le_domande_nuove(): void

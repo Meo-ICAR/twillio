@@ -15,7 +15,7 @@ class RichiestaFlowTest extends ConversationTestCase
 
         $this->assertCount(1, $replies);
         $this->assertSame('list', $replies[0]->kind);
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
         $this->assertSame(0, Conversation::count());
     }
 
@@ -199,15 +199,15 @@ class RichiestaFlowTest extends ConversationTestCase
 
     public function test_un_saluto_a_un_percorso_lasciato_alla_prima_domanda_riporta_al_menu(): void
     {
-        $this->say('#menu_perfeziona');
-        $this->assertSame('codice', Conversation::first()->node);
+        $this->say('#menu_richiedi');
+        $this->assertSame('prodotto', Conversation::first()->node);
 
         foreach (['ciao', 'Buongiorno', '  SALVE '] as $greeting) {
             Conversation::query()->update(['status' => 'attiva']);
             $replies = $this->say($greeting);
 
             $this->assertSame('list', $replies[0]->kind, $greeting);
-            $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options), $greeting);
+            $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options), $greeting);
             $this->assertSame('annullata', Conversation::latest('id')->first()->status);
         }
     }

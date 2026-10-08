@@ -35,7 +35,7 @@ class TesterMenuTest extends ConversationTestCase
 
         $menu = $this->say('ciao')[0];
 
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($menu->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($menu->options));
     }
 
     public function test_chi_e_associato_a_un_utente_vede_anche_le_voci_di_prova(): void
@@ -45,7 +45,7 @@ class TesterMenuTest extends ConversationTestCase
 
         $menu = $this->say('ciao')[0];
 
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato', 'test_richiedi', 'test_perfeziona', 'test_stato'], array_keys($menu->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato', 'test_richiedi', 'test_perfeziona', 'test_stato'], array_keys($menu->options));
         $this->assertSame('list', $menu->kind);
         foreach ($menu->options as $title) {
             $this->assertLessThanOrEqual(24, mb_strlen($title));
@@ -58,14 +58,14 @@ class TesterMenuTest extends ConversationTestCase
         app(FlowCloner::class)->createTestCopy(Flow::where('code', 'richiesta')->where('is_test', false)->first());
         $this->tester();
 
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato', 'test_richiedi'], array_keys($this->say('ciao')[0]->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato', 'test_richiedi'], array_keys($this->say('ciao')[0]->options));
     }
 
     public function test_senza_copie_di_prova_neanche_l_utente_vede_voci_in_piu(): void
     {
         $this->tester();
 
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($this->say('ciao')[0]->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($this->say('ciao')[0]->options));
     }
 
     public function test_la_voce_di_prova_avvia_la_versione_di_prova_in_ogni_messaggio(): void

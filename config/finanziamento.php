@@ -62,6 +62,7 @@ return [
         'body_named' => 'Ciao {nome}! Benvenuto nel servizio agenti. Cosa vuoi fare?',
         'options' => [
             'menu_richiedi' => 'Richiedi Finanziamento',
+            'menu_modifica' => 'Modifica Preventivo',
             'menu_perfeziona' => 'Perfeziona Finanziamento',
             'menu_stato' => 'Stato Pratiche',
         ],
@@ -79,9 +80,9 @@ return [
     // I messaggi (max 4, 80 caratteri) coincidono con i titoli del menu, così il bot li riconosce come scelte.
     'profile' => [
         'enable_welcome_message' => true,
-        'prompts' => ['Richiedi Finanziamento', 'Perfeziona Finanziamento', 'Stato Pratiche', 'Aiuto'],
+        'prompts' => ['Richiedi Finanziamento', 'Modifica Preventivo', 'Perfeziona Finanziamento', 'Stato Pratiche'],
         'commands' => [
-            'menu' => 'Mostra le tre opzioni: richiedi, perfeziona, stato pratiche',
+            'menu' => 'Mostra le opzioni: richiedi, modifica preventivo, perfeziona, stato pratiche',
             'help' => 'Elenco dei comandi disponibili',
             'indietro' => 'Torna alla domanda precedente',
             'salta' => 'Salta la domanda (dove è consentito)',

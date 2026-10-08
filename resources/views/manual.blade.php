@@ -75,7 +75,8 @@
     <table>
         <tr><th>Voce</th><th>A cosa serve</th></tr>
         <tr><td>Richiedi Finanziamento</td><td>Apre una nuova pratica anonima e ti dà un codice.</td></tr>
-        <tr><td>Perfeziona Finanziamento</td><td>Completa una pratica con i dati del cliente e i documenti.</td></tr>
+        <tr><td>Modifica Preventivo</td><td>Elenca gli ultimi 5 preventivi non perfezionati: scegli quale modificare.</td></tr>
+        <tr><td>Perfeziona Finanziamento</td><td>Completa una pratica con i dati del cliente e i documenti: scegli tra gli ultimi 5 preventivi o le pratiche a cui mancano ancora documenti.</td></tr>
         <tr><td>Stato Pratiche</td><td>Elenco delle tue pratiche; da qui carichi documenti mancanti o richiesti.</td></tr>
     </table>
     <h3>Comandi utili, in qualsiasi momento</h3>
@@ -97,7 +98,7 @@
         <li>Controlla il riepilogo e tocca <em>Conferma</em>, <em>Modifica</em> (ricomincia) o <em>Annulla</em>.</li>
     </ol>
     <div class="chat">✅ Richiesta registrata. Codice pratica: <strong>FIN-2026-0001</strong>. Conservalo: ti servirà per perfezionare il finanziamento.</div>
-    <p><strong>Modifica del preventivo.</strong> Sotto il messaggio di fine richiesta trovi il pulsante <em>Modifica preventivo</em> (non compare per i prodotti che non hanno dati modificabili). Il bot crea un nuovo preventivo copiando tutti i dati del precedente e ti chiede solo quelli modificabili (per esempio importo e durata): per ognuno vedi il valore attuale e puoi scegliere un'altra opzione oppure <em>Mantieni attuale</em> (o scrivere <kbd>ok</kbd>). Alla fine confermi il riepilogo: il preventivo di partenza non cambia e il nuovo ha un suo codice.</p>
+    <p><strong>Modifica del preventivo.</strong> Dal menu scegli <em>Modifica Preventivo</em> e il preventivo dall'elenco, oppure usa il pulsante <em>Modifica preventivo</em> sotto il messaggio di fine richiesta (non compare per i prodotti che non hanno dati modificabili). Il bot crea un nuovo preventivo copiando tutti i dati del precedente e ti chiede solo quelli modificabili (per esempio importo e durata): per ognuno vedi il valore attuale e puoi scegliere un'altra opzione oppure <em>Mantieni attuale</em> (o scrivere <kbd>ok</kbd>). Alla fine confermi il riepilogo: il preventivo di partenza non cambia e il nuovo ha un suo codice.</p>
         <p><strong>Cosa vedi dopo il codice</strong> dipende da chi sei e da come è configurata l'azienda:</p>
     <ul>
         <li><strong>Produttore con preventivatore (CRM) configurato</strong>: l'importo minimo e massimo ottenibile.</li>
@@ -108,7 +109,7 @@
 
     <h2 id="perfeziona">4. Perfeziona Finanziamento</h2>
     <ol class="steps">
-        <li><strong>Codice pratica</strong>: scrivi il codice ricevuto (es. FIN-2026-0001) e conferma che è la pratica giusta.</li>
+        <li><strong>Scelta della pratica</strong>: scegli dall'elenco (gli ultimi 5 preventivi da perfezionare e le pratiche già inviate a cui mancano documenti) oppure scrivi il codice (es. FIN-2026-0001), poi conferma che è la pratica giusta. Se scegli una pratica già perfezionata a cui mancano documenti, vai direttamente al loro caricamento.</li>
         <li><strong>Riepilogo dei documenti</strong>: il bot elenca i documenti necessari per quel finanziamento e ti dà il link dell'informativa privacy da scaricare, stampare e far firmare al cliente.</li>
         <li><strong>Informativa firmata</strong>: invia una foto o un PDF. Deve essere il nostro modulo e deve essere firmato; viene controllato in automatico e ti arriva l'esito. Finché non è a posto, gli altri documenti restano in attesa e non vengono letti.</li>
         <li><strong>Documenti</strong>: invia, uno alla volta, documento d'identità, codice fiscale e documento di reddito (quest'ultimo si può saltare). Un documento già inviato non viene richiesto di nuovo. Per ognuno il bot ti scrive l'esito del controllo dopo qualche istante, senza fermarti.</li>

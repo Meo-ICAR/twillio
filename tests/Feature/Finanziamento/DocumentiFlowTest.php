@@ -61,7 +61,7 @@ class DocumentiFlowTest extends ConversationTestCase
         $this->loan('FIN-2026-0002', ['status' => 'richiesta', 'privacy_received_at' => null, 'product' => 'mutuo']);
         $this->loan('FIN-2026-0003', ['agent_wa_number' => '393339998888']);
 
-        $replies = $this->say('3');
+        $replies = $this->say('4');
 
         $this->assertSame('buttons', $replies[0]->kind); // fino a 3 pratiche; oltre, lista
         $this->assertSame(['FIN-2026-0002' => 'FIN-2026-0002', 'FIN-2026-0001' => 'FIN-2026-0001'], $replies[0]->options);

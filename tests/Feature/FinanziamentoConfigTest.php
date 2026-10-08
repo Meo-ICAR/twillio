@@ -13,7 +13,7 @@ class FinanziamentoConfigTest extends TestCase
     {
         $options = config('finanziamento.menu.options');
 
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($options));
         $this->assertSame('Richiedi Finanziamento', $options['menu_richiedi']);
         $this->assertSame('Perfeziona Finanziamento', $options['menu_perfeziona']);
         foreach ($options as $title) {

@@ -18,30 +18,31 @@ class ConversazioniAbbandonateTest extends ConversationTestCase
 
     public function test_dopo_un_ora_alla_prima_domanda_il_messaggio_riparte_dal_menu(): void
     {
-        $this->say('#menu_perfeziona');
+        $this->say('#menu_richiedi');
         $this->aged(Conversation::first(), 61);
 
         $replies = $this->say('qualunque cosa');
 
         $this->assertSame('list', $replies[0]->kind);
-        $this->assertSame(['menu_richiedi', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
+        $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
         $this->assertSame('annullata', Conversation::first()->status);
     }
 
     public function test_prima_di_un_ora_la_conversazione_continua(): void
     {
-        $this->say('#menu_perfeziona');
+        $this->say('#menu_richiedi');
         $this->aged(Conversation::first(), 30);
 
-        $replies = $this->say('FIN-9999');
+        $replies = $this->say('#personale');
 
         $this->assertSame('attiva', Conversation::first()->status);
-        $this->assertStringContainsString('Codice non trovato', $this->bodies($replies));
+        $this->assertSame('importo', Conversation::first()->node);
+        $this->assertStringContainsString('Quale importo', $this->bodies($replies));
     }
 
     public function test_una_scelta_di_menu_dopo_un_ora_apre_il_percorso_scelto(): void
     {
-        $this->say('#menu_perfeziona');
+        $this->say('#menu_richiedi');
         $this->aged(Conversation::first(), 90);
 
         $replies = $this->say('#menu_richiedi');

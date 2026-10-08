@@ -151,12 +151,10 @@ class PerfezionamentoFlowTest extends ConversationTestCase
         $this->loan();
         $this->loan(['code' => 'FIN-2026-0008', 'agent_wa_number' => '393339998888']);
         $this->loan(['code' => 'FIN-2026-0009', 'status' => 'perfezionata']);
-        $this->say('#menu_perfeziona');
-
         $this->assertStringContainsString('Codice non trovato', $this->bodies($this->say('FIN-2026-9999')));
         $this->assertStringContainsString('Codice non trovato', $this->bodies($this->say('FIN-2026-0008')));
         $this->assertStringContainsString('già stata perfezionata', $this->bodies($this->say('FIN-2026-0009')));
-        $this->assertSame('codice', Conversation::first()->node);
+        $this->assertSame(0, Conversation::count(), 'nessuna conversazione per un codice non valido');
     }
 
     public function test_la_conferma_mostra_il_riepilogo_anonimo_e_no_riparte(): void

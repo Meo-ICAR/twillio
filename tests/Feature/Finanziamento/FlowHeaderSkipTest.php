@@ -55,7 +55,7 @@ class FlowHeaderSkipTest extends ConversationTestCase
         Flow::where('code', 'documenti')->update(['header' => 'HEADER DOCUMENTI']);
         LoanRequest::create(['code' => 'FIN-2026-0001', 'agent_wa_number' => $this->agent, 'product' => 'personale', 'status' => 'informativa_ricevuta', 'answers' => []]);
 
-        $this->assertStringContainsString('HEADER PERFEZIONA', $this->bodies($this->say('#menu_perfeziona')));
+        $this->assertStringContainsString('HEADER PERFEZIONA', $this->bodies($this->say('#menu_perfeziona', '#perfeziona:FIN-2026-0001')));
         Conversation::query()->delete();
         $this->assertStringContainsString('HEADER DOCUMENTI', $this->bodies($this->say('#menu_stato')));
         Conversation::query()->delete();

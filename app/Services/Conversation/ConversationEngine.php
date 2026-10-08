@@ -126,6 +126,11 @@ class ConversationEngine
 
             return $this->startModifyFromCode($m->from, substr($m->replyId, 9));
         }
+        if ($m->type === 'interactive' && str_starts_with((string) $m->replyId, 'perfeziona:')) {
+            $conv && $this->close($conv, 'annullata');
+
+            return $this->startPerfectionFromCode($m->from, substr($m->replyId, 11));
+        }
         if (in_array($command, ['help', 'aiuto'], true)) {
             $again = $conv && $this->flows->node($conv->flow, $conv->node) ? $this->prompt($conv) : [$this->menu($m->from)];
 
@@ -195,23 +200,34 @@ class ConversationEngine
     {
         $choice = $m->replyId ?? match ($this->normalize((string) $m->text)) {
             '1', 'richiedi', 'richiedi finanziamento' => 'menu_richiedi',
-            '2', 'perfeziona', 'perfeziona finanziamento' => 'menu_perfeziona',
-            '3', 'stato', 'stato pratiche' => 'menu_stato',
+            '2', 'modifica', 'modifica preventivo' => 'menu_modifica',
+            '3', 'perfeziona', 'perfeziona finanziamento' => 'menu_perfeziona',
+            '4', 'stato', 'stato pratiche' => 'menu_stato',
             default => null,
         };
+
+        // Un codice pratica scritto a mano apre il perfezionamento di quella pratica.
+        if ($choice === null && $m->type === 'text' && preg_match('/^[A-Z]{3}-\d{4}-\d+$/', Str::upper(trim($m->text)))) {
+            return $this->startPerfectionFromCode($m->from, Str::upper(trim($m->text)));
+        }
 
         // Le voci di prova valgono solo per chi è associato a un utente e solo se il percorso ha una copia di prova.
         foreach (config('finanziamento.menu.test') as $flow => [$id]) {
             if ($choice === $id && User::hasTesterNumber($m->from) && in_array($flow, $this->flows->testFlowCodes(), true)) {
                 $this->flows->setTest(true);
 
-                return $flow === 'documenti' ? $this->startDocuments($m->from) : $this->start($m->from, $flow);
+                return match ($flow) {
+                    'documenti' => $this->startDocuments($m->from),
+                    'perfezionamento' => $this->perfectionList($m->from),
+                    default => $this->start($m->from, $flow),
+                };
             }
         }
 
         return match ($choice) {
             'menu_richiedi' => $this->start($m->from, 'richiesta'),
-            'menu_perfeziona' => $this->start($m->from, 'perfezionamento'),
+            'menu_modifica' => $this->quoteList($m->from),
+            'menu_perfeziona' => $this->perfectionList($m->from),
             'menu_stato' => $this->startDocuments($m->from),
             default => [$this->menu($m->from)],
         };
@@ -769,6 +785,96 @@ class ConversationEngine
         $buttons = $this->hasModifiableSteps($answers) ? ['modifica:'.$loan->code => 'Modifica preventivo'] : [];
 
         return [Reply::choice($body, $buttons + ['vai_menu' => 'Vai al menu'])];
+    }
+
+    /** @return Collection<int,LoanRequest> gli ultimi 5 preventivi non ancora perfezionati */
+    private function modifiableQuotes(string $from): Collection
+    {
+        return LoanRequest::where('agent_wa_number', $from)->where('is_test', $this->flows->isTest())
+            ->where('status', '!=', 'perfezionata')->latest('id')->limit(5)->get();
+    }
+
+    /** @return Collection<int,LoanRequest> gli ultimi 5 preventivi da perfezionare o pratiche a cui mancano ancora documenti obbligatori */
+    private function perfectibleLoans(string $from): Collection
+    {
+        return LoanRequest::where('agent_wa_number', $from)->where('is_test', $this->flows->isTest())
+            ->where(fn ($q) => $q->where('status', '!=', 'perfezionata')
+                ->orWhere(fn ($q) => $q->where('status', 'perfezionata')->whereHas('praticaDocuments', fn ($d) => $d->where('requirement', 'obbligatorio')->where('status', '!=', 'ok'))))
+            ->latest('id')->limit(5)->get();
+    }
+
+    /** @param Collection<int,LoanRequest> $loans */
+    private function loanChoice(string $body, Collection $loans, string $prefix): Reply
+    {
+        $labels = LoanRequest::productLabels();
+
+        return Reply::choice($body, $loans->mapWithKeys(fn (LoanRequest $l) => [
+            $prefix.$l->code => mb_substr($l->code.' · '.($labels[$l->product] ?? $l->product), 0, 24),
+        ])->all());
+    }
+
+    /** @return Reply[] */
+    private function quoteList(string $from): array
+    {
+        $quotes = $this->modifiableQuotes($from);
+
+        return $quotes->isEmpty()
+            ? [Reply::text('Non hai preventivi da modificare.'), $this->menu($from)]
+            : [$this->loanChoice('Quale preventivo vuoi modificare? (gli ultimi 5 non perfezionati)', $quotes, 'modifica:')];
+    }
+
+    /** @return Reply[] */
+    private function perfectionList(string $from): array
+    {
+        $loans = $this->perfectibleLoans($from);
+
+        return $loans->isEmpty()
+            ? [Reply::text('Non hai preventivi da perfezionare né pratiche a cui mancano documenti.'), $this->menu($from)]
+            : [$this->loanChoice('Quale pratica vuoi perfezionare? (preventivi recenti o pratiche a cui mancano documenti)', $loans, 'perfeziona:')];
+    }
+
+    /**
+     * Perfezionamento della pratica scelta. Se è già perfezionata ma mancano documenti si passa al loro caricamento.
+     *
+     * @return Reply[]
+     */
+    private function startPerfectionFromCode(string $from, string $code): array
+    {
+        $loan = LoanRequest::where('code', $code)->where('agent_wa_number', $from)->first();
+        if (! $loan) {
+            return [Reply::text('Codice non trovato. Controlla e riprova.'), $this->menu($from)];
+        }
+
+        $this->flows->setTest($loan->is_test && in_array('perfezionamento', $this->flows->testFlowCodes(), true));
+
+        if ($loan->status === 'perfezionata') {
+            $missing = $loan->praticaDocuments()->where('requirement', 'obbligatorio')->where('status', '!=', 'ok')->exists();
+            if (! $missing) {
+                return [Reply::text('Questa pratica è già stata perfezionata.'), $this->menu($from)];
+            }
+
+            $conv = Conversation::create([
+                'wa_number' => $from, 'flow' => 'documenti', 'data' => [], 'history' => [], 'node' => 'dettaglio',
+                'is_test' => $this->flows->isTest(), 'loan_request_id' => $loan->id,
+            ]);
+            $conv->setRelation('loanRequest', $loan);
+
+            return $this->prompt($conv);
+        }
+
+        if ($loan->status === 'richiesta') {
+            $loan->update(['status' => 'in_attesa_informativa']);
+        }
+
+        $def = $this->flows->flow('perfezionamento') ?? throw new \LogicException('Percorso perfezionamento inesistente o disattivato');
+        $conv = Conversation::create([
+            'wa_number' => $from, 'flow' => 'perfezionamento', 'data' => [], 'history' => [], 'node' => 'conferma_pratica',
+            'is_test' => $this->flows->isTest(), 'loan_request_id' => $loan->id,
+        ]);
+        $conv->setRelation('loanRequest', $loan);
+        $header = trim((string) ($def['header'] ?? ''));
+
+        return [...($header !== '' ? [Reply::text($header)] : []), ...$this->prompt($conv)];
     }
 
     /**
