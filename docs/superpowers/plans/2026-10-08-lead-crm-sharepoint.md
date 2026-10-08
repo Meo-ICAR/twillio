@@ -320,7 +320,7 @@ final class ResidenceResolver
     /** «Roma (RM)» o «Roma RM» → [«Roma», «RM»]; senza sigla valida → [testo, null]. */
     private static function splitProvince(string $segment): array
     {
-        if (preg_match('/^(.*?)\s*\(?([A-Za-z]{2})\)?$/u', $segment, $m) && in_array(strtoupper($m[2]), self::provinces(), true) && trim($m[1]) !== '') {
+        if (preg_match('/^(.*?)\s*\(?\b([A-Za-z]{2})\b\)?$/u', $segment, $m) && in_array(strtoupper($m[2]), self::provinces(), true) && trim($m[1]) !== '') {
             return [trim($m[1]), strtoupper($m[2])];
         }
 
