@@ -53,7 +53,9 @@ class FornitoreResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Produttore')->columns(2)->schema([
+           
+            Section::make('Dati anagrafici')->columnSpanFull()->columns(4)->schema([
+         
                 TextInput::make('name')->label('Denominazione')->maxLength(255),
                 TextInput::make('nome')->label('Referente')->maxLength(255),
                 TextInput::make('sigla')->label('Sigla')->maxLength(10)->alphaDash()
@@ -62,24 +64,10 @@ class FornitoreResource extends Resource
                 TextInput::make('tel')->label('Cellulare')->tel()->maxLength(255)
                     ->helperText('Serve a riconoscere chi scrive su WhatsApp: con il prefisso (+39) o senza, ma solo cifre.'),
                 TextInput::make('email')->label('Email')->email()->maxLength(255),
-                TextInput::make('pec')->label('PEC')->email()->maxLength(255),
-                TextInput::make('piva')->label('Partita IVA')->maxLength(20),
-                TextInput::make('cf')->label('Codice fiscale')->maxLength(16),
-                TextInput::make('indirizzo')->label('Indirizzo')->maxLength(255),
-                TextInput::make('comune')->label('Comune')->maxLength(255),
-                TextInput::make('cap')->label('CAP')->maxLength(10),
-                TextInput::make('prov')->label('Provincia')->maxLength(5),
+              
                 Toggle::make('is_active')->label('Attivo')
                     ->helperText('Solo i produttori attivi sono riconosciuti: gli altri sono trattati come segnalatori occasionali.'),
-            ]),
-            Section::make('Iscrizioni')->columns(2)->schema([
-                TextInput::make('oam')->label('OAM')->maxLength(30),
-                DatePicker::make('oam_at')->label('OAM dal'),
-                TextInput::make('numero_iscrizione_rui')->label('RUI')->maxLength(50),
-                TextInput::make('ivass')->label('IVASS')->maxLength(30),
-                DatePicker::make('stipulated_at')->label('Convenzione dal'),
-                DatePicker::make('dismissed_at')->label('Cessato il'),
-            ]),
+            ])
         ]);
     }
 

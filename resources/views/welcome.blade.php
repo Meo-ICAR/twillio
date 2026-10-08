@@ -35,6 +35,8 @@
         h1 { font-size: clamp(2rem, 4.6vw, 3.1rem); line-height: 1.12; letter-spacing: -.02em; margin: 14px 0 16px; }
         .lead { font-size: 1.15rem; color: var(--muted); margin: 0 0 26px; }
         .cta { display: flex; flex-wrap: wrap; gap: 12px; }
+        .notice { margin-top: 16px; padding: 12px 16px; border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--card); border-radius: 10px; font-size: .95rem; }
+        .notice code { background: var(--brand-soft); color: var(--brand); padding: 1px 7px; border-radius: 6px; font-weight: 700; }
         .note { color: var(--muted); font-size: .9rem; margin-top: 14px; }
         .phone { background: var(--wa-bg); border: 1px solid var(--line); border-radius: 22px; padding: 18px 14px; box-shadow: 0 18px 40px rgba(0,0,0,.12); }
         .phone .bar { font-weight: 600; font-size: .9rem; padding: 0 6px 10px; color: var(--fg); }
@@ -85,10 +87,12 @@
             <h1>Le pratiche di finanziamento si aprono su WhatsApp. I dati dei clienti, solo quando servono.</h1>
             <p class="lead">I tuoi agenti scrivono dal telefono che già usano ogni giorno. Un assistente li guida con le domande giuste, assegna un codice pratica e raccoglie i dati personali del cliente solo dopo che l'informativa privacy firmata è arrivata.</p>
             <div class="cta">
-                <a class="btn primary" href="#come-funziona">Come funziona</a>
+                <a class="btn primary" href="https://wa.me/393509015695" target="_blank" rel="noopener">Prova ora</a>
+                <a class="btn ghost" href="#come-funziona">Come funziona</a>
                 <a class="btn ghost" href="/brochure">Scarica la brochure</a>
                 <a class="btn ghost" href="/admin">Accedi al pannello</a>
             </div>
+            <div class="notice" role="note">💬 Per attivare il dialogo, scrivi <code>/menu</code> come primo messaggio su WhatsApp.</div>
             <p class="note">Si collega al tuo numero WhatsApp Business. Gli agenti non installano nulla.</p>
         </div>
 

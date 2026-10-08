@@ -19,6 +19,14 @@ class WelcomePageTest extends TestCase
             ->assertSee('/admin', false);
     }
 
+    public function test_la_home_ha_il_link_per_provare_su_whatsapp(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('Prova ora')
+            ->assertSee('https://wa.me/393509015695', false)
+            ->assertSee('/menu');
+    }
+
     public function test_la_home_non_promette_certificazioni_non_possedute(): void
     {
         $html = strtolower($this->get('/')->getContent());
