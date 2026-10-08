@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             CompanySeeder::class,
             DocumentCatalogSeeder::class,
+            QuoteCatalogSeeder::class,
             FlowSeeder::class,
         ]);
     }
