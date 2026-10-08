@@ -131,7 +131,7 @@ class ImportiOttenibiliTest extends ConversationTestCase
             $m->assertHasTo('istruttoria@example.com');
             $m->assertSeeInHtml('Prestito personale');
 
-            return $m->hasSubject('Preventivo FIN-2026-0001 · Prestito personale');
+            return $m->hasSubject('Preventivo '.LoanRequest::first()->code.' · Prestito personale');
         });
     }
 

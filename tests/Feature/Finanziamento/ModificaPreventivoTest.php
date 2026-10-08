@@ -35,7 +35,7 @@ class ModificaPreventivoTest extends ConversationTestCase
 
         $last = end($replies);
         $this->assertSame('buttons', $last->kind);
-        $this->assertSame(['modifica:FIN-'.now()->format('Y').'-0001' => 'Modifica preventivo', 'vai_menu' => 'Vai al menu'], $last->options);
+        $this->assertSame(['modifica:'.LoanRequest::first()->code => 'Modifica preventivo', 'vai_menu' => 'Vai al menu'], $last->options);
         $this->assertStringContainsString('Codice pratica', $last->body);
     }
 

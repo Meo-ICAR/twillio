@@ -207,7 +207,7 @@ class ConversationEngine
         };
 
         // Un codice pratica scritto a mano apre il perfezionamento di quella pratica.
-        if ($choice === null && $m->type === 'text' && preg_match('/^[A-Z]{3}-\d{4}-\d+$/', Str::upper(trim($m->text)))) {
+        if ($choice === null && $m->type === 'text' && preg_match('/^[A-Z0-9]{2,6}(-[A-Z0-9]{2,6})?-\d{4}-\d{2,4}[A-Z]?$/', Str::upper(trim($m->text)))) {
             return $this->startPerfectionFromCode($m->from, Str::upper(trim($m->text)));
         }
 
@@ -765,9 +765,11 @@ class ConversationEngine
         $data = $conv->data ?? [];
         $parent = $this->modifiedLoan($conv);
         $answers = $this->cleanAnswers($data);
+        // La sigla del produttore apre il codice; chi non è in anagrafica diventa subito segnalatore occasionale.
+        $sigla = (Fornitore::findByWhatsApp($conv->wa_number) ?? Fornitore::registerOccasional($conv->wa_number))->ensureSigla();
         $loan = LoanRequest::create([
             'parent_id' => $parent?->id,
-            'code' => LoanRequestCode::next($this->flows->isTest()),
+            'code' => LoanRequestCode::next($this->flows->isTest(), $sigla),
             'is_test' => $this->flows->isTest(),
             'agent_wa_number' => $conv->wa_number,
             'product' => $data['prodotto'],
@@ -982,7 +984,7 @@ class ConversationEngine
             return [Reply::text('⚠️ Invio pratica fallito, riprovare o contattare Istruttoria.'), ...$this->prompt($conv)];
         }
 
-        $loan->update(['personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now()]);
+        $loan->update($this->perfectedAttributes($data));
         $this->close($conv, 'completata');
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
@@ -991,8 +993,9 @@ class ConversationEngine
     /** La pratica viene salvata per prima: la mail legge i dati dalla pratica; se non parte si annulla il salvataggio. */
     private function mailLoan(LoanRequest $loan, array $data): bool
     {
-        $before = $loan->only(['personal', 'status', 'perfected_at']);
-        $loan->update(['personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now()]);
+        $attributes = $this->perfectedAttributes($data);
+        $before = $loan->only(array_keys($attributes));
+        $loan->update($attributes);
         if ($this->mailer->send($loan)) {
             return true;
         }
@@ -1000,6 +1003,17 @@ class ConversationEngine
         $loan->update($before);
 
         return false;
+    }
+
+    /** Ciò che si scrive sulla pratica quando è perfezionata, compresi i recapiti del cliente e il consenso al contatto diretto. */
+    private function perfectedAttributes(array $data): array
+    {
+        return [
+            'personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now(),
+            'direct_contact' => ($data['contatto_diretto'] ?? null) === 'si',
+            'customer_phone' => $data['telefono'] ?? null,
+            'customer_email' => $data['email'] ?? null,
+        ];
     }
 
     private function submitToCrm(LoanRequest $loan, array $data): int

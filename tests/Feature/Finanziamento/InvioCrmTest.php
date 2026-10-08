@@ -26,7 +26,7 @@ class InvioCrmTest extends ConversationTestCase
             'status' => 'informativa_ricevuta', 'privacy_received_at' => now(), 'answers' => ['prodotto' => 'personale']]);
         PraticaDocument::populate($loan)->each->update(['status' => 'ricevuto']);
         $this->say('#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1', '#celibe', '#ci',
-            'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
+            'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
 
         return $loan;
     }

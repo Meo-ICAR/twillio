@@ -113,7 +113,7 @@ class TesterMenuTest extends ConversationTestCase
 
         $loan = LoanRequest::firstOrFail();
         $this->assertTrue($loan->is_test);
-        $this->assertMatchesRegularExpression('/^TST-\d{4}-0001$/', $loan->code);
+        $this->assertMatchesRegularExpression('/^TST-SEG-\d{4}-\d{4}$/', $loan->code);
         $this->assertStringContainsString($loan->code, $this->bodies($replies));
     }
 
@@ -127,7 +127,7 @@ class TesterMenuTest extends ConversationTestCase
         $this->say('#menu_richiedi', '#mutuo', '#prima', '#g_200k', '#ltv_80', '#m240', '#fam_3500', '#int_2', '#fisso', '#conferma');
 
         $real = LoanRequest::where('is_test', false)->firstOrFail();
-        $this->assertMatchesRegularExpression('/^FIN-\d{4}-0001$/', $real->code, 'la numerazione vera non la consumano le prove');
+        $this->assertMatchesRegularExpression('/^SEG-\d{4}-\d{4}$/', $real->code, 'il codice vero non ha il prefisso delle prove');
     }
 
     public function test_la_prova_di_stato_pratiche_usa_il_percorso_documenti_di_prova(): void

@@ -40,7 +40,8 @@ class RichiestaFlowTest extends ConversationTestCase
         $this->assertSame('richiesta', $loan->status);
         $this->assertSame('red_2000', $loan->answers['reddito']);
         $this->assertSame($this->agent, $loan->agent_wa_number);
-        $this->assertStringContainsString('FIN-'.now()->year.'-0001', $this->bodies($replies));
+        $this->assertMatchesRegularExpression('/^SEG-\d{4}-\d{4}$/', $loan->code);
+        $this->assertStringContainsString($loan->code, $this->bodies($replies));
         $this->assertSame('completata', Conversation::first()->status);
     }
 

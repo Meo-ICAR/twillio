@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\LoanRequests\Schemas;
 
 use App\Models\LoanRequest;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -23,6 +24,10 @@ class LoanRequestInfolist
                 TextEntry::make('privacy_received_at')->label('Informativa ricevuta il')->dateTime()->placeholder('-'),
                 TextEntry::make('privacy_verified_at')->label('Informativa verificata il')->dateTime()->placeholder('-')
                     ->helperText('Verificata dall\'AI (nostro modulo, firmato) o approvata da un operatore: da qui i documenti vengono letti.'),
+                TextEntry::make('customer_phone')->label('Cellulare cliente')->placeholder('-'),
+                TextEntry::make('customer_email')->label('Email cliente')->placeholder('-'),
+                IconEntry::make('direct_contact')->label('Contatto diretto col cliente')->boolean()
+                    ->helperText('I documenti si possono chiedere anche direttamente al cliente.'),
                 TextEntry::make('parent.code')->label('Modifica del preventivo')->placeholder('-'),
                 TextEntry::make('perfected_at')->label('Perfezionata il')->dateTime()->placeholder('-'),
                 TextEntry::make('created_at')->label('Creata il')->dateTime(),

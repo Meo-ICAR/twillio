@@ -3,11 +3,36 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /** Azienda cliente: è il Titolare del trattamento indicato nell'informativa privacy. */
 class Company extends Model
 {
+    /** Settori in cui opera il servizio. */
+    public const TYPES = ['FINANCE' => 'Finance', 'CALL CENTER' => 'Call center', 'HOTEL' => 'Hotel'];
+
     protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return [
+            'is_trial' => 'boolean',
+            'trialend_at' => 'date',
+            'trial_activated_at' => 'date',
+            'activated_at' => 'date',
+        ];
+    }
+
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'company_products')->withTimestamps();
+    }
+
+    /** La prova è ancora in corso (attiva e non scaduta). */
+    public function isTrialActive(): bool
+    {
+        return $this->is_trial && ($this->trialend_at === null || ! $this->trialend_at->copy()->endOfDay()->isPast());
+    }
 
     /** Esiste un CRM per la fase di preventivazione (altrimenti si manda una email all'istruttoria). */
     public function hasQuoteCrm(): bool

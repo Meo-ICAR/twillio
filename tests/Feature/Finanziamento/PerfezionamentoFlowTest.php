@@ -38,7 +38,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
     private function personal(): array
     {
         return ['rssmra80a01h501u', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#coniugato', '#ci',
-            'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', 'it60 x054 2811 1010 0000 0123 456'];
+            'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', '#si', 'it60 x054 2811 1010 0000 0123 456'];
     }
 
     /** Codice fiscale sintetico con la data di nascita voluta (il carattere di controllo non viene verificato). */
@@ -50,7 +50,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
     /** Dal codice fiscale al riepilogo, con i dati personali coerenti. */
     private function untilSummary(array $start): array
     {
-        return [...$start, 'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com',
+        return [...$start, 'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', '#si',
             'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015'];
     }
 
@@ -411,7 +411,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
         $this->loanWithDocuments();
         $this->say(...[
             '#menu_perfeziona', 'FIN-2026-0007', '#si', 'RSSMRA80A01H501U', 'Rossi', 'Mario',
-            'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com',
+            'Via Roma 1', '#celibe', '#ci', 'AB123456', '01/01/2030', '+39 333 1234567', 'mario@example.com', '#si',
         ]);
 
         $this->assertStringContainsString('IBAN non valido', $this->bodies($this->say('IT61X0542811101000000123456')));

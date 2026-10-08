@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 /**
  * Anagrafica degli agenti / collaboratori (tabella `fornitoris`).
@@ -47,6 +48,29 @@ class Fornitore extends Model
             'contributo' => 'decimal:2',
             'employee_roles' => 'array',
         ];
+    }
+
+    /**
+     * La sigla del produttore: quella inserita oppure, se manca, le iniziali del nome (o le prime tre lettere
+     * se il nome è una parola sola). Senza nome, «SEG» (segnalatore). Una volta ricavata viene salvata.
+     */
+    public function ensureSigla(): string
+    {
+        if (filled($this->sigla)) {
+            return $this->sigla;
+        }
+
+        $name = Str::upper(Str::ascii((string) $this->display_name));
+        $words = preg_split('/[^A-Z0-9]+/', $name, -1, PREG_SPLIT_NO_EMPTY);
+        $sigla = match (true) {
+            $words === [] => 'SEG',
+            count($words) === 1 => substr($words[0], 0, 3),
+            default => implode('', array_map(fn ($w) => $w[0], array_slice($words, 0, 3))),
+        };
+
+        $this->forceFill(['sigla' => $sigla])->saveQuietly();
+
+        return $sigla;
     }
 
     public function user(): BelongsTo

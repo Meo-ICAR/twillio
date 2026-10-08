@@ -290,7 +290,7 @@ class DocumentiPrimaTest extends ConversationTestCase
     {
         $this->sendDocuments();
         $this->afterResponse();
-        $this->say('#conferma', 'Via Roma 1', '#celibe', '#ci', '+39 333 1234567', 'mario@example.com', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
+        $this->say('#conferma', 'Via Roma 1', '#celibe', '#ci', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
         $loan = LoanRequest::first();
         $loan->attachments()->create(['kind' => 'reddito', 'path' => 'x.jpg', 'mime' => 'image/jpeg', 'status' => 'ricevuto', 'received_at' => now(),
             'pratica_document_id' => PraticaDocument::populate($loan)->firstWhere('code', 'reddito')->id]);
@@ -314,7 +314,7 @@ class DocumentiPrimaTest extends ConversationTestCase
         $this->sendDocuments();
         $this->afterResponse();
 
-        $replies = $this->say('#conferma', 'Via Roma 1', '#celibe', '#ci', '+39 333 1234567', 'mario@example.com', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
+        $replies = $this->say('#conferma', 'Via Roma 1', '#celibe', '#ci', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
 
         $body = $this->bodies($replies);
         $this->assertStringContainsString('✅ Documento d\'identità', $body);

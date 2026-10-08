@@ -222,7 +222,9 @@ return [
                 'documento_numero' => $text('Numero documento', 'Numero del documento:', ['required', 'string', 'max:30'], 'documento_scadenza', ['skip_if' => 'filled:documento_numero']),
                 'documento_scadenza' => $text('Scadenza documento', 'Scadenza del documento (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'telefono', ['skip_if' => 'filled:documento_scadenza', 'error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
                 'telefono' => $text('Telefono', 'Telefono del cliente:', ['required', 'regex:/^\+?\d{8,15}$/'], 'email', ['strip_spaces' => true, 'error' => 'Numero non valido, riprova.']),
-                'email' => $text('Email', 'Email del cliente:', ['required', 'email'], 'iban', ['error' => 'Email non valida, riprova.']),
+                'email' => $text('Email', 'Email del cliente:', ['required', 'email'], 'contatto_diretto', ['error' => 'Email non valida, riprova.']),
+                // Se sì, l'istruttoria potrà chiedere i documenti anche direttamente al cliente, a telefono ed email appena indicati.
+                'contatto_diretto' => $choice('Contatto diretto col cliente', 'Possiamo chiedere i documenti anche direttamente al cliente, al telefono e all\'email indicati?', $yn, 'iban'),
                 'iban' => $text('IBAN', 'IBAN per l\'erogazione:', ['required', 'regex:/^IT\d{2}[A-Z0-9]{23}$/'], ['aziendale' => 'ragione_sociale', 'leasing' => 'ragione_sociale', '*' => 'datore_lavoro'], ['upper' => true, 'strip_spaces' => true, 'checks' => ['iban'], 'next_by' => 'prodotto', 'error' => 'IBAN non valido (formato o checksum errati), riprova.']),
 
                 'datore_lavoro' => $text('Datore di lavoro / ente', 'Datore di lavoro, ente pensionistico o attività svolta:', ['required', 'string', 'max:120'], 'data_assunzione'),
