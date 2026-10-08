@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Fornitori;
 
 use App\Filament\Resources\Fornitori\Pages\EditFornitore;
 use App\Filament\Resources\Fornitori\Pages\ListFornitori;
-use App\Filament\Resources\Fornitori\Pages\ViewFornitore;
+
 use App\Models\Fornitore;
 use BackedEnum;
 use Filament\Actions\EditAction;
@@ -57,14 +57,14 @@ class FornitoreResource extends Resource
             Section::make('Dati anagrafici')->columnSpanFull()->columns(4)->schema([
          
                 TextInput::make('name')->label('Denominazione')->maxLength(255),
-                TextInput::make('nome')->label('Referente')->maxLength(255),
+                 TextInput::make('tel')->label('Cellulare')->tel()->maxLength(255)
+                    ->helperText('Serve a riconoscere chi scrive su WhatsApp: con il prefisso (+39) o senza, ma solo cifre.'),
+                TextInput::make('email')->label('Email')->email()->maxLength(255),
+                TextInput::make('comune')->label('Comune')->maxLength(255),
                 TextInput::make('sigla')->label('Sigla')->maxLength(10)->alphaDash()
                     ->helperText('Apre il codice dei suoi preventivi (SIGLA-MMGG-HHmm). Se la lasci vuota la ricava il programma dal nome.'),
                 TextInput::make('type')->label('Tipo')->maxLength(30)->helperText('Per esempio Agente, Mediatore, Consulente, Segnalatore occasionale.'),
-                TextInput::make('tel')->label('Cellulare')->tel()->maxLength(255)
-                    ->helperText('Serve a riconoscere chi scrive su WhatsApp: con il prefisso (+39) o senza, ma solo cifre.'),
-                TextInput::make('email')->label('Email')->email()->maxLength(255),
-              
+               
                 Toggle::make('is_active')->label('Attivo')
                     ->helperText('Solo i produttori attivi sono riconosciuti: gli altri sono trattati come segnalatori occasionali.'),
             ])
@@ -74,26 +74,17 @@ class FornitoreResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Produttore')->columns(3)->schema([
+            Section::make('Produttore')->columnSpanFull()->columns(4)->schema([
                 TextEntry::make('name')->label('Denominazione')->placeholder('-'),
-                TextEntry::make('nome')->label('Referente')->placeholder('-'),
+               TextEntry::make('tel')->label('Cellulare')->placeholder('-'),
+                TextEntry::make('email')->label('Email')->placeholder('-'),
+              
                 TextEntry::make('sigla')->label('Sigla')->placeholder('-'),
                 TextEntry::make('type')->label('Tipo')->placeholder('-'),
-                TextEntry::make('tel')->label('Cellulare')->placeholder('-'),
-                TextEntry::make('email')->label('Email')->placeholder('-'),
-                TextEntry::make('pec')->label('PEC')->placeholder('-'),
-                TextEntry::make('piva')->label('Partita IVA')->placeholder('-'),
                 TextEntry::make('comune')->label('Comune')->placeholder('-'),
                 IconEntry::make('is_active')->label('Attivo')->boolean(),
             ]),
-            Section::make('Iscrizioni')->columns(3)->schema([
-                TextEntry::make('oam')->label('OAM')->placeholder('-'),
-                TextEntry::make('oam_at')->label('OAM dal')->date()->placeholder('-'),
-                TextEntry::make('numero_iscrizione_rui')->label('RUI')->placeholder('-'),
-                TextEntry::make('ivass')->label('IVASS')->placeholder('-'),
-                TextEntry::make('stipulated_at')->label('Convenzione dal')->date()->placeholder('-'),
-                TextEntry::make('dismissed_at')->label('Cessato il')->date()->placeholder('-'),
-            ]),
+           
         ]);
     }
 
@@ -118,7 +109,7 @@ class FornitoreResource extends Resource
     {
         return [
             'index' => ListFornitori::route('/'),
-            'view' => ViewFornitore::route('/{record}'),
+     
             'edit' => EditFornitore::route('/{record}/edit'),
         ];
     }
