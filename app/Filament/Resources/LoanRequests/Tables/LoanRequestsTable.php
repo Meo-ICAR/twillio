@@ -32,6 +32,8 @@ class LoanRequestsTable
                     ->formatStateUsing(fn (string $state) => LoanRequest::STATUSES[$state] ?? $state),
                 TextColumn::make('privacy_received_at')->label('Informativa')->dateTime()->sortable()->placeholder('-'),
                 TextColumn::make('perfected_at')->label('Perfezionata')->dateTime()->sortable()->placeholder('-'),
+                TextColumn::make('attachments_sum_ai_cost')->label('Costo AI')->sum('attachments', 'ai_cost')
+                    ->formatStateUsing(fn ($state) => \App\Models\Attachment::formatCost($state))->placeholder('-')->toggleable(),
                 TextColumn::make('emailed_at')->label('Inviata per email')->dateTime()->placeholder('-')->toggleable(),
                 TextColumn::make('created_at')->label('Creata')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])

@@ -45,15 +45,19 @@ class LoanRequestInfolist
                     TextEntry::make('difformita')->hiddenLabel()->bulleted()->listWithLineBreaks()
                         ->state(fn (LoanRequest $record) => $record->personal['_difformita'] ?? []),
                 ]),
-            Section::make('Dati personali')
-                ->visible(fn (LoanRequest $record) => filled($record->personal))
-                ->columnSpanFull()
-                ->columns(6)
-                ->schema([
-                    
-                    KeyValueEntry::make('personal')->hiddenLabel()->keyLabel('Dato')->valueLabel('Valore')
-                        ->state(fn (LoanRequest $record) => LoanRequest::describe($record->personal, 'perfezionamento')),
-                ]),
+         Section::make('Dati personali')
+    ->visible(fn (LoanRequest $record) => filled($record->personal))
+    ->columnSpanFull()
+    ->columns(6)
+    ->schema(function (LoanRequest $record) {
+        $data = LoanRequest::describe($record->personal, 'perfezionamento') ?? [];
+
+        return collect($data)->map(function ($value, $key) {
+            return TextEntry::make("personal_{$key}")
+                ->label($key)
+                ->state($value);
+        })->toArray();
+    }),
         ]);
     }
 }

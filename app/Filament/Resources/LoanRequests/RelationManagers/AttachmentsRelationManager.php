@@ -5,6 +5,7 @@ namespace App\Filament\Resources\LoanRequests\RelationManagers;
 use App\Filament\Resources\Attachments\Tables\AttachmentsTable;
 use App\Models\Attachment;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -28,7 +29,8 @@ class AttachmentsRelationManager extends RelationManager
                 TextColumn::make('status')->label('Esito')->badge()->color(fn (string $state) => AttachmentsTable::COLORS[$state] ?? 'gray')
                     ->formatStateUsing(fn (string $state) => AttachmentsTable::STATUSES[$state] ?? $state),
                 TextColumn::make('mime')->label('Formato'),
-                TextColumn::make('ai_cost')->label('Costo AI')->sortable()->placeholder('-')->formatStateUsing(fn ($state) => Attachment::formatCost($state)),
+                TextColumn::make('ai_cost')->label('Costo AI')->sortable()->placeholder('-')->formatStateUsing(fn ($state) => Attachment::formatCost($state))
+                    ->summarize(Sum::make()->label('Totale')->formatStateUsing(fn ($state) => Attachment::formatCost($state))),
                 TextColumn::make('received_at')->label('Ricevuto il')->sortable()->dateTime(),
             ])
             ->recordActions([AttachmentsTable::downloadAction()]);
