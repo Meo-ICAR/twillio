@@ -11,6 +11,7 @@ use App\Services\Documents\DocumentReader;
 use App\Services\Documents\NullDocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Loans\LoanEstimator;
+use App\Services\Loans\MediafacileLoanEstimator;
 use App\Services\Loans\RandomLoanEstimator;
 use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\ServiceProvider;
@@ -29,8 +30,10 @@ class AppServiceProvider extends ServiceProvider
         // Invio al CRM del committente: per ora una simulazione.
         $this->app->bind(CrmGateway::class, SimulatedCrmGateway::class);
 
-        // Calcolo degli importi ottenibili: per ora una simulazione.
-        $this->app->bind(LoanEstimator::class, RandomLoanEstimator::class);
+        // Calcolo degli importi ottenibili: simulazione di base, servizio Mediafacile con QUOTE_DRIVER=mediafacile.
+        $this->app->bind(LoanEstimator::class, fn ($app) => config('finanziamento.quote.driver') === 'mediafacile'
+            ? $app->make(MediafacileLoanEstimator::class)
+            : new RandomLoanEstimator);
 
         // Lettura dei documenti con AI: attiva solo se c'è la chiave Anthropic.
         $this->app->bind(DocumentReader::class, function () {

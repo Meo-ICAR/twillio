@@ -10,6 +10,12 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-08-preventivatore-mediafacile-design.md`
 
+## Modifiche emerse in esecuzione (decise con il titolare)
+- `quote_band_bounds` ha anche la colonna `label` (stesso testo delle opzioni delle domande): il catalogo è riutilizzabile nelle domande.
+- I prodotti che il driver non gestisce (finalizzato, mutuo…) usano ancora `RandomLoanEstimator`, dentro `MediafacileLoanEstimator`; altri driver arriveranno poi. Sostituisce il ripiego sull'email descritto per il finalizzato.
+- La richiesta HTTP è un POST con **tutti i parametri, Passkey compresa, nell'URL**; la risposta XML può essere più articolata: si legge solo `Importo_erogato` con l'`Errore` accanto.
+- `outcomeText` usa `Company::forWhatsApp` (la stessa company dello stimatore).
+
 ## Global Constraints
 - Rata Cessione/Delega = `reddito_mensile ÷ 5`.
 - Data di nascita = **1° gennaio** dell'anno `anno corrente − età`; fascia 40-50 nel 2026 → `01-01-1986` (migliore) e `01-01-1976` (peggiore).

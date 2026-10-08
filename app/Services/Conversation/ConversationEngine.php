@@ -19,6 +19,7 @@ use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Flows\FlowValidator;
 use App\Services\Loans\LoanEstimator;
+use App\Services\Loans\QuoteUnavailable;
 use App\Services\Whatsapp\WhatsAppClient;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -672,6 +673,14 @@ class ConversationEngine
         return rtrim((string) config('app.url'), '/').$path;
     }
 
+    /** I dati del preventivo vanno per email all'istruttoria, che ricontatta il produttore. */
+    private function forwardQuote(LoanRequest $loan): string
+    {
+        return $this->quoteMailer->send($loan)
+            ? '📨 Ho inoltrato la richiesta all\'istruttoria: ti ricontatteranno con l\'esito.'
+            : '⚠️ Non sono riuscito a inoltrare la richiesta all\'istruttoria: contattala indicando il codice pratica.';
+    }
+
     /** I documenti da preparare per il finanziamento (obbligatori e facoltativi del catalogo), con la descrizione. */
     private function requiredDocuments(LoanRequest $loan): string
     {
@@ -970,17 +979,21 @@ class ConversationEngine
     /** Importi ottenibili per i produttori; chi non lo è (segnalatore occasionale) è invitato a chiamare la company. */
     private function outcomeText(LoanRequest $loan, string $waNumber): string
     {
-        $company = Company::current();
+        $company = Company::forWhatsApp($waNumber);
 
         if (Fornitore::isProducer($waNumber)) {
             // Senza preventivatore (CRM) i dati vanno per email all'istruttoria, che risponderà.
             if (! $company?->hasQuoteCrm()) {
-                return $this->quoteMailer->send($loan)
-                    ? '📨 Ho inoltrato la richiesta all\'istruttoria: ti ricontatteranno con l\'esito.'
-                    : '⚠️ Non sono riuscito a inoltrare la richiesta all\'istruttoria: contattala indicando il codice pratica.';
+                return $this->forwardQuote($loan);
             }
 
-            $range = $this->estimator->estimate($loan);
+            try {
+                $range = $this->estimator->estimate($loan);
+            } catch (QuoteUnavailable $e) {
+                Log::warning('Preventivatore non disponibile: '.$e->getMessage(), ['loan' => $loan->code]);
+
+                return $this->forwardQuote($loan);
+            }
 
             return '💶 Importo ottenibile: da *'.number_format($range['min'], 0, ',', '.').' €* a *'.number_format($range['max'], 0, ',', '.').' €*.';
         }

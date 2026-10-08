@@ -43,6 +43,8 @@ class CompanyForm
                         ->helperText('Riceve i dati della pratica e gli allegati quando viene inviata in istruttoria.'),
                     TextInput::make('url_preventivatore')->label('URL del preventivatore (CRM)')->url()->maxLength(255)
                         ->helperText('Se vuoto, i dati del preventivo vengono mandati per email all\'istruttoria.'),
+                    TextInput::make('preventivatore_passkey')->label('Passkey del preventivatore')->password()->revealable()->maxLength(255)
+                        ->helperText('Fornita con il servizio di simulazione; serve solo se il preventivatore è quello Mediafacile.'),
                     TextInput::make('url_istruttoria')->label('URL dell\'istruttoria (CRM)')->url()->maxLength(255)
                         ->helperText('Se vuoto, la pratica con gli allegati viene mandata per email all\'istruttoria.'),
 
