@@ -97,9 +97,10 @@
         <li>Rispondi alle domande: cambiano in base al prodotto. Sono sempre a scelta, mai dati identificativi.</li>
         <li>Controlla il riepilogo e tocca <em>Conferma</em>, <em>Modifica</em> (ricomincia) o <em>Annulla</em>.</li>
     </ol>
-    <div class="chat">✅ Richiesta registrata. Codice pratica: <strong>FIN-2026-0001</strong>. Conservalo: ti servirà per perfezionare il finanziamento.</div>
+    <div class="chat">✅ Richiesta registrata. Codice pratica: <strong>PM-1007-1435</strong>. Conservalo: ti servirà per perfezionare il finanziamento.</div>
     <p><strong>Modifica del preventivo.</strong> Dal menu scegli <em>Modifica Preventivo</em> e il preventivo dall'elenco, oppure usa il pulsante <em>Modifica preventivo</em> sotto il messaggio di fine richiesta (non compare per i prodotti che non hanno dati modificabili). Il bot crea un nuovo preventivo copiando tutti i dati del precedente e ti chiede solo quelli modificabili (per esempio importo e durata): per ognuno vedi il valore attuale e puoi scegliere un'altra opzione oppure <em>Mantieni attuale</em> (o scrivere <kbd>ok</kbd>). Alla fine confermi il riepilogo: il preventivo di partenza non cambia e il nuovo ha un suo codice.</p>
-        <p><strong>Cosa vedi dopo il codice</strong> dipende da chi sei e da come è configurata l'azienda:</p>
+        <p><strong>Il codice.</strong> Ha la forma <code>SIGLA-MMGG-HHmm</code>: la sigla del produttore (se non ne ha una, <code>SEG</code>), poi mese e giorno e infine ora e minuti in cui è stato fatto il preventivo. Se lo stesso produttore ne fa due nello stesso minuto, il secondo ha una lettera in più (<code>PM-1007-1435A</code>). Le pratiche di prova iniziano con <code>TST-</code>.</p>
+    <p><strong>Cosa vedi dopo il codice</strong> dipende da chi sei e da come è configurata l'azienda:</p>
     <ul>
         <li><strong>Produttore con preventivatore (CRM) configurato</strong>: l'importo minimo e massimo ottenibile.</li>
         <li><strong>Produttore senza preventivatore</strong>: la richiesta viene inoltrata per email all'istruttoria, che ti ricontatta con l'esito.</li>
@@ -109,17 +110,17 @@
 
     <h2 id="perfeziona">4. Perfeziona Finanziamento</h2>
     <ol class="steps">
-        <li><strong>Scelta della pratica</strong>: scegli dall'elenco (gli ultimi 5 preventivi da perfezionare e le pratiche già inviate a cui mancano documenti) oppure scrivi il codice (es. FIN-2026-0001), poi conferma che è la pratica giusta. Se scegli una pratica già perfezionata a cui mancano documenti, vai direttamente al loro caricamento.</li>
+        <li><strong>Scelta della pratica</strong>: scegli dall'elenco (gli ultimi 5 preventivi da perfezionare e le pratiche già inviate a cui mancano documenti) oppure scrivi il codice (es. PM-1007-1435), poi conferma che è la pratica giusta. Se scegli una pratica già perfezionata a cui mancano documenti, vai direttamente al loro caricamento.</li>
         <li><strong>Riepilogo dei documenti</strong>: il bot elenca i documenti necessari per quel finanziamento e ti dà il link dell'informativa privacy da scaricare, stampare e far firmare al cliente.</li>
         <li><strong>Informativa firmata</strong>: invia una foto o un PDF. Deve essere il nostro modulo e deve essere firmato; viene controllato in automatico e ti arriva l'esito. Finché non è a posto, gli altri documenti restano in attesa e non vengono letti.</li>
         <li><strong>Documenti</strong>: invia, uno alla volta, documento d'identità, codice fiscale e documento di reddito (quest'ultimo si può saltare). Un documento già inviato non viene richiesto di nuovo. Per ognuno il bot ti scrive l'esito del controllo dopo qualche istante, senza fermarti.</li>
         <li><strong>Attesa</strong>: se i controlli non sono finiti, il bot dice che sta controllando e riparte da solo. Se non vuoi aspettare scrivi <kbd>avanti</kbd>.</li>
         <li><strong>Conferma dei dati letti</strong>: il bot mostra ciò che ha letto dai documenti (cognome, nome, codice fiscale, numero e scadenza del documento). Scegli <em>Sì, confermo</em>: quelle domande vengono saltate. Con <em>No, li inserisco io</em> compili tutto a mano. Se un dato letto non è valido (per esempio un codice fiscale errato o di un minorenne) il bot te lo dice e lo richiede.</li>
-        <li><strong>Domande sui dati</strong>: codice fiscale (da cui ricava data e luogo di nascita), cognome e nome, residenza, stato civile, documento, telefono, email, IBAN, dati del lavoro o dell'azienda. Ogni risposta è controllata: se non è valida la domanda si ripete.</li>
+        <li><strong>Domande sui dati</strong>: codice fiscale (da cui ricava data e luogo di nascita), cognome e nome, residenza, stato civile, documento, telefono e email del cliente, se i documenti si possono chiedere anche direttamente a lui (contatto diretto), IBAN, dati del lavoro o dell'azienda. Ogni risposta è controllata: se non è valida la domanda si ripete.</li>
         <li><strong>Riepilogo finale</strong>: vedi dati, stato dei documenti ed eventuali dati difformi da verificare. Tocca <em>Invia in istruttoria</em>.</li>
     </ol>
     <p>Lo stato dei documenti nel riepilogo: ✅ a posto · 📎 ricevuto, in verifica · ⚠️ da correggere · ➖ mancante.</p>
-    <div class="chat">✅ Pratica FIN-2026-0001 perfezionata e inviata in istruttoria al mediatore creditizio.</div>
+    <div class="chat">✅ Pratica PM-1007-1435 perfezionata e inviata in istruttoria al mediatore creditizio.</div>
     <div class="box warn"><strong>Invio pratica fallito, riprovare o contattare Istruttoria</strong>: l'invio non è andato a buon fine. La pratica non è cambiata e i dati sono ancora lì: tocca di nuovo <em>Invia in istruttoria</em> dopo qualche minuto; se continua, contatta l'istruttoria. Se alcuni documenti sono ancora in controllo, il bot ti chiede di aspettare l'esito prima di inviare.</div>
 
     <h2 id="stato">5. Stato Pratiche</h2>
@@ -143,6 +144,7 @@
     <h2 id="pratiche">7. Pratiche e documenti</h2>
     <p><strong>Pratiche</strong> elenca tutte le richieste, con filtri per stato, origine (reale o di prova) e prodotto. La scheda mostra codice, agente, stato, quando è stata ricevuta e <em>verificata</em> l'informativa, le risposte della richiesta, i dati personali e gli eventuali dati difformi segnalati dal bot. Sotto trovi tre tabelle:</p>
     <ul>
+        <li><strong>Recapiti del cliente</strong> (nella scheda): cellulare ed email chiesti in perfezionamento e il flag <em>Contatto diretto col cliente</em>, che indica se i documenti si possono chiedere anche direttamente a lui. Sono cifrati come gli altri dati personali.</li>
         <li><strong>Documenti della pratica</strong>: ogni documento atteso con stato (Da ricevere, Ricevuto, OK, Rifiutato, Integrazione richiesta) e annotazioni di AI e operatore. Azioni: <em>Approva</em>, <em>Rifiuta</em> (con nota: l'agente la riceve su WhatsApp), <em>Chiedi integrazione</em> e, dall'alto, <em>Richiedi un documento integrativo</em> (dal catalogo o libero).</li>
         <li><strong>Dati letti dai documenti</strong>: ciò che l'AI ha letto, con stato Proposto / Confermato / Rifiutato e il documento di provenienza. Sola lettura.</li>
         <li><strong>Allegati</strong>: i file ricevuti con l'esito del controllo (Verificato, Difforme, Non leggibile, Non analizzato, In attesa informativa) e le differenze trovate.</li>
@@ -173,6 +175,9 @@
     <table>
         <tr><th>Campo</th><th>Effetto</th></tr>
         <tr><td>Ragione sociale, Sede, Email privacy, DPO</td><td>Titolare del trattamento nell'informativa e nella pagina di trasparenza.</td></tr>
+        <tr><td>Settore, Prodotti attivi</td><td>Settore dell'azienda (Finance, Call center, Hotel) e prodotti del catalogo che ha attivi (si gestiscono in Settings → Prodotti).</td></tr>
+        <tr><td>In prova, Prova attivata il, La prova termina il, Contratto attivato il</td><td>Stato commerciale: se l'azienda è in trial, quando è iniziato e finisce, e quando è partito il contratto.</td></tr>
+        <tr><td>Cellulare WhatsApp, Logo</td><td>Il numero WhatsApp Business dell'azienda e il suo logo.</td></tr>
         <tr><td>Telefono / Email del customer care</td><td>Indicati ai segnalatori occasionali.</td></tr>
         <tr><td>Email dell'istruttoria</td><td>Riceve preventivi e pratiche con allegati quando non c'è un CRM.</td></tr>
         <tr><td>URL del preventivatore</td><td>Se compilato, il preventivo usa il CRM; se vuoto, parte una email.</td></tr>
@@ -180,7 +185,7 @@
         <tr><td>Conservazione pratiche perfezionate</td><td>Testo mostrato nell'informativa.</td></tr>
     </table>
     <h3>Produttori</h3>
-    <p>Agenti e collaboratori. Si modificano con <em>Modifica</em> (non si creano da qui: arrivano dal gestionale o come segnalatori occasionali). Il numero di cellulare serve a riconoscere chi scrive su WhatsApp. I numeri sconosciuti compaiono qui come <em>Segnalatore occasionale</em>, non attivi: per convenzionarne uno, correggi i dati, imposta il tipo e spunta <em>Attivo</em>.</p>
+    <p>Ogni produttore ha una <strong>sigla</strong> che apre il codice dei suoi preventivi: se la lasci vuota la ricava il programma dal nome (le iniziali) e la salva; puoi correggerla in ogni momento. Agenti e collaboratori. Si modificano con <em>Modifica</em> (non si creano da qui: arrivano dal gestionale o come segnalatori occasionali). Il numero di cellulare serve a riconoscere chi scrive su WhatsApp. I numeri sconosciuti compaiono qui come <em>Segnalatore occasionale</em>, non attivi: per convenzionarne uno, correggi i dati, imposta il tipo e spunta <em>Attivo</em>.</p>
     <h3>Utenti</h3>
     <p>Chi accede al pannello. Il campo <em>Numero WhatsApp</em> associa l'utente al suo telefono e abilita le voci di prova nel menu del bot.</p>
 
