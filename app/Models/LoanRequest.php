@@ -6,6 +6,7 @@ use App\Jobs\AnalyzeAttachment;
 use App\Models\Concerns\BelongsToCompany;
 use App\Services\Flows\FlowRepository;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -50,6 +51,12 @@ class LoanRequest extends Model
             'perfected_at' => 'datetime',
             'emailed_at' => 'datetime',
         ];
+    }
+
+    /** Il preventivo da cui questo è stato ricavato con «Modifica». */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
     }
 
     public function attachments(): HasMany

@@ -23,7 +23,7 @@ class FlowNode extends Model
 
     protected function casts(): array
     {
-        return ['skippable' => 'boolean', 'save' => 'boolean', 'params' => 'array', 'checks' => 'array'];
+        return ['skippable' => 'boolean', 'can_modify' => 'boolean', 'save' => 'boolean', 'params' => 'array', 'checks' => 'array'];
     }
 
     public function flow(): BelongsTo

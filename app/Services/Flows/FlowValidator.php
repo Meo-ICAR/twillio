@@ -26,11 +26,16 @@ class FlowValidator
      * @param  array<int,string|array<string,mixed>>  $checks  controlli agganciati: nome, oppure ['name' => ..., ...parametri]
      * @param  list<array{when: string, go_to: string}>|null  $jumps  salti proposti (null = quelli attuali)
      * @param  string|null  $jumpBy  da cosa dipendono i salti (null = valore attuale)
+     * @param  bool  $canModify  la domanda si richiede anche quando si modifica un preventivo
      * @return list<string>
      */
-    public function nodeErrors(FlowNode $node, string $prompt, array $options, bool $skippable, array $checks = [], ?array $jumps = null, ?string $jumpBy = null): array
+    public function nodeErrors(FlowNode $node, string $prompt, array $options, bool $skippable, array $checks = [], ?array $jumps = null, ?string $jumpBy = null, bool $canModify = false): array
     {
         $errors = [];
+
+        if ($canModify && ($node->type !== 'choice' || $node->flow->code !== 'richiesta')) {
+            $errors[] = 'Solo le domande a scelta del percorso di richiesta possono essere modificabili.';
+        }
         $jumps ??= $node->jumps->map(fn ($j) => ['when' => $j->when_value, 'go_to' => $j->go_to])->all();
         $jumpBy ??= $node->jump_by;
 

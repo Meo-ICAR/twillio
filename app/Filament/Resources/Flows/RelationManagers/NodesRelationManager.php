@@ -51,6 +51,7 @@ class NodesRelationManager extends RelationManager
                 TextColumn::make('options_count')->label('Opzioni')->counts('options'),
                 TextColumn::make('salti')->label('Salti')->limit(60)->state(fn (FlowNode $record) => $this->jumpSummary($record)),
                 IconColumn::make('skippable')->label('Saltabile')->boolean(),
+                IconColumn::make('can_modify')->label('Modificabile')->boolean(),
             ])
             ->recordActions([
                 EditAction::make()
@@ -60,6 +61,7 @@ class NodesRelationManager extends RelationManager
                         'prompt' => $record->prompt,
                         'label' => $record->label,
                         'skippable' => $record->skippable,
+                        'can_modify' => $record->can_modify,
                         'checks' => collect($record->checks ?? [])->map(fn ($e) => is_array($e) ? $e['name'] : $e)->all(),
                         'jump_by' => $record->jump_by,
                         'jumps' => $record->jumps->map(fn ($j) => ['when' => $j->when_value, 'go_to' => $j->go_to])->all(),
@@ -78,6 +80,11 @@ class NodesRelationManager extends RelationManager
             Toggle::make('skippable')->label('Si può saltare')
                 ->helperText('L\'agente può scrivere «salta» per non rispondere. Serve un\'uscita predefinita: non vale per le domande con salti diversi per ogni risposta.'),
         ];
+
+        if ($record->type === 'choice' && $record->flow->code === 'richiesta') {
+            $fields[] = Toggle::make('can_modify')->label('Modificabile nel preventivo')
+                ->helperText('Quando l\'agente modifica un preventivo, questa domanda gli viene richiesta di nuovo (le altre restano com\'erano). Non renderla modificabile se cambiarla cambia il percorso delle domande.');
+        }
 
         if (in_array($record->type, ['text', 'choice', 'file'], true)) {
             // Sulle risposte girano i controlli sulle risposte; sui file, quelli sui documenti.
@@ -182,7 +189,7 @@ class NodesRelationManager extends RelationManager
         $jumpBy = $data['jump_by'] ?? null;
 
         $validator = app(FlowValidator::class);
-        $errors = $validator->nodeErrors($record, (string) $data['prompt'], $options, (bool) ($data['skippable'] ?? false), $checks ?? ($record->checks ?? []), $jumps, $jumpBy);
+        $errors = $validator->nodeErrors($record, (string) $data['prompt'], $options, (bool) ($data['skippable'] ?? false), $checks ?? ($record->checks ?? []), $jumps, $jumpBy, (bool) ($data['can_modify'] ?? false));
         if ($codes->count() !== $codes->unique()->count()) {
             $errors[] = 'Due opzioni hanno lo stesso codice.';
         }
@@ -200,6 +207,7 @@ class NodesRelationManager extends RelationManager
                 'prompt' => $data['prompt'],
                 'label' => filled($data['label'] ?? null) ? $data['label'] : null,
                 'skippable' => (bool) ($data['skippable'] ?? false),
+                'can_modify' => (bool) ($data['can_modify'] ?? false),
             ] + ($checks !== null ? ['checks' => $checks ?: null] : []) + ($jumpBy !== null ? ['jump_by' => $jumpBy] : []));
 
             if (in_array($record->type, ['choice', 'summary', 'review'], true)) {

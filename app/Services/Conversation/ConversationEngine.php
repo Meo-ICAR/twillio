@@ -17,6 +17,7 @@ use App\Services\Crm\LoanEmailSender;
 use App\Services\Crm\QuoteEmailSender;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
+use App\Services\Flows\FlowValidator;
 use App\Services\Loans\LoanEstimator;
 use App\Services\Whatsapp\WhatsAppClient;
 use Illuminate\Support\Collection;
@@ -110,11 +111,20 @@ class ConversationEngine
     {
         // I comandi si possono scrivere anche con la barra (/menu): è come li invia il profilo WhatsApp.
         $command = $m->type === 'text' ? ltrim($this->normalize($m->text), '/') : null;
+        // Il pulsante «Vai al menu» che chiude il preventivo vale come il comando.
+        if ($m->type === 'interactive' && $m->replyId === 'vai_menu') {
+            $command = 'menu';
+        }
 
         if (in_array($command, ['annulla', 'menu'], true)) {
             $conv && $this->close($conv, 'annullata');
 
             return $command === 'annulla' ? [Reply::text('Operazione annullata.'), $this->menu($m->from)] : [$this->menu($m->from)];
+        }
+        if ($m->type === 'interactive' && str_starts_with((string) $m->replyId, 'modifica:')) {
+            $conv && $this->close($conv, 'annullata');
+
+            return $this->startModifyFromCode($m->from, substr($m->replyId, 9));
         }
         if (in_array($command, ['help', 'aiuto'], true)) {
             $again = $conv && $this->flows->node($conv->flow, $conv->node) ? $this->prompt($conv) : [$this->menu($m->from)];
@@ -244,6 +254,9 @@ class ConversationEngine
         $extra = [];
         if ($value === null) {
             return [Reply::text($error), ...$this->prompt($conv)];
+        }
+        if ($value === '_keep') {
+            $value = (string) ($conv->data[$conv->node] ?? '');
         }
         if (! empty($def['checks']) && in_array($def['type'], ['text', 'choice'], true)) {
             $checked = $this->runChecks($def, (string) $value, $conv->data ?? []);
@@ -409,6 +422,9 @@ class ConversationEngine
     {
         $options = $this->optionsFor($conv, $def);
         $value = $m->replyId ?? $this->matchOption($options, (string) $m->text);
+        if ($value === null && isset($options['_keep']) && in_array($this->normalize((string) $m->text), ['ok', 'mantieni', 'conferma'], true)) {
+            $value = '_keep';
+        }
 
         if ($value === null || ! isset($options[$value])) {
             return [null, 'Scegli una delle opzioni proposte.'];
@@ -433,7 +449,25 @@ class ConversationEngine
             return $pending->mapWithKeys(fn (PraticaDocument $d) => [$d->code => mb_substr($d->name, 0, 24)])->all() + ($def['options'] ?? []);
         }
 
-        return $def['options'] ?? [];
+        $options = $def['options'] ?? [];
+        // Modificando un preventivo si può tenere il valore attuale (se c'è posto: le liste di WhatsApp arrivano a 10 voci).
+        if ($this->isModifying($conv) && ($def['can_modify'] ?? false) && count($options) < FlowValidator::MAX_OPTIONS) {
+            $options['_keep'] = 'Mantieni attuale';
+        }
+
+        return $options;
+    }
+
+    private function isModifying(Conversation $conv): bool
+    {
+        return ! empty($conv->data['_modify']);
+    }
+
+    /** In modifica una domanda già risposta e non modificabile non si richiede. */
+    private function modifySkips(array $def, string $node, array $data): bool
+    {
+        return ! empty($data['_modify']) && ! ($def['can_modify'] ?? false) && ($def['save'] ?? true)
+            && in_array($def['type'], ['choice', 'text'], true) && array_key_exists($node, $data) && is_scalar($data[$node]);
     }
 
     /** @return Collection<int,LoanRequest> */
@@ -495,8 +529,12 @@ class ConversationEngine
     /** Nodo successivo: segue i salti, esegue i controlli automatici e salta le domande già note. */
     private function nextNode(array $def, Conversation $conv, array &$data, string $value): string
     {
-        $node = $this->target($def, $conv, $data, $value);
+        return $this->settle($conv, $this->target($def, $conv, $data, $value), $data);
+    }
 
+    /** Da un nodo raggiunto, prosegue finché non trova qualcosa da chiedere. */
+    private function settle(Conversation $conv, string $node, array &$data): string
+    {
         for ($i = 0; $i < 10; $i++) {
             $next = $this->def($conv->flow, $node);
 
@@ -507,6 +545,9 @@ class ConversationEngine
                 $node = $this->target($next, $conv, $data, '');
             } elseif ($next['type'] === 'wait' && ! $this->hasPending($conv)) {
                 $node = $this->target($next, $conv, $data, '');
+            } elseif ($this->modifySkips($next, $node, $data)) {
+                // Modifica di un preventivo: ciò che non è modificabile resta com'era e il percorso segue quelle risposte.
+                $node = $this->target($next, $conv, $data, (string) $data[$node]);
             } elseif ($this->shouldSkip($next, $conv, $data)) {
                 $node = $this->target($next, $conv, $data, '');
             } else {
@@ -706,21 +747,93 @@ class ConversationEngine
     private function completeRichiesta(Conversation $conv): array
     {
         $data = $conv->data ?? [];
+        $parent = $this->modifiedLoan($conv);
+        $answers = $this->cleanAnswers($data);
         $loan = LoanRequest::create([
+            'parent_id' => $parent?->id,
             'code' => LoanRequestCode::next($this->flows->isTest()),
             'is_test' => $this->flows->isTest(),
             'agent_wa_number' => $conv->wa_number,
             'product' => $data['prodotto'],
             'status' => 'richiesta',
-            'answers' => $data,
+            'answers' => $answers,
         ]);
         PraticaDocument::populate($loan);
         $conv->loan_request_id = $loan->id;
         $this->close($conv, 'completata');
 
         $text = "✅ Richiesta registrata.\n\nCodice pratica: *{$loan->code}*\n\nConservalo: ti servirà per perfezionare il finanziamento con i dati del cliente.";
+        $body = $text."\n\n".$this->outcomeText($loan, $conv->wa_number);
 
-        return [Reply::text($text."\n\n".$this->outcomeText($loan, $conv->wa_number))];
+        // Con «Modifica» si ricava un nuovo preventivo cambiando solo i dati modificabili (se per questo prodotto ce ne sono).
+        $buttons = $this->hasModifiableSteps($answers) ? ['modifica:'.$loan->code => 'Modifica preventivo'] : [];
+
+        return [Reply::choice($body, $buttons + ['vai_menu' => 'Vai al menu'])];
+    }
+
+    /**
+     * Modifica di un preventivo: ne nasce un altro con tutti i dati copiati; si chiedono solo quelli modificabili.
+     *
+     * @return Reply[]
+     */
+    private function startModifyFromCode(string $from, string $code): array
+    {
+        $loan = LoanRequest::where('code', $code)->where('agent_wa_number', $from)->first();
+        if (! $loan) {
+            return [Reply::text('Non trovo questo preventivo tra le tue pratiche.'), $this->menu($from)];
+        }
+
+        $this->flows->setTest($loan->is_test && in_array('richiesta', $this->flows->testFlowCodes(), true));
+
+        return $this->startModify($from, $loan);
+    }
+
+    /** @return Reply[] */
+    private function startModify(string $from, LoanRequest $loan, ?Conversation $conv = null): array
+    {
+        $def = $this->flows->flow('richiesta');
+        $data = $this->cleanAnswers($loan->answers ?? []) + ['_modify' => ['loan' => $loan->id]];
+
+        $conv ??= new Conversation(['wa_number' => $from, 'flow' => 'richiesta', 'is_test' => $this->flows->isTest()]);
+        $conv->fill(['data' => $data, 'history' => [], 'status' => 'attiva']);
+        $node = $this->settle($conv, $def['start'], $data);
+
+        if ($this->def('richiesta', $node)['type'] === 'summary') {
+            $conv->exists && $this->close($conv, 'annullata');
+
+            return [Reply::text('Per questo preventivo non ci sono dati modificabili: puoi fare una nuova richiesta dal menu.'), $this->menu($from)];
+        }
+
+        $conv->fill(['data' => $data, 'node' => $node])->save();
+
+        return [
+            Reply::text("✏️ Modifica del preventivo {$loan->code}: ti chiedo solo i dati modificabili. Per ognuno vedi il valore attuale e puoi mantenerlo."),
+            ...$this->takeNotices(), ...$this->prompt($conv),
+        ];
+    }
+
+    private function modifiedLoan(Conversation $conv): ?LoanRequest
+    {
+        $id = $conv->data['_modify']['loan'] ?? null;
+
+        return $id ? LoanRequest::find($id) : null;
+    }
+
+    /** Il percorso di un prodotto ha domande modificabili? Lo si scopre percorrendolo con le risposte date. */
+    private function hasModifiableSteps(array $answers): bool
+    {
+        $data = $this->cleanAnswers($answers) + ['_modify' => ['loan' => 0]];
+        $probe = new Conversation(['flow' => 'richiesta', 'data' => $data]);
+        $node = $this->settle($probe, $this->flows->flow('richiesta')['start'], $data);
+        $this->takeNotices();
+
+        return $this->def('richiesta', $node)['type'] !== 'summary';
+    }
+
+    /** @return array<string,mixed> */
+    private function cleanAnswers(array $data): array
+    {
+        return array_filter($data, fn ($key) => ! str_starts_with((string) $key, '_'), ARRAY_FILTER_USE_KEY);
     }
 
     /** Importi ottenibili per i produttori; chi non lo è (segnalatore occasionale) è invitato a chiamare la company. */
@@ -803,6 +916,11 @@ class ConversationEngine
 
     private function restart(Conversation $conv): array
     {
+        // Modificando un preventivo si ricomincia dal preventivo di partenza, non da zero.
+        if ($parent = $this->modifiedLoan($conv)) {
+            return $this->startModify($conv->wa_number, $parent, $conv);
+        }
+
         $conv->update([
             'data' => [], 'history' => [],
             'node' => $this->flows->flow($conv->flow)['restart'],
@@ -840,6 +958,10 @@ class ConversationEngine
         }
         if ($def['prompt_summary'] ?? false) {
             $body = $this->describe($conv->loanRequest->answers, 'richiesta')."\n\n".$body;
+        }
+        if ($this->isModifying($conv) && ($def['can_modify'] ?? false) && isset($data[$conv->node])) {
+            $current = $def['options'][$data[$conv->node]] ?? $data[$conv->node];
+            $body = "Valore attuale: *{$current}*\n\n".$body;
         }
         if ($this->canSkip($def)) {
             $body .= "\n\nScrivi «salta» per saltare.";

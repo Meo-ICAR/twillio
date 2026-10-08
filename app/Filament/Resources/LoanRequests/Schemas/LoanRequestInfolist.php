@@ -23,6 +23,7 @@ class LoanRequestInfolist
                 TextEntry::make('privacy_received_at')->label('Informativa ricevuta il')->dateTime()->placeholder('-'),
                 TextEntry::make('privacy_verified_at')->label('Informativa verificata il')->dateTime()->placeholder('-')
                     ->helperText('Verificata dall\'AI (nostro modulo, firmato) o approvata da un operatore: da qui i documenti vengono letti.'),
+                TextEntry::make('parent.code')->label('Modifica del preventivo')->placeholder('-'),
                 TextEntry::make('perfected_at')->label('Perfezionata il')->dateTime()->placeholder('-'),
                 TextEntry::make('created_at')->label('Creata il')->dateTime(),
             ]),

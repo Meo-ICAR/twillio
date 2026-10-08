@@ -11,7 +11,7 @@ use App\Models\FlowCheck;
 class FlowConfigExporter
 {
     /** Ordine delle chiavi di una domanda nel file; le altre (parametri) seguono. */
-    private const NODE_KEYS = ['type', 'label', 'prompt', 'options', 'next', 'next_by', 'save', 'skippable', 'checks'];
+    private const NODE_KEYS = ['type', 'label', 'prompt', 'options', 'next', 'next_by', 'save', 'skippable', 'can_modify', 'checks'];
 
     private const FLOW_KEYS = ['start', 'restart', 'header', 'labels', 'nodes'];
 

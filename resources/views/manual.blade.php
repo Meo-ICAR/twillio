@@ -97,7 +97,8 @@
         <li>Controlla il riepilogo e tocca <em>Conferma</em>, <em>Modifica</em> (ricomincia) o <em>Annulla</em>.</li>
     </ol>
     <div class="chat">✅ Richiesta registrata. Codice pratica: <strong>FIN-2026-0001</strong>. Conservalo: ti servirà per perfezionare il finanziamento.</div>
-    <p><strong>Cosa vedi dopo il codice</strong> dipende da chi sei e da come è configurata l'azienda:</p>
+    <p><strong>Modifica del preventivo.</strong> Sotto il messaggio di fine richiesta trovi il pulsante <em>Modifica preventivo</em> (non compare per i prodotti che non hanno dati modificabili). Il bot crea un nuovo preventivo copiando tutti i dati del precedente e ti chiede solo quelli modificabili (per esempio importo e durata): per ognuno vedi il valore attuale e puoi scegliere un'altra opzione oppure <em>Mantieni attuale</em> (o scrivere <kbd>ok</kbd>). Alla fine confermi il riepilogo: il preventivo di partenza non cambia e il nuovo ha un suo codice.</p>
+        <p><strong>Cosa vedi dopo il codice</strong> dipende da chi sei e da come è configurata l'azienda:</p>
     <ul>
         <li><strong>Produttore con preventivatore (CRM) configurato</strong>: l'importo minimo e massimo ottenibile.</li>
         <li><strong>Produttore senza preventivatore</strong>: la richiesta viene inoltrata per email all'istruttoria, che ti ricontatta con l'esito.</li>
@@ -158,6 +159,7 @@
         <li><strong>Pubblica in produzione</strong> quando va bene. <em>Rifai la copia di prova</em> riparte dalla produzione.</li>
     </ol>
     <p>Altri pulsanti: <em>Grafo delle domande</em> (diagramma del percorso) ed <em>Esporta configurazione</em> (ricrea il file di configurazione dalle tabelle).</p>
+    <p>Nel percorso di richiesta, ogni domanda a scelta ha l'opzione <em>Modificabile nel preventivo</em>: se attiva, la domanda viene richiesta quando l'agente modifica un preventivo (le altre restano com'erano). Di default sono modificabili importo e durata. Conviene non rendere modificabili le domande che cambiano il percorso delle domande successive (per esempio prodotto o situazione lavorativa); se succede, il bot chiede comunque le domande nuove che il preventivo di partenza non aveva.</p>
     <p>Sulle domande di <strong>file</strong> si agganciano i controlli sul documento (tipo di documento, dati coerenti con quelli noti, estrazione dei dati, informativa firmata); se non ne scegli, valgono quelli predefiniti per il tipo di documento. Sulle domande di testo o a scelta si agganciano i controlli sulla risposta.</p>
     <h3>Documenti per il finanziamento</h3>
     <p>Il catalogo dei documenti per ogni tipo di finanziamento: nome (max 24 caratteri, è il titolo sulla lista WhatsApp), descrizione, tipo (obbligatorio, facoltativo, integrativo), tipo di lettura AI e ordine. Le modifiche valgono per le nuove pratiche.</p>

@@ -112,8 +112,8 @@ return [
                 ]),
 
                 // Comune al consumo
-                'importo' => $choice('Importo', 'Quale importo ti serve?', $importi, 'durata'),
-                'durata' => $choice('Durata', 'Su quale durata?', $durate, $consumo('lavoro') + ['leasing' => 'leasing_anticipo', 'aziendale' => 'az_finalita'], ['next_by' => 'prodotto']),
+                'importo' => $choice('Importo', 'Quale importo ti serve?', $importi, 'durata', ['can_modify' => true]),
+                'durata' => $choice('Durata', 'Su quale durata?', $durate, $consumo('lavoro') + ['leasing' => 'leasing_anticipo', 'aziendale' => 'az_finalita'], ['next_by' => 'prodotto', 'can_modify' => true]),
 
                 // Credito al consumo
                 'lavoro' => $choice('Situazione lavorativa', 'Qual è la situazione lavorativa del cliente?', [

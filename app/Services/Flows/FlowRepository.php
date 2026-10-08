@@ -138,6 +138,9 @@ class FlowRepository
         if ($node->skippable) {
             $def['skippable'] = true;
         }
+        if ($node->can_modify) {
+            $def['can_modify'] = true;
+        }
 
         return $def;
     }

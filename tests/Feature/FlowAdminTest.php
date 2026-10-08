@@ -248,6 +248,26 @@ class FlowAdminTest extends TestCase
         $this->assertNull($text->fresh()->checks);
     }
 
+    public function test_si_rende_modificabile_una_domanda_dal_pannello_solo_se_e_a_scelta_di_richiesta(): void
+    {
+        $node = $this->node('lavoro', 'richiesta');
+        $this->assertFalse($node->can_modify);
+
+        $this->manager('richiesta')->callTableAction('edit', $node, data: ['prompt' => $node->prompt, 'can_modify' => true, 'options' => $this->formOptions($node), 'jump_by' => $node->jump_by, 'jumps' => $this->formJumps($node)])->assertHasNoTableActionErrors();
+
+        $this->assertTrue($node->fresh()->can_modify);
+        $this->assertTrue(app(FlowRepository::class)->node('richiesta', 'lavoro')['can_modify']);
+        $this->manager('richiesta')->assertTableColumnExists('can_modify');
+    }
+
+    public function test_il_pannello_non_offre_la_modifica_per_le_domande_di_perfezionamento(): void
+    {
+        $node = $this->node('residenza', 'perfezionamento');
+
+        $this->manager('perfezionamento')->mountTableAction('edit', $node)->assertMountedActionModalDontSee('Modificabile nel preventivo');
+        $this->manager('richiesta')->mountTableAction('edit', $this->node('importo', 'richiesta'))->assertMountedActionModalSee('Modificabile nel preventivo');
+    }
+
     private function jumpsOf(string $code, string $flow = 'richiesta'): array
     {
         return $this->node($code, $flow)->jumps()->get()->map(fn ($j) => [$j->when_value, $j->go_to])->all();

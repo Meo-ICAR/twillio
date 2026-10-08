@@ -80,7 +80,7 @@ class FlowCloner
     {
         foreach ($from->nodes()->with(['options', 'jumps'])->get() as $node) {
             $copy = $to->nodes()->create($node->only([
-                'code', 'type', 'label', 'prompt', 'sort_order', 'skippable', 'save', 'jump_by', 'params', 'checks',
+                'code', 'type', 'label', 'prompt', 'sort_order', 'skippable', 'can_modify', 'save', 'jump_by', 'params', 'checks',
             ]));
 
             foreach ($node->options as $option) {
