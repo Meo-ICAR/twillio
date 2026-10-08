@@ -469,7 +469,7 @@ class FasceChiuseTest extends ConversationTestCase
 
 Run: `php artisan test --compact --filter=FasceChiuseTest` → Expected: FAIL (nodi `eta`/`sesso` assenti).
 
-- [ ] **Step 2: Modificare `config/finanziamo.php`** — in `config/finanziamento.php`:
+- [ ] **Step 2: Modificare `config/finanziamento.php`** — in `config/finanziamento.php`:
 
 Sostituire le righe `$redditi` e `$anzianita` lasciandole (servono ad altri percorsi) e aggiungere subito sotto `$durate`:
 
