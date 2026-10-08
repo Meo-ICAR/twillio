@@ -24,7 +24,7 @@ A pratica perfezionata (a valle di `completePerfezionamento`):
 | `residenza_citta` | ultimo segmento dell'indirizzo di residenza (separato da virgola) |
 | `residenza_provincia` | sigla chiesta con la nuova domanda `residenza_provincia` |
 | `cellulare`, `email` | quelli del cliente |
-| `fonte` | `WhatsApp - {sigla del produttore}` (formato in `finanziamento.lead.fonte`) |
+| `fonte` | `unicoagent` (fisso, in `finanziamento.lead.fonte`) |
 | `annotazioni` | codice pratica, prodotto, durata, fascia di importo (etichetta), produttore. Mai IBAN, documento o codice fiscale |
 | `file` | **non inviato** |
 
@@ -45,7 +45,7 @@ A pratica perfezionata (a valle di `completePerfezionamento`):
 
 ## Dati e configurazione
 - Colonne nuove: `companies.istruttoria_passkey` (cifrata), `loan_requests.crm_lead_id`, `loan_requests.documents_archived_at`, `quote_employment_map.lead_tipologia`.
-- Config: `finanziamento.crm.driver` (`CRM_DRIVER`), `finanziamento.lead.fonte`.
+- Config: `finanziamento.crm.driver` (`CRM_DRIVER`), `finanziamento.lead.fonte` (`unicoagent`).
 
 ## Test
 GET simulata (parametri nella query, `OK`/`KO`, XML non valido, timeout, nessun `file`); mappatura di `tipologia` e della città; la nuova domanda e la sua migrazione; il job (cicla gli allegati, salta i rifiutati e le prove, scrive `documents_archived_at`, non blocca in caso di errore); il perfezionamento che chiama il lead e avvia l'archiviazione.
@@ -54,4 +54,4 @@ GET simulata (parametri nella query, `OK`/`KO`, XML non valido, timeout, nessun 
 Invio del PDF o di altri documenti al CRM; routine SharePoint reali (le fornisce il titolare); correzione dei duplicati del CRM; invio dei lead per i percorsi senza `url_istruttoria` (restano per email).
 
 ## Punti aperti con la software house
-Tracciato XML della risposta (nomi degli elementi `Stato` e `IDUU`) · `file` in GET con base64 non praticabile (serve POST?) · comportamento sui duplicati · elenco dei valori di `fonte` accettati.
+Tracciato XML della risposta (nomi degli elementi `Stato` e `IDUU`) · `file` in GET con base64 non praticabile (serve POST?) · comportamento sui duplicati.
