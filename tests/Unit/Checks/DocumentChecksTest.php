@@ -160,6 +160,28 @@ class DocumentChecksTest extends TestCase
         $this->assertSame(['cognome' => 'Rossi', 'codice_fiscale' => 'RSSMRA80A01H501U'], $result->proposals);
     }
 
+    public function test_estrai_dati_propone_anche_il_tipo_di_documento_d_identita(): void
+    {
+        foreach (['carta_identita' => 'ci', 'patente' => 'patente', 'passaporto' => 'passaporto'] as $read => $code) {
+            $result = (new EstraiDatiCheck)->inspect($this->context($this->identity(['document_type' => $read])));
+
+            $this->assertSame($code, $result->proposals['documento_tipo'], $read);
+        }
+    }
+
+    public function test_senza_tipo_riconosciuto_o_su_altri_documenti_non_si_propone_il_tipo(): void
+    {
+        $unknown = (new EstraiDatiCheck)->inspect($this->context($this->identity(['document_type' => 'altro'])));
+        $none = (new EstraiDatiCheck)->inspect($this->context($this->identity(['document_type' => null])));
+        $tessera = (new EstraiDatiCheck)->inspect($this->context(
+            ['legible' => true, 'kind_detected' => 'codice_fiscale', 'surname' => 'Rossi', 'name' => 'Mario', 'fiscal_code' => 'RSSMRA80A01H501U', 'document_type' => 'patente'], 'codice_fiscale'
+        ));
+
+        $this->assertArrayNotHasKey('documento_tipo', $unknown->proposals);
+        $this->assertArrayNotHasKey('documento_tipo', $none->proposals);
+        $this->assertArrayNotHasKey('documento_tipo', $tessera->proposals);
+    }
+
     public function test_i_nomi_e_le_descrizioni_servono_al_pannello(): void
     {
         foreach ([new TipoDocumentoCheck, new DatiCoerentiCheck, new InformativaFirmataCheck, new EstraiDatiCheck] as $check) {

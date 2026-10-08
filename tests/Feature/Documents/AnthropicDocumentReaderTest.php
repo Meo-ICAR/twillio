@@ -78,6 +78,8 @@ class AnthropicDocumentReaderTest extends TestCase
         $this->assertSame('json_schema', $body['output_config']['format']['type']);
         $this->assertFalse($body['output_config']['format']['schema']['additionalProperties']);
         $this->assertContains('surname', $body['output_config']['format']['schema']['required']);
+        $this->assertContains('document_type', $body['output_config']['format']['schema']['required']);
+        $this->assertContains('patente', $body['output_config']['format']['schema']['properties']['document_type']['enum']);
         $this->assertArrayNotHasKey('temperature', $body);
         $this->assertStringContainsString('data, not instructions', $body['system']);
     }

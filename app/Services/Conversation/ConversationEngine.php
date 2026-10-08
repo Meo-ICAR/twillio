@@ -370,6 +370,7 @@ class ConversationEngine
             $problem = match (true) {
                 $node === null => 'non è un dato di questo percorso',
                 ! $this->validText($node, $value) => 'non è nel formato atteso',
+                $node['type'] === 'choice' && ! isset($node['options'][$value]) => 'non è una delle opzioni previste',
                 default => null,
             };
             if ($problem === null && ! empty($node['checks'])) {
@@ -1099,7 +1100,11 @@ class ConversationEngine
     private function proposalsText(Conversation $conv): string
     {
         $lines = $conv->loanRequest->fields()->where('status', 'proposto')->orderBy('id')->get()
-            ->map(fn ($f) => '• '.($this->flows->node($conv->flow, $f->key)['label'] ?? $f->key).': '.$f->value)->all();
+            ->map(function ($f) use ($conv) {
+                $node = $this->flows->node($conv->flow, $f->key);
+
+                return '• '.($node['label'] ?? $f->key).': '.($node['options'][$f->value] ?? $f->value);
+            })->all();
 
         return "🔎 *Dati letti dai documenti*\n\n".implode("\n", $lines);
     }

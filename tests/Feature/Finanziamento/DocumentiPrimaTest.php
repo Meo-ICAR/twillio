@@ -26,7 +26,7 @@ class DocumentiPrimaTest extends ConversationTestCase
         config(['app.url' => 'https://twillio.hassisto.com']);
         $this->readings = [
             'informativa' => ['kind_detected' => 'informativa', 'legible' => true, 'matches_template' => true, 'signed' => true],
-            'documento_identita' => ['kind_detected' => 'identita', 'legible' => true, 'surname' => 'ROSSI', 'name' => 'MARIO', 'fiscal_code' => 'RSSMRA80A01H501U', 'document_number' => 'AB123456', 'expiry_date' => '01/01/2035'],
+            'documento_identita' => ['kind_detected' => 'identita', 'legible' => true, 'surname' => 'ROSSI', 'name' => 'MARIO', 'fiscal_code' => 'RSSMRA80A01H501U', 'document_number' => 'AB123456', 'expiry_date' => '01/01/2035', 'document_type' => 'patente'],
             'codice_fiscale' => ['kind_detected' => 'codice_fiscale', 'legible' => true, 'surname' => 'ROSSI', 'name' => 'MARIO', 'fiscal_code' => 'RSSMRA80A01H501U'],
         ];
         $this->app->instance(DocumentReader::class, new class($this) implements DocumentReader
@@ -223,12 +223,32 @@ class DocumentiPrimaTest extends ConversationTestCase
     {
         $this->sendDocuments();
         $this->afterResponse();
-        $this->say('#conferma', 'Via Roma 1', '#celibe', '#ci');
+        $this->say('#conferma', 'Via Roma 1', '#celibe');
 
-        // Numero e scadenza del documento sono stati letti: si passa al telefono.
+        // Tipo, numero e scadenza del documento sono stati letti: si passa al telefono.
+        $this->assertSame('patente', Conversation::first()->data['documento_tipo']);
         $this->assertSame('telefono', $this->node());
         $this->assertSame('AB123456', Conversation::first()->data['documento_numero']);
         $this->assertSame('01/01/2035', Conversation::first()->data['documento_scadenza']);
+    }
+
+    public function test_se_il_tipo_di_documento_non_e_riconosciuto_la_domanda_resta(): void
+    {
+        $this->readings['documento_identita']['document_type'] = null;
+        $this->sendDocuments();
+        $this->afterResponse();
+        $this->say('#conferma', 'Via Roma 1', '#celibe');
+
+        $this->assertSame('documento_tipo', $this->node());
+        $this->assertArrayNotHasKey('documento_tipo', Conversation::first()->data);
+    }
+
+    public function test_i_dati_letti_mostrano_il_tipo_di_documento_con_il_suo_titolo(): void
+    {
+        $this->sendDocuments();
+        $this->afterResponse();
+
+        $this->assertStringContainsString('Documento: Patente', $this->sent());
     }
 
     public function test_correggendo_i_dati_letti_si_inseriscono_tutti_a_mano(): void
@@ -290,7 +310,7 @@ class DocumentiPrimaTest extends ConversationTestCase
     {
         $this->sendDocuments();
         $this->afterResponse();
-        $this->say('#conferma', 'Via Roma 1', '#celibe', '#ci', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
+        $this->say('#conferma', 'Via Roma 1', '#celibe', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
         $loan = LoanRequest::first();
         $loan->attachments()->create(['kind' => 'reddito', 'path' => 'x.jpg', 'mime' => 'image/jpeg', 'status' => 'ricevuto', 'received_at' => now(),
             'pratica_document_id' => PraticaDocument::populate($loan)->firstWhere('code', 'reddito')->id]);
@@ -314,7 +334,7 @@ class DocumentiPrimaTest extends ConversationTestCase
         $this->sendDocuments();
         $this->afterResponse();
 
-        $replies = $this->say('#conferma', 'Via Roma 1', '#celibe', '#ci', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
+        $replies = $this->say('#conferma', 'Via Roma 1', '#celibe', '+39 333 1234567', 'mario@example.com', '#si', 'IT60X0542811101000000123456', 'ACME Srl', '01/03/2015');
 
         $body = $this->bodies($replies);
         $this->assertStringContainsString('✅ Documento d\'identità', $body);

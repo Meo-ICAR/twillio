@@ -218,7 +218,7 @@ return [
                 'luogo_nascita' => $text('Luogo di nascita', 'Luogo di nascita (non ricavabile dal codice fiscale):', ['required', 'string', 'max:80'], 'residenza', ['skip_if' => 'filled:luogo_nascita']),
                 'residenza' => $text('Residenza', 'Indirizzo di residenza (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'stato_civile'),
                 'stato_civile' => $choice('Stato civile', 'Stato civile:', ['celibe' => 'Celibe/Nubile', 'coniugato' => 'Coniugato/a', 'separato' => 'Separato/a', 'vedovo' => 'Vedovo/a'], 'documento_tipo'),
-                'documento_tipo' => $choice('Documento', 'Tipo di documento d\'identità:', ['ci' => 'Carta d\'identità', 'patente' => 'Patente', 'passaporto' => 'Passaporto'], 'documento_numero'),
+                'documento_tipo' => $choice('Documento', 'Tipo di documento d\'identità:', ['ci' => 'Carta d\'identità', 'patente' => 'Patente', 'passaporto' => 'Passaporto'], 'documento_numero', ['skip_if' => 'filled:documento_tipo']),
                 'documento_numero' => $text('Numero documento', 'Numero del documento:', ['required', 'string', 'max:30'], 'documento_scadenza', ['skip_if' => 'filled:documento_numero']),
                 'documento_scadenza' => $text('Scadenza documento', 'Scadenza del documento (gg/mm/aaaa):', ['required', 'date_format:d/m/Y'], 'telefono', ['skip_if' => 'filled:documento_scadenza', 'error' => 'Data non valida: usa il formato gg/mm/aaaa.']),
                 'telefono' => $text('Telefono', 'Telefono del cliente:', ['required', 'regex:/^\+?\d{8,15}$/'], 'email', ['strip_spaces' => true, 'error' => 'Numero non valido, riprova.']),
