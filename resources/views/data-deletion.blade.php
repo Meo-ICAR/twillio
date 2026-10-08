@@ -10,6 +10,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cancellazione dei dati</title>
+    <link rel="icon" href="/unicoagent_logo.png">
     <meta name="description" content="Come chiedere la cancellazione dei dati personali trattati nel servizio di richiesta e perfezionamento dei finanziamenti su WhatsApp.">
     <style>
         :root { --bg:#f6f8f7; --fg:#14211c; --muted:#55655e; --card:#ffffff; --line:#dbe4df; --brand:#0f7b5f; --brand-soft:#e3f4ee; }

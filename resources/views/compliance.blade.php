@@ -19,6 +19,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Trasparenza e conformità</title>
+    <link rel="icon" href="/unicoagent_logo.png">
     <meta name="description" content="Come vengono trattati i dati nel servizio di richiesta e perfezionamento dei finanziamenti su WhatsApp: flusso dei dati, ruoli, sub-responsabili, sicurezza e uso dell'intelligenza artificiale.">
     <style>
         :root { --bg:#f6f8f7; --fg:#14211c; --muted:#55655e; --card:#ffffff; --line:#dbe4df; --brand:#0f7b5f; --brand-soft:#e3f4ee; --warn:#b4540a; --warn-soft:#fff1e3; }

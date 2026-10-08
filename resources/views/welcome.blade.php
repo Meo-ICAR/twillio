@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pratiche di finanziamento su WhatsApp, senza dati dei clienti in chat</title>
+    <link rel="icon" href="/unicoagent_logo.png">
     <meta name="description" content="Gli agenti aprono e completano le pratiche di finanziamento direttamente su WhatsApp. La richiesta è anonima; i dati personali arrivano solo dopo l'informativa privacy firmata.">
     <style>
         :root {
