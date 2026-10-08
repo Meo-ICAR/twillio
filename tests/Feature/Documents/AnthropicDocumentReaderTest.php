@@ -51,6 +51,36 @@ class AnthropicDocumentReaderTest extends TestCase
         return json_decode((string) $this->requests[0]->getBody(), true);
     }
 
+    public function test_dopo_una_lettura_riporta_i_token_consumati(): void
+    {
+        $reader = $this->reader(['usage' => ['input_tokens' => 1200, 'output_tokens' => 80]]);
+        $this->assertNull($reader->lastUsage(), 'prima di leggere non c\'è consumo');
+
+        $reader->read('documento_identita', 'image/jpeg', 'X');
+
+        $this->assertSame(['model' => 'claude-opus-5-5', 'input_tokens' => 1200, 'output_tokens' => 80], $reader->lastUsage());
+    }
+
+    public function test_il_consumo_c_e_anche_se_la_risposta_non_e_utilizzabile(): void
+    {
+        $reader = $this->reader(['content' => [['type' => 'text', 'text' => 'non è json']], 'usage' => ['input_tokens' => 900, 'output_tokens' => 20]]);
+
+        $this->assertNull($reader->read('documento_identita', 'image/jpeg', 'X'));
+
+        $this->assertSame(900, $reader->lastUsage()['input_tokens']);
+    }
+
+    public function test_un_formato_non_leggibile_non_ha_consumo_e_azzera_il_precedente(): void
+    {
+        $reader = $this->reader();
+        $reader->read('documento_identita', 'image/jpeg', 'X');
+        $this->assertNotNull($reader->lastUsage());
+
+        $reader->read('documento_identita', 'video/mp4', 'X');
+
+        $this->assertNull($reader->lastUsage());
+    }
+
     public function test_legge_un_immagine_e_restituisce_i_campi(): void
     {
         $fields = $this->reader()->read('documento_identita', 'image/jpeg', 'JPEGBYTES');

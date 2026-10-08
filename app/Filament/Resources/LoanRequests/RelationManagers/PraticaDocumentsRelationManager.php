@@ -38,15 +38,15 @@ class PraticaDocumentsRelationManager extends RelationManager
             ->recordTitleAttribute('name')
             ->defaultSort('sort_order')
             ->columns([
-                TextColumn::make('name')->label('Documento'),
+                TextColumn::make('name')->label('Documento')->sorted(),
                 TextColumn::make('requirement')->label('Tipo')->badge()->color(fn (string $state) => self::REQUIREMENT_COLORS[$state] ?? 'gray')
                     ->formatStateUsing(fn (string $state) => FinanziamentoDocument::REQUIREMENTS[$state] ?? $state),
-                TextColumn::make('status')->label('Stato')->badge()->color(fn (string $state) => self::COLORS[$state] ?? 'gray')
+                TextColumn::make('status')->label('Stato')->sorted()->badge()->color(fn (string $state) => self::COLORS[$state] ?? 'gray')
                     ->formatStateUsing(fn (string $state) => PraticaDocument::STATUSES[$state] ?? $state),
                 TextColumn::make('storico')->label('Annotazioni')->wrap()->bulleted()->listWithLineBreaks()
                     ->state(fn (PraticaDocument $record) => collect($record->annotations ?? [])
                         ->map(fn (array $n) => ($n['by'] === 'ai' ? 'AI' : 'Operatore').': '.$n['text'])->all()),
-                TextColumn::make('received_at')->label('Ricevuto il')->dateTime()->placeholder('-'),
+                TextColumn::make('received_at')->label('Ricevuto il')->sorted()->dateTime()->placeholder('-'),
             ])
             ->headerActions([$this->requestIntegrativeAction()])
             ->recordActions([
