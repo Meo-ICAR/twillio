@@ -41,6 +41,8 @@ class AttachmentsTable
                 TextColumn::make('status')->label('Esito')->badge()->color(fn (string $state) => self::COLORS[$state] ?? 'gray')
                     ->formatStateUsing(fn (string $state) => self::STATUSES[$state] ?? $state),
                 TextColumn::make('mime')->label('Formato'),
+                TextColumn::make('ai_cost')->label('Costo AI')->placeholder('-')->formatStateUsing(fn ($state) => Attachment::formatCost($state))
+                    ->tooltip(fn (Attachment $record) => $record->ai_input_tokens !== null ? "{$record->ai_input_tokens} token in ingresso, {$record->ai_output_tokens} in uscita" : null),
                 TextColumn::make('received_at')->label('Ricevuto il')->dateTime()->sortable(),
             ])
             ->filters([

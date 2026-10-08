@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Attachment;
 use App\Models\LoanRequest;
 use App\Services\SystemHealth;
 use Filament\Widgets\StatsOverviewWidget;
@@ -21,6 +22,7 @@ class WeekWidget extends StatsOverviewWidget
         return [
             Stat::make('Pratiche nuove', array_sum($w['per_stato']))->description($states),
             Stat::make('Prossime alla cancellazione', $w['in_scadenza'])->description('Non perfezionate, entro 7 giorni dal termine di conservazione')->color($w['in_scadenza'] ? 'warning' : 'success'),
+            Stat::make('Costo AI (7 giorni)', Attachment::formatCost($w['costo_ai_7g']))->description($w['letture_ai_7g'].' letture di documenti'),
             Stat::make('Conversazioni attive', $w['conversazioni_attive'])->description($w['conversazioni_ferme'].' ferme da più di 24 ore'),
         ];
     }

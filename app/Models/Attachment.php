@@ -14,7 +14,13 @@ class Attachment extends Model
 
     protected function casts(): array
     {
-        return ['received_at' => 'datetime', 'analysis' => 'encrypted:array', 'pending_checks' => 'array'];
+        return ['received_at' => 'datetime', 'analysis' => 'encrypted:array', 'pending_checks' => 'array', 'ai_cost' => 'decimal:6'];
+    }
+
+    /** Costo in dollari come testo («$ 0,0123»), oppure null se non c'è stata una lettura con l'AI. */
+    public static function formatCost(null|float|string $cost): ?string
+    {
+        return $cost === null ? null : '$ '.number_format((float) $cost, 4, ',', '.');
     }
 
     public function praticaDocument(): BelongsTo

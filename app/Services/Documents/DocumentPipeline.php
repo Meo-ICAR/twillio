@@ -71,7 +71,10 @@ class DocumentPipeline
             }
         }, $declared);
 
-        if ($context->fields() === null) {
+        $fields = $context->fields();
+        $this->recordUsage($attachment);
+
+        if ($fields === null) {
             $attachment->update(['status' => 'non_analizzato']);
 
             return new AnalysisOutcome($attachment, 'non_analizzato', $label, $aiKind);
@@ -100,6 +103,21 @@ class DocumentPipeline
         }
 
         return new AnalysisOutcome($attachment, $status, $label, $aiKind, $issues, $issues === [] ? $proposals : []);
+    }
+
+    /** Segna sul documento quanto è costata la lettura (si somma se lo stesso allegato viene riletto). */
+    private function recordUsage(Attachment $attachment): void
+    {
+        $usage = $this->reader instanceof ReportsUsage ? $this->reader->lastUsage() : null;
+        if (! $usage) {
+            return;
+        }
+
+        $input = (int) $attachment->ai_input_tokens + $usage['input_tokens'];
+        $output = (int) $attachment->ai_output_tokens + $usage['output_tokens'];
+        $attachment->update([
+            'ai_model' => $usage['model'], 'ai_input_tokens' => $input, 'ai_output_tokens' => $output, 'ai_cost' => AiCost::usd($input, $output),
+        ]);
     }
 
     /**

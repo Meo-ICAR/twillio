@@ -37,6 +37,9 @@ return [
     'anthropic' => [
         'key' => env('ANTHROPIC_API_KEY'),
         'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+        // Dollari per milione di token del modello in uso (Claude Opus 5.5: 4 in ingresso, 20 in uscita): servono a stimare il costo di ogni lettura.
+        'price_input' => env('ANTHROPIC_PRICE_INPUT', 4.0),
+        'price_output' => env('ANTHROPIC_PRICE_OUTPUT', 20.0),
     ],
 
     'whatsapp' => [

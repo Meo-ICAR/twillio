@@ -148,7 +148,7 @@ class SystemHealth
         ];
     }
 
-    /** @return array{per_stato: array<string,int>, in_scadenza: int, conversazioni_attive: int, conversazioni_ferme: int} */
+    /** @return array{per_stato: array<string,int>, costo_ai_7g: float, letture_ai_7g: int, in_scadenza: int, conversazioni_attive: int, conversazioni_ferme: int} */
     public function week(): array
     {
         $days = (int) config('privacy.retention_days');
@@ -157,6 +157,8 @@ class SystemHealth
             'per_stato' => LoanRequest::where('created_at', '>=', now()->subDays(7))->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status')->map(fn ($n) => (int) $n)->all(),
             'in_scadenza' => LoanRequest::where('status', '!=', 'perfezionata')->where('created_at', '<', now()->subDays(max($days - 7, 0)))->count(),
             'conversazioni_attive' => Conversation::where('status', 'attiva')->count(),
+            'costo_ai_7g' => (float) Attachment::where('received_at', '>=', now()->subDays(7))->sum('ai_cost'),
+            'letture_ai_7g' => Attachment::where('received_at', '>=', now()->subDays(7))->whereNotNull('ai_cost')->count(),
             'conversazioni_ferme' => Conversation::where('status', 'attiva')->where('updated_at', '<', now()->subDay())->count(),
         ];
     }

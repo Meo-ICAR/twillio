@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LoanRequests\Schemas;
 
+use App\Models\Attachment;
 use App\Models\LoanRequest;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\KeyValueEntry;
@@ -28,6 +29,7 @@ class LoanRequestInfolist
                 TextEntry::make('customer_email')->label('Email cliente')->placeholder('-'),
                 IconEntry::make('direct_contact')->label('Contatto diretto col cliente')->boolean()
                     ->helperText('I documenti si possono chiedere anche direttamente al cliente.'),
+                TextEntry::make('ai_cost_total')->label('Costo AI (documenti)')->state(fn (LoanRequest $record) => Attachment::formatCost($record->attachments()->sum('ai_cost')))->placeholder('-'),
                 TextEntry::make('parent.code')->label('Modifica del preventivo')->placeholder('-'),
                 TextEntry::make('perfected_at')->label('Perfezionata il')->dateTime()->placeholder('-'),
                 TextEntry::make('created_at')->label('Creata il')->dateTime(),

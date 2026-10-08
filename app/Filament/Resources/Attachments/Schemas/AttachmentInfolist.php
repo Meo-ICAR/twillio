@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Attachments\Schemas;
 
 use App\Filament\Resources\Attachments\Tables\AttachmentsTable;
+use App\Models\Attachment;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
@@ -19,6 +20,8 @@ class AttachmentInfolist
                 ->color(fn (string $state) => AttachmentsTable::COLORS[$state] ?? 'gray')
                 ->formatStateUsing(fn (string $state) => AttachmentsTable::STATUSES[$state] ?? $state),
             TextEntry::make('mime')->label('Formato'),
+            TextEntry::make('ai_cost')->label('Costo AI')->placeholder('-')->formatStateUsing(fn ($state) => Attachment::formatCost($state))
+                ->helperText(fn ($record) => $record->ai_input_tokens !== null ? "{$record->ai_model}: {$record->ai_input_tokens} token in ingresso, {$record->ai_output_tokens} in uscita" : 'Nessuna lettura con l\'AI.'),
             TextEntry::make('difformita')->label('Difformità')->bulleted()->listWithLineBreaks()->columnSpanFull()
                 ->visible(fn ($record) => filled($record->analysis['discrepancies'] ?? null))
                 ->state(fn ($record) => $record->analysis['discrepancies'] ?? []),
