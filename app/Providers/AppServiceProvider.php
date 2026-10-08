@@ -11,6 +11,8 @@ use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
 use App\Services\Documents\NullDocumentReader;
 use App\Services\Flows\FlowRepository;
+use App\Services\Documents\LoggingSharePointUploader;
+use App\Services\Documents\SharePointUploader;
 use App\Services\Loans\LoanEstimator;
 use App\Services\Loans\MediafacileLoanEstimator;
 use App\Services\Loans\RandomLoanEstimator;
@@ -32,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(CrmGateway::class, fn ($app) => config('finanziamento.crm.driver') === 'mediafacile'
             ? $app->make(MediafacileLeadGateway::class)
             : new SimulatedCrmGateway);
+
+        // Archiviazione dei documenti su SharePoint: per ora una simulazione che scrive nel log.
+        $this->app->bind(SharePointUploader::class, LoggingSharePointUploader::class);
 
         // Calcolo degli importi ottenibili: simulazione di base, servizio Mediafacile con QUOTE_DRIVER=mediafacile.
         $this->app->bind(LoanEstimator::class, fn ($app) => config('finanziamento.quote.driver') === 'mediafacile'
