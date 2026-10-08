@@ -31,7 +31,7 @@ class RichiestaFlowTest extends ConversationTestCase
 
     public function test_cessione_del_quinto_completa_fino_al_codice(): void
     {
-        $this->say('#menu_richiedi', '#quinto', '#imp_20k', '#m60', '#dip_pub', '#indet', '#anz_10', '#red_2000', '#oltre15', '#no', '#no', '#no');
+        $this->say('#menu_richiedi', '#quinto', '#imp_20k', '#m60', '#eta_40', '#sesso_m', '#dip_pub', '#indet', '#anz_10', '#red_2000', '#oltre15', '#no', '#no', '#no');
 
         $replies = $this->say('#conferma');
 
@@ -47,7 +47,7 @@ class RichiestaFlowTest extends ConversationTestCase
 
     public function test_il_riepilogo_elenca_le_risposte_in_chiaro(): void
     {
-        $replies = $this->say('#menu_richiedi', '#quinto', '#imp_20k', '#m60', '#dip_pub', '#indet', '#anz_10', '#red_2000', '#oltre15', '#no', '#no', '#no');
+        $replies = $this->say('#menu_richiedi', '#quinto', '#imp_20k', '#m60', '#eta_40', '#sesso_m', '#dip_pub', '#indet', '#anz_10', '#red_2000', '#oltre15', '#no', '#no', '#no');
 
         $this->assertCount(2, $replies);
         $this->assertStringContainsString('Importo: 10.000 - 20.000 €', $replies[0]->body);
@@ -120,7 +120,7 @@ class RichiestaFlowTest extends ConversationTestCase
 
     public function test_la_risposta_si_puo_digitare(): void
     {
-        $this->say('#menu_richiedi', '#personale', '#imp_5k', '#m24', '#dip_priv', '#det', '#anz_1', '#red_1000');
+        $this->say('#menu_richiedi', '#personale', '#imp_5k', '#m24', '#eta_40', '#sesso_m', '#dip_priv', '#det', '#anz_1', '#red_1500');
 
         foreach (['  SÌ ', 'sì', 'si', '1'] as $input) {
             Conversation::first()->update(['node' => 'impegni', 'data' => ['prodotto' => 'personale']]);

@@ -140,7 +140,7 @@ class FlowConfigExporterTest extends TestCase
         $source = $this->export();
 
         $this->assertStringContainsString("'importo' => [", $source);
-        $this->assertStringContainsString("'imp_5k' => 'Fino a 5.000 €',", $source);
+        $this->assertStringContainsString("'imp_5k' => '1.000 - 5.000 €',", $source);
         $this->assertStringNotContainsString('array (', $source, 'sintassi corta, non var_export');
     }
 

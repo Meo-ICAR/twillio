@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Mail;
 
 class ImportiOttenibiliTest extends ConversationTestCase
 {
-    private const FLOW = ['#menu_richiedi', '#personale', '#imp_5k', '#m24', '#dip_priv', '#det', '#anz_1', '#red_1000', '#no', '#no', '#conferma'];
+    private const FLOW = ['#menu_richiedi', '#personale', '#imp_5k', '#m24', '#eta_40', '#sesso_m', '#dip_priv', '#det', '#anz_1', '#red_1500', '#no', '#no', '#conferma'];
 
     private function fixedEstimator(): void
     {

@@ -10,7 +10,7 @@ use App\Services\Flows\FlowValidator;
 
 class ModificaPreventivoTest extends ConversationTestCase
 {
-    private const FLOW = ['#menu_richiedi', '#personale', '#imp_5k', '#m24', '#dip_priv', '#det', '#anz_1', '#red_1000', '#no', '#no', '#conferma'];
+    private const FLOW = ['#menu_richiedi', '#personale', '#imp_5k', '#m24', '#eta_40', '#sesso_m', '#dip_priv', '#det', '#anz_1', '#red_1500', '#no', '#no', '#conferma'];
 
     private function quote(array $steps = self::FLOW): LoanRequest
     {
@@ -53,7 +53,7 @@ class ModificaPreventivoTest extends ConversationTestCase
         $replies = $this->say('#modifica:'.$loan->code);
 
         $this->assertStringContainsString('Modifica del preventivo '.$loan->code, $replies[0]->body);
-        $this->assertStringContainsString('Valore attuale: *Fino a 5.000 €*', end($replies)->body);
+        $this->assertStringContainsString('Valore attuale: *1.000 - 5.000 €*', end($replies)->body);
         $this->assertArrayHasKey('_keep', end($replies)->options);
         $this->assertSame('importo', Conversation::where('status', 'attiva')->first()->node);
         $this->assertSame('personale', Conversation::where('status', 'attiva')->first()->data['prodotto'], 'i dati sono clonati');
@@ -113,7 +113,7 @@ class ModificaPreventivoTest extends ConversationTestCase
         $this->assertSame('importo', $conv->node);
         $this->assertSame('imp_5k', $conv->data['importo'], 'torna ai valori del preventivo di partenza');
         $this->assertSame('personale', $conv->data['prodotto']);
-        $this->assertStringContainsString('Valore attuale: *Fino a 5.000 €*', end($replies)->body);
+        $this->assertStringContainsString('Valore attuale: *1.000 - 5.000 €*', end($replies)->body);
     }
 
     public function test_non_si_modifica_il_preventivo_di_un_altro_agente(): void

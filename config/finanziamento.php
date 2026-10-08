@@ -18,7 +18,10 @@ $redditi = ['red_1000' => 'Fino a 1.000 €', 'red_1500' => '1.000 - 1.500 €',
 $anzianita = ['anz_1' => 'Meno di 1 anno', 'anz_3' => '1 - 3 anni', 'anz_10' => '3 - 10 anni', 'anz_oltre' => 'Oltre 10 anni'];
 $durate = ['m24' => '24 mesi', 'm36' => '36 mesi', 'm48' => '48 mesi', 'm60' => '60 mesi', 'm84' => '84 mesi', 'm120' => '120 mesi'];
 $durateMutuo = ['m120' => '120 mesi', 'm180' => '180 mesi', 'm240' => '240 mesi', 'm300' => '300 mesi', 'm360' => '360 mesi'];
-$consumo = fn (string $to) => ['personale' => $to, 'quinto' => $to, 'finalizzato' => $to];
+$importiPrestito = ['imp_5k' => '1.000 - 5.000 €', 'imp_10k' => '5.000 - 10.000 €', 'imp_20k' => '10.000 - 20.000 €', 'imp_35k' => '20.000 - 35.000 €', 'imp_oltre' => '35.000 - 50.000 €'];
+$redditiConsumo = ['red_1500' => '1.000 - 1.500 €', 'red_2000' => '1.500 - 2.000 €', 'red_3000' => '2.000 - 3.000 €', 'red_oltre' => '3.000 - 5.000 €'];
+$anzianitaConsumo = ['anz_1' => 'Meno di 1 anno', 'anz_3' => '1 - 3 anni', 'anz_10' => '3 - 10 anni', 'anz_20' => '10 - 20 anni', 'anz_30' => '20 - 30 anni', 'anz_40' => '30 - 40 anni'];
+$eta = ['eta_30' => '20 - 30 anni', 'eta_40' => '30 - 40 anni', 'eta_50' => '40 - 50 anni', 'eta_60' => '50 - 60 anni', 'eta_75' => '60 - 75 anni'];
 
 $choice = fn (string $label, string $prompt, array $options, string|array $next, array $extra = []) => array_merge(
     ['type' => 'choice', 'label' => $label, 'prompt' => $prompt, 'options' => $options, 'next' => $next], $extra
@@ -113,8 +116,10 @@ return [
                 ]),
 
                 // Comune al consumo
-                'importo' => $choice('Importo', 'Quale importo ti serve?', $importi, 'durata', ['can_modify' => true]),
-                'durata' => $choice('Durata', 'Su quale durata?', $durate, $consumo('lavoro') + ['leasing' => 'leasing_anticipo', 'aziendale' => 'az_finalita'], ['next_by' => 'prodotto', 'can_modify' => true]),
+                'importo' => $choice('Importo', 'Quale importo ti serve?', $importiPrestito, 'durata', ['can_modify' => true]),
+                'durata' => $choice('Durata', 'Su quale durata?', $durate, ['personale' => 'eta', 'quinto' => 'eta', 'finalizzato' => 'lavoro', 'leasing' => 'leasing_anticipo', 'aziendale' => 'az_finalita'], ['next_by' => 'prodotto', 'can_modify' => true]),
+                'eta' => $choice('Fascia d\'età', 'Qual è l\'età del cliente?', $eta, 'sesso'),
+                'sesso' => $choice('Sesso', 'Qual è il sesso del cliente? Se salti, considero maschio.', ['sesso_m' => 'Maschio', 'sesso_f' => 'Femmina'], 'lavoro', ['skippable' => true]),
 
                 // Credito al consumo
                 'lavoro' => $choice('Situazione lavorativa', 'Qual è la situazione lavorativa del cliente?', [
@@ -122,13 +127,13 @@ return [
                     'autonomo' => 'Autonomo', 'altro' => 'Altro',
                 ], ['dip_priv' => 'contratto', 'dip_pub' => 'contratto', 'pensionato' => 'ente_pensione', 'autonomo' => 'anni_attivita', '*' => 'impegni']),
                 'contratto' => $choice('Contratto', 'Che tipo di contratto ha?', ['indet' => 'Tempo indeterminato', 'det' => 'Tempo determinato'], 'anzianita'),
-                'anzianita' => $choice('Anzianità lavorativa', 'Da quanto lavora presso l\'attuale datore?', $anzianita, 'reddito'),
-                'reddito' => $choice('Reddito netto mensile', 'Qual è il reddito netto mensile?', $redditi, ['quinto' => 'dimensione_azienda', '*' => 'impegni'], ['next_by' => 'prodotto']),
+                'anzianita' => $choice('Anzianità lavorativa', 'Da quanto lavora presso l\'attuale datore?', $anzianitaConsumo, 'reddito'),
+                'reddito' => $choice('Reddito netto mensile', 'Qual è il reddito netto mensile?', $redditiConsumo, ['quinto' => 'dimensione_azienda', '*' => 'impegni'], ['next_by' => 'prodotto']),
                 'dimensione_azienda' => $choice('Dimensione azienda', 'Quanti dipendenti ha l\'azienda?', ['oltre15' => 'Oltre 15 dipendenti', 'fino15' => 'Fino a 15 dipendenti'], 'impegni'),
                 'ente_pensione' => $choice('Ente pensionistico', 'Da quale ente riceve la pensione?', ['inps' => 'INPS', 'exinpdap' => 'Ex INPDAP', 'altro' => 'Altro ente'], 'pensione_netta'),
-                'pensione_netta' => $choice('Pensione netta mensile', 'Qual è la pensione netta mensile?', $redditi, 'impegni'),
-                'anni_attivita' => $choice('Anni di attività', 'Da quanti anni svolge l\'attività?', $anzianita, 'reddito_autonomo'),
-                'reddito_autonomo' => $choice('Reddito', 'Qual è il reddito dell\'ultima dichiarazione (mensile netto)?', $redditi, 'impegni'),
+                'pensione_netta' => $choice('Pensione netta mensile', 'Qual è la pensione netta mensile?', $redditiConsumo, 'impegni'),
+                'anni_attivita' => $choice('Anni di attività', 'Da quanti anni svolge l\'attività?', $anzianitaConsumo, 'reddito_autonomo'),
+                'reddito_autonomo' => $choice('Reddito', 'Qual è il reddito dell\'ultima dichiarazione (mensile netto)?', $redditiConsumo, 'impegni'),
                 'impegni' => $choice('Finanziamenti in corso', 'Ci sono finanziamenti in corso?', $yn, ['si' => 'rata', 'no' => 'crif']),
                 'rata' => $choice('Rata mensile', 'A quanto ammonta la rata mensile totale?', ['rata_200' => 'Fino a 200 €', 'rata_400' => '200 - 400 €', 'rata_oltre' => 'Oltre 400 €'], 'crif'),
                 'crif' => $choice('Segnalazioni CRIF', 'Ci sono segnalazioni in CRIF o protesti?', ['no' => 'No', 'si' => 'Sì', 'nonso' => 'Non so'], ['quinto' => 'quote_cedute', 'finalizzato' => 'bene', '*' => 'riepilogo'], ['next_by' => 'prodotto']),

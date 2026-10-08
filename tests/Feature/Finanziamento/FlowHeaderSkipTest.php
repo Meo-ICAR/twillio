@@ -113,7 +113,7 @@ class FlowHeaderSkipTest extends ConversationTestCase
     public function test_saltare_una_domanda_a_salti_condizionati_segue_l_uscita_predefinita(): void
     {
         $this->node('richiesta', 'crif')->update(['skippable' => true]);
-        $this->say('#menu_richiedi', '#personale', '#imp_5k', '#m24', '#dip_priv', '#det', '#anz_1', '#red_1000', '#no');
+        $this->say('#menu_richiedi', '#personale', '#imp_5k', '#m24', '#eta_40', '#sesso_m', '#dip_priv', '#det', '#anz_1', '#red_1500', '#no');
         $this->assertSame('crif', Conversation::first()->node);
 
         $this->say('salta');
@@ -125,7 +125,7 @@ class FlowHeaderSkipTest extends ConversationTestCase
     public function test_senza_uscita_predefinita_la_domanda_non_e_saltabile_anche_se_il_flag_e_attivo(): void
     {
         $this->node('richiesta', 'impegni')->update(['skippable' => true]); // salti si/no, nessun '*'
-        $this->say('#menu_richiedi', '#personale', '#imp_5k', '#m24', '#dip_priv', '#det', '#anz_1', '#red_1000');
+        $this->say('#menu_richiedi', '#personale', '#imp_5k', '#m24', '#eta_40', '#sesso_m', '#dip_priv', '#det', '#anz_1', '#red_1500');
         $this->assertSame('impegni', Conversation::first()->node);
 
         $body = $this->bodies($this->say('salta'));
