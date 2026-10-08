@@ -102,13 +102,13 @@ class FornitoreResource extends Resource
         return $table
             ->defaultSort('name')
             ->columns([
-                TextColumn::make('name')->label('Denominazione')->searchable()->placeholder('-')->description(fn (Fornitore $r) => $r->nome),
-                TextColumn::make('sigla')->label('Sigla')->placeholder('-'),
-                TextColumn::make('type')->label('Tipo')->badge()->placeholder('-'),
-                TextColumn::make('tel')->label('Cellulare')->searchable()->placeholder('-'),
-                TextColumn::make('email')->label('Email')->searchable()->placeholder('-'),
-                TextColumn::make('oam')->label('OAM')->placeholder('-'),
-                IconColumn::make('is_active')->label('Attivo')->boolean(),
+                TextColumn::make('name')->label('Denominazione')->searchable()->sortable()->placeholder('-')->description(fn (Fornitore $r) => $r->nome),
+                TextColumn::make('sigla')->label('Sigla')->sortable()->placeholder('-'),
+                TextColumn::make('type')->label('Tipo')->badge()->sortable()->placeholder('-'),
+                TextColumn::make('tel')->label('Cellulare')->searchable()->sortable()->placeholder('-'),
+                TextColumn::make('email')->label('Email')->searchable()->sortable()->placeholder('-'),
+       
+                IconColumn::make('is_active')->label('Attivo')->boolean()->sortable(),
             ])
             ->filters([TernaryFilter::make('is_active')->label('Attivo')])
             ->recordActions([ViewAction::make(), EditAction::make()]);

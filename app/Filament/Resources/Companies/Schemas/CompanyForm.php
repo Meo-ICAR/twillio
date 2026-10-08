@@ -17,21 +17,10 @@ class CompanyForm
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Azienda e contratto')
-                ->columns(2)
-                ->schema([
-                    Select::make('type')->label('Settore')->options(Company::TYPES)->required()->default('FINANCE'),
-                    Select::make('products')->label('Prodotti attivi')->relationship('products', 'name')->multiple()->preload(),
-                    Toggle::make('is_trial')->label('In prova (trial)')->live(),
-                    DatePicker::make('trial_activated_at')->label('Prova attivata il'),
-                    DatePicker::make('trialend_at')->label('La prova termina il')->visible(fn ($get) => (bool) $get('is_trial')),
-                    DatePicker::make('activated_at')->label('Contratto attivato il'),
-                    TextInput::make('whatsapp_number')->label('Cellulare WhatsApp')->tel()->maxLength(30)
-                        ->helperText('Il numero WhatsApp Business dell\'azienda.'),
-                    FileUpload::make('logo')->label('Logo')->image()->disk('public')->directory('company-logos')->visibility('public'),
-                ]),
+             
+          
 
-            Section::make('Titolare del trattamento')
+            Section::make('Azienda e privacy')->columns(2)
                 ->columnSpanFull()
                 ->description('Questi dati compaiono nell\'informativa privacy pubblica (/privacy).')
                 ->columns(2)
@@ -57,6 +46,20 @@ class CompanyForm
                     TextInput::make('url_istruttoria')->label('URL dell\'istruttoria (CRM)')->url()->maxLength(255)
                         ->helperText('Se vuoto, la pratica con gli allegati viene mandata per email all\'istruttoria.'),
 
+                ]),
+                  Section::make('Contratto')
+           ->columnSpanFull()
+            ->columns(4)
+                ->schema([
+                    Select::make('type')->label('Settore')->options(Company::TYPES)->required()->default('FINANCE'),
+                    Select::make('products')->label('Prodotti attivi')->relationship('products', 'name')->multiple()->preload(),
+                    Toggle::make('is_trial')->label('In prova (trial)')->live(),
+                    DatePicker::make('trial_activated_at')->label('Prova attivata il'),
+                    DatePicker::make('trialend_at')->label('La prova termina il')->visible(fn ($get) => (bool) $get('is_trial')),
+                    DatePicker::make('activated_at')->label('Contratto attivato il'),
+                    TextInput::make('whatsapp_number')->label('Cellulare WhatsApp')->tel()->maxLength(30)
+                        ->helperText('Il numero WhatsApp Business dell\'azienda.'),
+                    FileUpload::make('logo')->label('Logo')->image()->disk('public')->directory('company-logos')->visibility('public'),
                 ]),
         ]);
     }
