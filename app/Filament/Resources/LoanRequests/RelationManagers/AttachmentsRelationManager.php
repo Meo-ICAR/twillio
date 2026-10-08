@@ -28,8 +28,8 @@ class AttachmentsRelationManager extends RelationManager
                 TextColumn::make('status')->label('Esito')->badge()->color(fn (string $state) => AttachmentsTable::COLORS[$state] ?? 'gray')
                     ->formatStateUsing(fn (string $state) => AttachmentsTable::STATUSES[$state] ?? $state),
                 TextColumn::make('mime')->label('Formato'),
-                TextColumn::make('ai_cost')->label('Costo AI')->sorted()->placeholder('-')->formatStateUsing(fn ($state) => Attachment::formatCost($state)),
-                TextColumn::make('received_at')->label('Ricevuto il')->sorted()->dateTime(),
+                TextColumn::make('ai_cost')->label('Costo AI')->sortable()->placeholder('-')->formatStateUsing(fn ($state) => Attachment::formatCost($state)),
+                TextColumn::make('received_at')->label('Ricevuto il')->sortable()->dateTime(),
             ])
             ->recordActions([AttachmentsTable::downloadAction()]);
     }
