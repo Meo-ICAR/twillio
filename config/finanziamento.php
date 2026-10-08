@@ -75,6 +75,21 @@ return [
         ],
     ],
 
+    // Profilo WhatsApp (php artisan whatsapp:setup-profile): comandi con la "/" e messaggi per rompere il ghiaccio.
+    // I messaggi (max 4, 80 caratteri) coincidono con i titoli del menu, così il bot li riconosce come scelte.
+    'profile' => [
+        'enable_welcome_message' => true,
+        'prompts' => ['Richiedi Finanziamento', 'Perfeziona Finanziamento', 'Stato Pratiche', 'Aiuto'],
+        'commands' => [
+            'menu' => 'Mostra le tre opzioni: richiedi, perfeziona, stato pratiche',
+            'help' => 'Elenco dei comandi disponibili',
+            'indietro' => 'Torna alla domanda precedente',
+            'salta' => 'Salta la domanda (dove è consentito)',
+            'avanti' => 'Prosegui senza aspettare i controlli sui documenti',
+            'annulla' => 'Annulla l\'operazione in corso',
+        ],
+    ],
+
     // CRM del committente: codice HTTP restituito dalla simulazione (CRM_SIMULATED_STATUS=500 per provare l'errore).
     'crm' => ['simulated_status' => (int) env('CRM_SIMULATED_STATUS', 200)],
 

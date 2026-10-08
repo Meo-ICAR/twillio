@@ -222,4 +222,46 @@ class RichiestaFlowTest extends ConversationTestCase
         $this->assertSame('importo', Conversation::first()->node);
         $this->assertStringContainsString('Scegli una delle opzioni', $this->bodies($replies));
     }
+
+    public function test_i_comandi_si_scrivono_anche_con_la_barra(): void
+    {
+        $this->say('#menu_richiedi', '#personale');
+
+        $replies = $this->say('/menu');
+
+        $this->assertSame('list', $replies[0]->kind);
+        $this->assertSame('annullata', Conversation::first()->status);
+    }
+
+    public function test_help_elenca_i_comandi_e_ripropone_la_domanda_in_corso(): void
+    {
+        $this->say('#menu_richiedi', '#personale');
+
+        foreach (['help', '/help', 'Aiuto'] as $word) {
+            $replies = $this->say($word);
+
+            $this->assertStringContainsString('*menu*', $replies[0]->body, $word);
+            $this->assertStringContainsString('*annulla*', $replies[0]->body, $word);
+            $this->assertStringContainsString('/menu', $replies[0]->body, $word);
+            $this->assertStringContainsString('Quale importo', end($replies)->body, $word);
+            $this->assertSame('importo', Conversation::first()->node, 'la conversazione non cambia');
+        }
+    }
+
+    public function test_help_senza_conversazione_mostra_comandi_e_menu(): void
+    {
+        $replies = $this->say('/help');
+
+        $this->assertStringContainsString('*help*', $replies[0]->body);
+        $this->assertSame('list', end($replies)->kind);
+        $this->assertSame(0, Conversation::count());
+    }
+
+    public function test_il_messaggio_per_rompere_il_ghiaccio_apre_il_percorso(): void
+    {
+        $replies = $this->say('Richiedi Finanziamento');
+
+        $this->assertSame('richiesta', Conversation::first()->flow);
+        $this->assertStringContainsString('Che tipo di finanziamento', $this->bodies($replies));
+    }
 }

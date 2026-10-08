@@ -30,7 +30,7 @@ class ConversationEngine
 {
     private const PRIVACY_WARNING = '⚠️ Non inserire dati identificativi del cliente (nome, codice fiscale, telefono, email, P.IVA). In questa fase servono solo dati di profilo.';
 
-    private const GREETINGS = ['ciao', 'salve', 'buongiorno', 'buonasera', 'hello', 'hi', 'start', 'inizio', 'aiuto', 'help'];
+    private const GREETINGS = ['ciao', 'salve', 'buongiorno', 'buonasera', 'hello', 'hi', 'start', 'inizio'];
 
     private const ALLOWED_MIME = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'];
 
@@ -108,13 +108,20 @@ class ConversationEngine
     /** @return Reply[] */
     private function dispatch(IncomingMessage $m, ?Conversation $conv): array
     {
-        $command = $m->type === 'text' ? $this->normalize($m->text) : null;
+        // I comandi si possono scrivere anche con la barra (/menu): è come li invia il profilo WhatsApp.
+        $command = $m->type === 'text' ? ltrim($this->normalize($m->text), '/') : null;
 
         if (in_array($command, ['annulla', 'menu'], true)) {
             $conv && $this->close($conv, 'annullata');
 
             return $command === 'annulla' ? [Reply::text('Operazione annullata.'), $this->menu($m->from)] : [$this->menu($m->from)];
         }
+        if (in_array($command, ['help', 'aiuto'], true)) {
+            $again = $conv && $this->flows->node($conv->flow, $conv->node) ? $this->prompt($conv) : [$this->menu($m->from)];
+
+            return [Reply::text($this->helpText()), ...$again];
+        }
+
         // Una conversazione lasciata alla prima domanda da più di un'ora è abbandonata: si riparte dal menu.
         if ($conv && empty($conv->history) && $conv->updated_at->lt(now()->subMinutes(Conversation::UNTOUCHED_MINUTES))) {
             $this->close($conv, 'annullata');
@@ -143,6 +150,14 @@ class ConversationEngine
         }
 
         return $this->answer($conv, $m);
+    }
+
+    /** L'elenco dei comandi, dalla stessa configurazione che li registra nel profilo WhatsApp. */
+    private function helpText(): string
+    {
+        $lines = collect(config('finanziamento.profile.commands'))->map(fn ($description, $name) => "• *{$name}*: {$description}")->implode("\n");
+
+        return "Comandi disponibili (puoi scriverli anche con la barra, per esempio /menu):\n\n{$lines}";
     }
 
     /** Il menu; chi ha il numero associato a un utente vede anche le voci di prova dei percorsi che hanno una copia. */

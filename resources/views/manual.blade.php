@@ -85,7 +85,9 @@
         <tr><td><kbd>indietro</kbd></td><td>Torna alla domanda precedente.</td></tr>
         <tr><td><kbd>salta</kbd></td><td>Salta una domanda, quando il bot lo permette (lo scrive in fondo alla domanda).</td></tr>
         <tr><td><kbd>avanti</kbd></td><td>Mentre il bot controlla i documenti: prosegui senza aspettare.</td></tr>
+        <tr><td><kbd>help</kbd> o <kbd>aiuto</kbd></td><td>Elenco dei comandi; poi il bot ripropone la domanda in corso.</td></tr>
     </table>
+    <p>I comandi si possono scrivere anche con la barra (<kbd>/menu</kbd>, <kbd>/help</kbd>…): sono quelli che WhatsApp mostra quando scrivi «/» nella chat. Nel profilo dell'azienda compaiono anche i messaggi per rompere il ghiaccio (Richiedi Finanziamento, Perfeziona Finanziamento, Stato Pratiche, Aiuto), che aprono direttamente la voce scelta.</p>
     <p>Puoi rispondere toccando i pulsanti o le liste, oppure scrivendo il testo (o il numero) dell'opzione. Se lasci una conversazione ferma per più di 24 ore, il bot ti chiede se continuare o ricominciare.</p>
 
     <h2 id="richiedi">3. Richiedi Finanziamento</h2>
