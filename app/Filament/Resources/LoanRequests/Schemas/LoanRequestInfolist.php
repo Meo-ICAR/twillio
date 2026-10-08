@@ -47,7 +47,10 @@ class LoanRequestInfolist
                 ]),
             Section::make('Dati personali')
                 ->visible(fn (LoanRequest $record) => filled($record->personal))
+                ->columnSpanFull()
+                ->columns(6)
                 ->schema([
+                    
                     KeyValueEntry::make('personal')->hiddenLabel()->keyLabel('Dato')->valueLabel('Valore')
                         ->state(fn (LoanRequest $record) => LoanRequest::describe($record->personal, 'perfezionamento')),
                 ]),

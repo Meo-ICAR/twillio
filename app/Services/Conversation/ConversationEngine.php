@@ -986,6 +986,7 @@ class ConversationEngine
         }
 
         $loan->update($this->perfectedAttributes($data));
+        $this->mailer->notifyProducer($loan);
         $this->close($conv, 'completata');
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
