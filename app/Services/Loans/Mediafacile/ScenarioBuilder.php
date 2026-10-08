@@ -80,10 +80,7 @@ class ScenarioBuilder
 
     private function employmentType(array $answers, string $contract): string
     {
-        $type = QuoteEmploymentMap::where('lavoro', $answers['lavoro'] ?? '')
-            ->where(fn ($q) => $q->whereNull('ente_pensione')->orWhere('ente_pensione', $answers['ente_pensione'] ?? ''))
-            ->where(fn ($q) => $q->whereNull('dimensione_azienda')->orWhere('dimensione_azienda', $answers['dimensione_azienda'] ?? ''))
-            ->orderByDesc('priority')->value('tipo_rapporto')
+        $type = QuoteEmploymentMap::resolve($answers)?->tipo_rapporto
             ?? throw new QuoteUnavailable('Situazione lavorativa non riconosciuta.');
 
         $allowed = QuoteEmploymentType::where('value', $type)->first()?->contracts;

@@ -1015,7 +1015,7 @@ class ConversationEngine
 
         // Con un CRM per l'istruttoria si chiama il CRM, altrimenti si manda una email con dati e allegati.
         // Se l'invio non riesce resta tutto com'è: l'agente può riprovare dal riepilogo.
-        $viaCrm = Company::current()?->hasSubmissionCrm() ?? false;
+        $viaCrm = Company::forWhatsApp($loan->agent_wa_number)?->hasSubmissionCrm() ?? false;
         if ($viaCrm ? $this->submitToCrm($loan, $data) !== 200 : ! $this->mailLoan($loan, $data)) {
             return [Reply::text('⚠️ Invio pratica fallito, riprovare o contattare Istruttoria.'), ...$this->prompt($conv)];
         }

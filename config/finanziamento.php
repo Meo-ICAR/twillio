@@ -104,7 +104,10 @@ return [
     ],
 
     // CRM del committente: codice HTTP restituito dalla simulazione (CRM_SIMULATED_STATUS=500 per provare l'errore).
-    'crm' => ['simulated_status' => (int) env('CRM_SIMULATED_STATUS', 200)],
+    'crm' => ['driver' => env('CRM_DRIVER', 'simulated'), 'simulated_status' => (int) env('CRM_SIMULATED_STATUS', 200)],
+
+    // Lead sul CRM: valore del parametro `fonte`.
+    'lead' => ['fonte' => 'unicoagent'],
 
     // Casella dell'istruttoria se non è indicata nella scheda Azienda.
     'mail' => ['to' => env('FINANZIAMENTO_MAIL_TO')],

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Anthropic\Client;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Crm\CrmGateway;
+use App\Services\Crm\MediafacileLeadGateway;
 use App\Services\Crm\SimulatedCrmGateway;
 use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
@@ -28,7 +29,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(CheckRegistry::class);
 
         // Invio al CRM del committente: per ora una simulazione.
-        $this->app->bind(CrmGateway::class, SimulatedCrmGateway::class);
+        $this->app->bind(CrmGateway::class, fn ($app) => config('finanziamento.crm.driver') === 'mediafacile'
+            ? $app->make(MediafacileLeadGateway::class)
+            : new SimulatedCrmGateway);
 
         // Calcolo degli importi ottenibili: simulazione di base, servizio Mediafacile con QUOTE_DRIVER=mediafacile.
         $this->app->bind(LoanEstimator::class, fn ($app) => config('finanziamento.quote.driver') === 'mediafacile'
