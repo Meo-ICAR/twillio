@@ -17,11 +17,15 @@ Route::get('/grafo-domande', fn () => response((new FlowGraph)->html()));
 
 Route::get('/brochure', fn () => view('brochure'));
 
+Route::get('/comandi', fn () => view('comandi'));
+
 Route::get('/manuale', fn () => view('manual'));
 
 Route::get('/compliance', fn () => view('compliance', ['company' => Company::current()]));
 
 Route::get('/privacy', fn () => view('privacy', ['company' => Company::current()]));
+
+Route::get('/privacy/{company}', fn (Company $company) => view('privacy', ['company' => $company]))->whereNumber('company');
 
 Route::get('/cancellazione-dati', fn () => view('data-deletion', ['company' => Company::current()]));
 

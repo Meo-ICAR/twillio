@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Finanziamento;
 
+use App\Models\Company;
 use App\Models\Conversation;
+use App\Models\Fornitore;
 use App\Models\Flow;
 use App\Models\FlowNode;
 use App\Models\LoanRequest;
@@ -27,6 +29,20 @@ class PerfezionamentoIntroTest extends ConversationTestCase
         ]);
     }
 
+    public function test_il_link_dell_informativa_e_quello_della_company_del_produttore(): void
+    {
+        $prima = Company::create(['name' => 'Prima Spa']);
+        $seconda = Company::create(['name' => 'Seconda Srl', 'address' => 'Via Verdi 2, Torino']);
+        Fornitore::create(['name' => 'Mario Rossi', 'tel' => $this->agent, 'is_active' => true, 'tenant_company_id' => $seconda->id]);
+        $this->loan();
+
+        $body = $this->bodies($this->say('#menu_perfeziona', 'FIN-2026-0007', '#si'));
+
+        $this->assertStringContainsString('https://twillio.hassisto.com/privacy/'.$seconda->id, $body);
+        $this->get('/privacy/'.$seconda->id)->assertOk()->assertSee('Seconda Srl')->assertSee('Via Verdi 2, Torino')->assertDontSee('Prima Spa');
+        $this->assertNotSame($prima->id, $seconda->id);
+    }
+
     public function test_dopo_la_conferma_della_pratica_il_bot_riassume_i_documenti_e_da_il_link_all_informativa(): void
     {
         $this->loan();
@@ -42,7 +58,7 @@ class PerfezionamentoIntroTest extends ConversationTestCase
         $this->assertStringContainsString('Carta d\'identità, passaporto o patente', $body, 'con la descrizione del catalogo');
         $this->assertStringContainsString('Facoltativi', $body);
         $this->assertStringContainsString('Estratto conto bancario', $body);
-        $this->assertStringContainsString('https://twillio.hassisto.com/privacy', $body);
+        $this->assertStringContainsString('https://twillio.hassisto.com/privacy', $body, 'senza company assegnata vale quella attuale');
         $this->assertStringContainsString('informativa', strtolower($body));
         $this->assertStringContainsString('invia l\'informativa privacy firmata', end($replies)->body, 'poi la domanda vera');
         $this->assertSame('informativa', Conversation::first()->node);

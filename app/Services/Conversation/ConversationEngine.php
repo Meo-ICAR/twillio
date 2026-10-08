@@ -119,7 +119,9 @@ class ConversationEngine
         if (in_array($command, ['annulla', 'menu'], true)) {
             $conv && $this->close($conv, 'annullata');
 
-            return $command === 'annulla' ? [Reply::text('Operazione annullata.'), $this->menu($m->from)] : [$this->menu($m->from)];
+            return $command === 'annulla'
+                ? [Reply::text('Operazione annullata.'), $this->menu($m->from)]
+                : $this->menuWithCommandsLink($m->from);
         }
         if ($m->type === 'interactive' && str_starts_with((string) $m->replyId, 'modifica:')) {
             $conv && $this->close($conv, 'annullata');
@@ -150,7 +152,7 @@ class ConversationEngine
         if (in_array($command, self::GREETINGS, true) && empty($conv->history)) {
             $this->close($conv, 'annullata');
 
-            return [$this->menu($m->from)];
+            return $this->menuWithCommandsLink($m->from);
         }
         if (! $this->flows->node($conv->flow, $conv->node)) {
             $this->close($conv, 'annullata');
@@ -229,8 +231,15 @@ class ConversationEngine
             'menu_modifica' => $this->quoteList($m->from),
             'menu_perfeziona' => $this->perfectionList($m->from),
             'menu_stato' => $this->startDocuments($m->from),
-            default => [$this->menu($m->from)],
+            // Chi scrive per la prima volta, di solito con un saluto, trova anche il link ai comandi.
+            default => Conversation::where('wa_number', $m->from)->exists() ? [$this->menu($m->from)] : $this->menuWithCommandsLink($m->from),
         };
+    }
+
+    /** @return Reply[] il menu, seguito dal link alla sintesi dei comandi */
+    private function menuWithCommandsLink(string $waNumber): array
+    {
+        return [$this->menu($waNumber), Reply::text("ℹ️ Sintesi dei comandi: {$this->appUrl('/comandi')}")];
     }
 
     private function start(string $from, string $flow): array
@@ -646,8 +655,21 @@ class ConversationEngine
             '{codice}' => $loan?->code ?? '',
             '{prodotto}' => $loan ? (LoanRequest::productLabels()[$loan->product] ?? $loan->product) : '',
             '{documenti}' => $loan ? $this->requiredDocuments($loan) : '',
-            '{informativa_url}' => rtrim((string) config('app.url'), '/').'/privacy',
+            '{informativa_url}' => $this->privacyUrl($loan),
         ]);
+    }
+
+    /** Informativa del Titolare a cui fa capo il produttore che ha aperto la pratica. */
+    private function privacyUrl(?LoanRequest $loan): string
+    {
+        $company = Company::forWhatsApp($loan?->agent_wa_number);
+
+        return $this->appUrl('/privacy'.($company ? '/'.$company->id : ''));
+    }
+
+    private function appUrl(string $path): string
+    {
+        return rtrim((string) config('app.url'), '/').$path;
     }
 
     /** I documenti da preparare per il finanziamento (obbligatori e facoltativi del catalogo), con la descrizione. */

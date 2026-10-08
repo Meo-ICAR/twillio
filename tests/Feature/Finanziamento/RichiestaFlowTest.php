@@ -13,7 +13,7 @@ class RichiestaFlowTest extends ConversationTestCase
     {
         $replies = $this->say('ciao');
 
-        $this->assertCount(1, $replies);
+        $this->assertCount(2, $replies, 'menu e link ai comandi per chi scrive la prima volta');
         $this->assertSame('list', $replies[0]->kind);
         $this->assertSame(['menu_richiedi', 'menu_modifica', 'menu_perfeziona', 'menu_stato'], array_keys($replies[0]->options));
         $this->assertSame(0, Conversation::count());
@@ -232,6 +232,29 @@ class RichiestaFlowTest extends ConversationTestCase
 
         $this->assertSame('list', $replies[0]->kind);
         $this->assertSame('annullata', Conversation::first()->status);
+    }
+
+    public function test_menu_porta_il_link_alla_sintesi_dei_comandi(): void
+    {
+        config(['app.url' => 'https://twillio.hassisto.com']);
+
+        $replies = $this->say('/menu');
+
+        $this->assertSame('list', $replies[0]->kind);
+        $this->assertStringContainsString('https://twillio.hassisto.com/comandi', $replies[1]->body);
+
+        $this->say('#menu_richiedi', 'annulla');
+        $this->assertCount(1, $this->say('ciao'), 'chi ha già scritto riceve solo il menu');
+    }
+
+    public function test_il_saluto_di_un_nuovo_utente_porta_il_link_ai_comandi(): void
+    {
+        config(['app.url' => 'https://twillio.hassisto.com']);
+
+        $replies = $this->say('ciao');
+
+        $this->assertSame('list', $replies[0]->kind);
+        $this->assertStringContainsString('https://twillio.hassisto.com/comandi', $replies[1]->body);
     }
 
     public function test_help_elenca_i_comandi_e_ripropone_la_domanda_in_corso(): void

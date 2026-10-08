@@ -46,6 +46,14 @@ class Company extends Model
         return filled($this->url_istruttoria);
     }
 
+    /** La company del produttore con quel numero WhatsApp; se non è assegnata (o è sconosciuto) vale quella attuale. */
+    public static function forWhatsApp(?string $waNumber): ?self
+    {
+        $company = filled($waNumber) ? Fornitore::findByWhatsApp($waNumber)?->company : null;
+
+        return $company ?? static::current();
+    }
+
     /** L'installazione serve una sola azienda: vale la prima. */
     public static function current(): ?self
     {

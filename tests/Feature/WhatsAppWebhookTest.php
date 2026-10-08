@@ -36,8 +36,9 @@ class WhatsAppWebhookTest extends TestCase
             ->assertOk()->assertJson(['status' => 'EVENT_RECEIVED']);
 
         Http::assertSent(fn (Request $r) => $r['to'] === '393331112222'
-            && $r['interactive']['type'] === 'list'
+            && ($r['interactive']['type'] ?? null) === 'list'
             && $r['interactive']['action']['sections'][0]['rows'][0]['title'] === 'Richiedi Finanziamento');
+        Http::assertSent(fn (Request $r) => str_contains($r['text']['body'] ?? '', '/comandi'));
     }
 
     public function test_gli_eventi_di_stato_non_fanno_nulla(): void

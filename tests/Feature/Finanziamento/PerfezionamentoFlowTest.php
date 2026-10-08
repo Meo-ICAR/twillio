@@ -373,7 +373,7 @@ class PerfezionamentoFlowTest extends ConversationTestCase
 
         $replies = $this->say('ciao');
 
-        $this->assertSame('list', end($replies)->kind);
+        $this->assertSame('list', $replies[0]->kind);
         $this->assertSame('annullata', Conversation::first()->status);
     }
 
