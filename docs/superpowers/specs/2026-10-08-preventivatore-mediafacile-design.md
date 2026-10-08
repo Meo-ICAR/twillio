@@ -47,8 +47,8 @@ Per questi due prodotti le fasce non sono più aperte ("Fino a…", "Oltre…"):
 | Fascia | Opzioni (estremi in euro / anni) |
 |---|---|
 | Età | 20-30 · 30-40 · 40-50 · 50-60 · 60-75 |
-| Anzianità | 0-1 · 1-3 · 3-10 · 10-35 anni |
-| Reddito netto mensile | 500-1.000 · 1.000-1.500 · 1.500-2.000 · 2.000-3.000 · 3.000-5.000 |
+| Anzianità | 0-1 · 1-3 · 3-10 · 10-20 · 20-30 · 30-40 anni |
+| Reddito netto mensile | 1.000-1.500 · 1.500-2.000 · 2.000-3.000 · 3.000-5.000 |
 | Importo (solo Prestito) | 1.000-5.000 · 5.000-10.000 · 10.000-20.000 · 20.000-35.000 · 35.000-50.000 |
 
 Le altre linee di prodotto (mutuo, leasing, aziendale, finalizzato) conservano le loro fasce.
