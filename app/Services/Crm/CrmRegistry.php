@@ -15,6 +15,7 @@ class CrmRegistry
     private array $drivers = [
         'mediafacile' => ['class' => MediafacileLeadGateway::class, 'label' => 'Mediafacile'],
         'generic' => ['class' => GenericRestGateway::class, 'label' => 'CRM generico (REST)'],
+        'unicoloan' => ['class' => UnicoloanGateway::class, 'label' => 'unicoloan'],
     ];
 
     /** @param  class-string<CrmGateway>  $class */

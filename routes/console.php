@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('conversazioni:chiudi-abbandonate')->hourly();
 Schedule::command('finanziamento:purge')->dailyAt('03:30');
+Schedule::command('crm:send-documents')->hourly();

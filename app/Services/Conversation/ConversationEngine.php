@@ -4,6 +4,7 @@ namespace App\Services\Conversation;
 
 use App\Jobs\AnalyzeAttachment;
 use App\Jobs\ArchiveLoanDocuments;
+use App\Jobs\SendDocumentsToCrm;
 use App\Models\Company;
 use App\Models\Conversation;
 use App\Models\Fornitore;
@@ -1024,6 +1025,7 @@ class ConversationEngine
         $loan->update($this->perfectedAttributes($data));
         $this->mailer->notifyProducer($loan);
         $this->archiveDocuments($loan);
+        $this->sendDocumentsToCrm($loan);
         $this->close($conv, 'completata');
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
@@ -1063,6 +1065,16 @@ class ConversationEngine
         } catch (\Throwable $e) {
             // Nel log solo il tipo di errore.
             Log::error('Archiviazione documenti non avviata', ['loan' => $loan->code, 'exception' => $e::class]);
+        }
+    }
+
+    /** Mette in coda la consegna dei documenti al CRM (se li accetta); un errore qui non annulla il perfezionamento. */
+    private function sendDocumentsToCrm(LoanRequest $loan): void
+    {
+        try {
+            SendDocumentsToCrm::dispatch($loan->id);
+        } catch (\Throwable $e) {
+            Log::error('Consegna documenti al CRM non avviata', ['loan' => $loan->code, 'exception' => $e::class]);
         }
     }
 

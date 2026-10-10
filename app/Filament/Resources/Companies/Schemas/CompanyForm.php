@@ -65,6 +65,17 @@ class CompanyForm
                         ->live()
                         ->columnSpanFull(),
                     Group::make([
+                        TextInput::make('crm_config.url')->label('Indirizzo di unicoloan')->url()->maxLength(255)->required()
+                            ->helperText('Indirizzo di base (https), ad es. https://unicoloan.example.com'),
+                        TextInput::make('crm_config.token')->label('Token')->password()->revealable()->required()->maxLength(500),
+                        TextInput::make('crm_config.secret')->label('Segreto per la firma')->password()->revealable()->required()->maxLength(500)
+                            ->helperText('Token e segreto si ottengono in unicoloan con: php artisan agent-api:client unicoagent'),
+                        Select::make('crm_config.analysis')->label('Analisi dei documenti')
+                            ->options(['summary' => 'Solo esito e discrepanze', 'full' => 'Anche i dati letti dal documento'])->default('summary')
+                            ->helperText('Cosa si manda a unicoloan dell\'analisi già fatta qui.'),
+                    ])->columns(2)->columnSpanFull()
+                        ->visible(fn (Get $get) => $get('crm_driver') === 'unicoloan'),
+                    Group::make([
                         TextInput::make('crm_config.url')->label('Indirizzo')->url()->maxLength(255)->required()
                             ->helperText('Solo https (http è ammesso soltanto in sviluppo).'),
                         Select::make('crm_config.method')->label('Metodo')->options(['POST' => 'POST', 'PUT' => 'PUT', 'PATCH' => 'PATCH'])->default('POST'),

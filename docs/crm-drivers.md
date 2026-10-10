@@ -9,6 +9,7 @@ La pratica perfezionata arriva al CRM dell'azienda. Ogni azienda usa **un solo**
 | `email` | nessun CRM: dati e allegati vanno per email all'istruttoria |
 | `mediafacile` | servizio di caricamento lead Mediafacile (GET, risposta XML) |
 | `generic` | qualsiasi CRM con API REST, configurato da pannello (sotto) |
+| `unicoloan` | unicoloan tramite la sua API per agenti (sotto) |
 
 `CRM_DRIVER=simulated` (sviluppo, test) fa rispondere la simulazione per tutte le aziende.
 
@@ -42,7 +43,7 @@ Una classe che implementa `CrmGateway` (costruttore con `Company $company` se se
 ## Funzioni oltre l'invio (capacità opzionali)
 
 Un driver dichiara cosa sa fare implementando le interfacce di `App\Services\Crm\Capabilities`; `CrmRegistry::supports()` risponde.
-Nessun driver le implementa ancora: sono il punto di arrivo per unicoloan.
+Il driver `unicoloan` implementa `SendsDocuments`; le altre sono il punto di arrivo.
 
 | Interfaccia | Funzione |
 |---|---|
@@ -52,4 +53,14 @@ Nessun driver le implementa ancora: sono il punto di arrivo per unicoloan.
 | `RequestsSignature` | firma elettronica con OTP e stato della firma |
 
 Sono tutte funzioni che unico-core e unicoloan hanno già (`PdfFormFiller`, `SignatureRequestService`, tipi documento): il driver `unicoloan`
-le espone tramite l'API in ingresso di unicoloan, ancora da scrivere.
+le esporrà tramite l'API in ingresso di unicoloan (oggi: richieste e documenti; template, modulo compilato e firma OTP da scrivere).
+
+## Driver `unicoloan`
+
+Chiavi di `crm_config`: `url` (https; http solo in sviluppo), `token`, `secret` (da `php artisan agent-api:client unicoagent` in unicoloan),
+`analysis` (vuoto = solo esito dell'analisi; `full` = anche i campi letti). Contratto: `docs/agent-api.md` di unicoloan.
+
+- `submit()` crea cliente e pratica (`POST /api/agente/v1/richieste`, idempotente per `riferimento`); `crm_lead_id` = codice pratica.
+- `sendDocuments()` carica gli allegati non ancora inviati (`attachments.crm_sent_at`), uno per volta, con firma HMAC; rifiutati e senza file si saltano.
+- Il job `SendDocumentsToCrm` parte a fine perfezionamento (5 tentativi, attesa crescente); `php artisan crm:send-documents [--loan=ID]`
+  riprova quelli rimasti indietro e gira ogni ora.

@@ -14,7 +14,7 @@ class Attachment extends Model
 
     protected function casts(): array
     {
-        return ['received_at' => 'datetime', 'analysis' => 'encrypted:array', 'pending_checks' => 'array', 'ai_cost' => 'decimal:6'];
+        return ['received_at' => 'datetime', 'crm_sent_at' => 'datetime', 'analysis' => 'encrypted:array', 'pending_checks' => 'array', 'ai_cost' => 'decimal:6'];
     }
 
     /** Costo in dollari come testo («$ 0,0123»), oppure null se non c'è stata una lettura con l'AI. */
