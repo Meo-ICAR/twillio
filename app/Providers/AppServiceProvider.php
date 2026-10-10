@@ -4,9 +4,9 @@ namespace App\Providers;
 
 use Anthropic\Client;
 use App\Services\Checks\CheckRegistry;
+use App\Services\Crm\CompanyCrmGateway;
 use App\Services\Crm\CrmGateway;
-use App\Services\Crm\MediafacileLeadGateway;
-use App\Services\Crm\SimulatedCrmGateway;
+use App\Services\Crm\CrmRegistry;
 use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
 use App\Services\Documents\NullDocumentReader;
@@ -30,10 +30,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(FlowRepository::class);
         $this->app->singleton(CheckRegistry::class);
 
-        // Invio al CRM del committente: per ora una simulazione.
-        $this->app->bind(CrmGateway::class, fn ($app) => config('finanziamento.crm.driver') === 'mediafacile'
-            ? $app->make(MediafacileLeadGateway::class)
-            : new SimulatedCrmGateway);
+        // Invio al CRM del committente: il driver lo sceglie l'azienda (vedi CrmRegistry); con CRM_DRIVER=simulated risponde la simulazione.
+        $this->app->singleton(CrmRegistry::class);
+        $this->app->bind(CrmGateway::class, CompanyCrmGateway::class);
 
         // Archiviazione dei documenti su SharePoint: per ora una simulazione che scrive nel log.
         $this->app->bind(SharePointUploader::class, LoggingSharePointUploader::class);

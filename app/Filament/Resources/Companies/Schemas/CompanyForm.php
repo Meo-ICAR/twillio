@@ -3,13 +3,16 @@
 namespace App\Filament\Resources\Companies\Schemas;
 
 use App\Models\Company;
+use App\Services\Crm\CrmRegistry;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class CompanyForm
@@ -50,6 +53,42 @@ class CompanyForm
                     TextInput::make('istruttoria_passkey')->label('Passkey dell\'istruttoria (CRM)')->password()->revealable()->maxLength(255)
                         ->helperText('Fornita con il servizio di caricamento lead; serve solo se il CRM è quello Mediafacile.'),
 
+                ]),
+            Section::make('CRM dell\'istruttoria')
+                ->columnSpanFull()
+                ->columns(2)
+                ->description('Il CRM a cui arriva la pratica perfezionata. Un\'azienda ne usa uno solo.')
+                ->schema([
+                    Select::make('crm_driver')->label('CRM')
+                        ->options(['email' => 'Solo email (senza CRM)'] + app(CrmRegistry::class)->labels())
+                        ->placeholder('Automatico (Mediafacile se c\'è l\'URL dell\'istruttoria, altrimenti email)')
+                        ->live()
+                        ->columnSpanFull(),
+                    Group::make([
+                        TextInput::make('crm_config.url')->label('Indirizzo')->url()->maxLength(255)->required()
+                            ->helperText('Solo https (http è ammesso soltanto in sviluppo).'),
+                        Select::make('crm_config.method')->label('Metodo')->options(['POST' => 'POST', 'PUT' => 'PUT', 'PATCH' => 'PATCH'])->default('POST'),
+                        Select::make('crm_config.format')->label('Formato')->options(['json' => 'JSON', 'form' => 'Form'])->default('json'),
+                        Select::make('crm_config.auth')->label('Autenticazione')
+                            ->options(['none' => 'Nessuna', 'bearer' => 'Bearer token', 'header' => 'Intestazione con chiave', 'basic' => 'Utente e password'])
+                            ->default('none')->live(),
+                        TextInput::make('crm_config.token')->label('Token / chiave')->password()->revealable()->maxLength(500)
+                            ->visible(fn (Get $get) => in_array($get('crm_config.auth'), ['bearer', 'header'], true)),
+                        TextInput::make('crm_config.header_name')->label('Nome dell\'intestazione')->default('X-Api-Key')->maxLength(100)
+                            ->visible(fn (Get $get) => $get('crm_config.auth') === 'header'),
+                        TextInput::make('crm_config.username')->label('Utente')->maxLength(255)
+                            ->visible(fn (Get $get) => $get('crm_config.auth') === 'basic'),
+                        TextInput::make('crm_config.password')->label('Password')->password()->revealable()->maxLength(255)
+                            ->visible(fn (Get $get) => $get('crm_config.auth') === 'basic'),
+                        Textarea::make('crm_config.body_template')->label('Modello del messaggio (JSON)')->rows(8)->columnSpanFull()
+                            ->helperText('Con segnaposto come {{cliente.cognome}}, {{riferimento}}, {{pratica.importo_richiesto}}. Vuoto = si invia l\'intera pratica.'),
+                        TextInput::make('crm_config.success_codes')->label('Codici HTTP validi')->placeholder('200,201')
+                            ->helperText('Vuoto = qualsiasi 2xx.'),
+                        TextInput::make('crm_config.id_path')->label('Dove leggere l\'id della pratica nella risposta')->placeholder('data.id'),
+                        TextInput::make('crm_config.ok_path')->label('Esito nella risposta: percorso')->placeholder('stato'),
+                        TextInput::make('crm_config.ok_value')->label('Esito nella risposta: valore atteso')->placeholder('OK'),
+                    ])->columns(2)->columnSpanFull()
+                        ->visible(fn (Get $get) => $get('crm_driver') === 'generic'),
                 ]),
                   Section::make('Contratto')
            ->columnSpanFull()

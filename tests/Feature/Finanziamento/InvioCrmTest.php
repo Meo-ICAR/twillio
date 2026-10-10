@@ -8,7 +8,7 @@ use App\Models\Conversation;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Services\Crm\CrmGateway;
-use App\Services\Crm\SimulatedCrmGateway;
+use App\Services\Crm\CompanyCrmGateway;
 use Database\Seeders\DocumentCatalogSeeder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -51,7 +51,7 @@ class InvioCrmTest extends ConversationTestCase
 
     public function test_la_simulazione_risponde_200_di_default_e_si_configura(): void
     {
-        $this->assertInstanceOf(SimulatedCrmGateway::class, app(CrmGateway::class));
+        $this->assertInstanceOf(CompanyCrmGateway::class, app(CrmGateway::class));
         $this->assertSame(200, app(CrmGateway::class)->submit(new LoanRequest, []));
 
         config(['finanziamento.crm.simulated_status' => 503]);

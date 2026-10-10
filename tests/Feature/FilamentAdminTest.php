@@ -224,6 +224,37 @@ class FilamentAdminTest extends TestCase
         $this->get('/privacy')->assertOk()->assertSee('Nuova Spa')->assertSee('Via Verdi 2, Torino')->assertSee('Dieci anni.');
     }
 
+    public function test_il_crm_dell_azienda_si_sceglie_dal_pannello_con_la_configurazione_cifrata(): void
+    {
+        $company = Company::create(['name' => 'Spa']);
+        $this->login();
+
+        Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
+            ->fillForm([
+                'crm_driver' => 'generic',
+                'crm_config' => ['url' => 'https://crm.example.com/api', 'auth' => 'bearer', 'token' => 'SEGRETO', 'id_path' => 'data.id'],
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $company->refresh();
+        $this->assertSame('generic', $company->crmDriver());
+        $this->assertSame('SEGRETO', $company->crm_config['token']);
+        $this->assertSame('data.id', $company->crm_config['id_path']);
+        $this->assertStringNotContainsString('SEGRETO', (string) \DB::table('companies')->value('crm_config'));
+    }
+
+    public function test_il_crm_generico_richiede_l_indirizzo(): void
+    {
+        $company = Company::create(['name' => 'Spa']);
+        $this->login();
+
+        Livewire::test(EditCompany::class, ['record' => $company->getRouteKey()])
+            ->fillForm(['crm_driver' => 'generic', 'crm_config' => ['url' => '']])
+            ->call('save')
+            ->assertHasFormErrors(['crm_config.url' => 'required']);
+    }
+
     public function test_si_crea_una_sola_azienda_e_non_si_elimina(): void
     {
         $this->login();

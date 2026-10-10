@@ -19,6 +19,7 @@ class Company extends Model
             'is_trial' => 'boolean',
             'preventivatore_passkey' => 'encrypted',
             'istruttoria_passkey' => 'encrypted',
+            'crm_config' => 'encrypted:array',
             'trialend_at' => 'date',
             'trial_activated_at' => 'date',
             'activated_at' => 'date',
@@ -42,13 +43,25 @@ class Company extends Model
         return filled($this->url_preventivatore);
     }
 
+    /**
+     * Driver del CRM dell'istruttoria: quello scelto per l'azienda; senza scelta Mediafacile se c'è l'URL
+     * dell'istruttoria (come prima), altrimenti nessuno. «email» vuol dire esplicitamente nessun CRM.
+     */
+    public function crmDriver(): ?string
+    {
+        if (filled($this->crm_driver)) {
+            return $this->crm_driver === 'email' ? null : $this->crm_driver;
+        }
+
+        return filled($this->url_istruttoria) ? 'mediafacile' : null;
+    }
+
     /** Esiste un CRM per l'istruttoria (altrimenti si manda una email con dati e allegati). */
     public function hasSubmissionCrm(): bool
     {
-        return filled($this->url_istruttoria);
+        return $this->crmDriver() !== null;
     }
 
-    /** La company del produttore con quel numero WhatsApp; se non è assegnata (o è sconosciuto) vale quella attuale. */
     public static function forWhatsApp(?string $waNumber): ?self
     {
         $company = filled($waNumber) ? Fornitore::findByWhatsApp($waNumber)?->company : null;

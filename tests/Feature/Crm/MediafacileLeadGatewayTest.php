@@ -4,9 +4,9 @@ namespace Tests\Feature\Crm;
 
 use App\Models\Company;
 use App\Models\LoanRequest;
+use App\Services\Crm\CompanyCrmGateway;
 use App\Services\Crm\CrmGateway;
 use App\Services\Crm\MediafacileLeadGateway;
-use App\Services\Crm\SimulatedCrmGateway;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
@@ -40,12 +40,21 @@ class MediafacileLeadGatewayTest extends TestCase
         return (new MediafacileLeadGateway)->submit($loan ?? $this->loan(), $this->personal());
     }
 
-    public function test_il_driver_si_sceglie_dalla_configurazione(): void
+    public function test_il_gateway_dell_applicazione_sceglie_il_driver_dall_azienda(): void
     {
-        $this->assertInstanceOf(SimulatedCrmGateway::class, app(CrmGateway::class));
+        $this->assertInstanceOf(CompanyCrmGateway::class, app(CrmGateway::class));
 
+        // Con la simulazione risponde la simulazione, qualunque sia l'azienda.
+        $loan = $this->loan();
+        $this->assertSame(200, app(CrmGateway::class)->submit($loan, $this->personal()));
+
+        // In produzione un'azienda con l'URL dell'istruttoria usa Mediafacile, come prima.
         config(['finanziamento.crm.driver' => 'mediafacile']);
-        $this->assertInstanceOf(MediafacileLeadGateway::class, app(CrmGateway::class));
+        $this->company();
+        Http::fake(['crm.example.com/*' => Http::response('<r><Stato>OK</Stato><IDUU>77</IDUU></r>', 200)]);
+
+        $this->assertSame(200, app(CrmGateway::class)->submit($loan, $this->personal()));
+        $this->assertSame('77', $loan->fresh()->crm_lead_id);
     }
 
     public function test_ok_da_200_e_salva_l_id_del_lead(): void
