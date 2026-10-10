@@ -266,4 +266,65 @@ class UnicoloanGatewayTest extends TestCase
         $this->assertSame(200, app(CrmGateway::class)->submit($this->loan(), $this->personal()));
         Http::assertSentCount(1);
     }
+
+    public function test_dichiara_le_capacita_documentali(): void
+    {
+        $registry = app(CrmRegistry::class);
+
+        foreach ([\App\Services\Crm\Capabilities\ProvidesTemplates::class, \App\Services\Crm\Capabilities\FillsForms::class, \App\Services\Crm\Capabilities\RequestsSignature::class] as $capability) {
+            $this->assertTrue($registry->supports('unicoloan', $capability));
+        }
+    }
+
+    public function test_elenca_e_scarica_i_template(): void
+    {
+        Http::fake([
+            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/moduli' => Http::response(['moduli' => [['id' => 7, 'nome' => 'QAV']]]),
+            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/moduli/7/template' => Http::response('%PDF-vuoto'),
+            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/moduli/9/template' => Http::response(['codice' => 'modulo_non_trovato'], 404),
+        ]);
+        $gateway = $this->gateway();
+        $loan = $this->loan();
+
+        $this->assertSame([['code' => '7', 'name' => 'QAV']], $gateway->templates($loan));
+        $this->assertSame('%PDF-vuoto', $gateway->downloadTemplate($loan, '7'));
+        $this->assertNull($gateway->downloadTemplate($loan, '9'));
+    }
+
+    public function test_il_modulo_compilato_si_scarica_dopo_averlo_creato(): void
+    {
+        Http::fake([
+            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/moduli/7/compilato' => Http::response(['id' => 'doc-1'], 201),
+            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/documenti/doc-1/file' => Http::response('%PDF-compilato'),
+        ]);
+
+        $this->assertSame('%PDF-compilato', $this->gateway()->fillForm($this->loan(), '7'));
+    }
+
+    public function test_la_firma_compila_il_modulo_la_richiede_e_se_ne_legge_lo_stato(): void
+    {
+        Http::fake([
+            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/moduli/7/compilato' => Http::response(['id' => 'doc-1'], 201),
+            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/documenti/doc-1/firma' => Http::sequence()
+                ->push(['stato' => 'sent'], 201)->push(['stato' => 'signed'])->push(['stato' => 'declined']),
+        ]);
+        $gateway = $this->gateway();
+        $loan = $this->loan();
+
+        $this->assertSame(['status' => 'inviata', 'reference' => 'doc-1'], $gateway->requestSignature($loan, '7'));
+        $this->assertSame(['status' => 'firmata', 'reference' => 'doc-1'], $gateway->signatureStatus($loan, 'doc-1'));
+        $this->assertSame('rifiutata', $gateway->signatureStatus($loan, 'doc-1')['status']);
+    }
+
+    public function test_gli_errori_delle_funzioni_documentali_non_lanciano(): void
+    {
+        Http::fake(fn () => throw new ConnectionException('timeout'));
+        $gateway = $this->gateway();
+        $loan = $this->loan();
+
+        $this->assertSame([], $gateway->templates($loan));
+        $this->assertNull($gateway->fillForm($loan, '7'));
+        $this->assertSame(['status' => 'errore', 'reference' => null], $gateway->requestSignature($loan, '7'));
+        $this->assertSame('errore', $gateway->signatureStatus($loan, 'doc-1')['status']);
+    }
 }

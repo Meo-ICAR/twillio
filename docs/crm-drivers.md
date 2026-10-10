@@ -43,7 +43,7 @@ Una classe che implementa `CrmGateway` (costruttore con `Company $company` se se
 ## Funzioni oltre l'invio (capacità opzionali)
 
 Un driver dichiara cosa sa fare implementando le interfacce di `App\Services\Crm\Capabilities`; `CrmRegistry::supports()` risponde.
-Il driver `unicoloan` implementa `SendsDocuments`; le altre sono il punto di arrivo.
+Il driver `unicoloan` le implementa tutte e quattro.
 
 | Interfaccia | Funzione |
 |---|---|
@@ -64,3 +64,10 @@ Chiavi di `crm_config`: `url` (https; http solo in sviluppo), `token`, `secret` 
 - `sendDocuments()` carica gli allegati non ancora inviati (`attachments.crm_sent_at`), uno per volta, con firma HMAC; rifiutati e senza file si saltano.
 - Il job `SendDocumentsToCrm` parte a fine perfezionamento (5 tentativi, attesa crescente); `php artisan crm:send-documents [--loan=ID]`
   riprova quelli rimasti indietro e gira ogni ora.
+
+Funzioni documentali (tutte passano da unicoloan, che resta l'unico a conoscere moduli e provider di firma):
+`templates()` elenca i moduli della pratica (codice = id del modulo in unicoloan); `downloadTemplate()` scarica il PDF vuoto;
+`fillForm()` fa compilare il modulo con i dati della pratica e restituisce il PDF da stampare; `requestSignature($loan, $codiceModulo)`
+compila il modulo e chiede la firma OTP, `reference` = id del documento in unicoloan; `signatureStatus()` risponde `inviata | firmata | rifiutata | scaduta | errore`.
+Una volta firmato, `GET …/documenti/{id}/file` di unicoloan restituisce il PDF firmato.
+Nessuna di queste è ancora richiamata da una conversazione: sono a disposizione per le prossime funzioni dell'agente.
