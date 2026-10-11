@@ -51,4 +51,11 @@ return [
         'app_secret' => env('META_APP_SECRET'),
     ],
 
+
+    // UnicoBPM: gli eventi (es. pratica.perfezionata) avviano i processi di presa in carico. Senza indirizzo o chiave non si invia nulla.
+    'bpm' => [
+        'url' => env('BPM_API_URL'),
+        'key' => env('BPM_BRIDGE_API_KEY'),
+    ],
+
 ];

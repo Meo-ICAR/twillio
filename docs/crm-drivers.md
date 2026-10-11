@@ -71,3 +71,11 @@ Funzioni documentali (tutte passano da unicoloan, che resta l'unico a conoscere 
 compila il modulo e chiede la firma OTP, `reference` = id del documento in unicoloan; `signatureStatus()` risponde `inviata | firmata | rifiutata | scaduta | errore`.
 Una volta firmato, `GET …/documenti/{id}/file` di unicoloan restituisce il PDF firmato.
 Nessuna di queste è ancora richiamata da una conversazione: sono a disposizione per le prossime funzioni dell'agente.
+
+## Eventi verso UnicoBPM
+Al perfezionamento di una pratica unicoagent comunica a UnicoBPM l'evento `pratica.perfezionata` (`POST {BPM_API_URL}/api/events`, chiave `BPM_BRIDGE_API_KEY`):
+`App\Services\Bpm\BpmEvents` → job `SendBpmEvent` in coda, ritentativi dopo 1, 5, 15 minuti, 1 e 4 ore (errori di rete, 5xx, 408/425/429; gli altri 4xx sono definitivi).
+`event_id` = `pratica.perfezionata:{codice pratica}`: un nuovo invio non avvia due processi. Dati: prodotto, codice pratica del CRM (`crm_lead_id`), nome e partita IVA dell'agente;
+nessun dato del cliente né contenuto di file. Senza `BPM_API_URL` e chiave, o per le pratiche di prova, non si invia nulla. In UnicoBPM un trigger «Evento da un'altra app»
+con `pratica.perfezionata` avvia il processo di presa in carico dell'istruttore, che sollecita finché qualcuno non la prende in carico.
+

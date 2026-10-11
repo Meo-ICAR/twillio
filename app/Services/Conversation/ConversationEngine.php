@@ -5,6 +5,7 @@ namespace App\Services\Conversation;
 use App\Jobs\AnalyzeAttachment;
 use App\Jobs\ArchiveLoanDocuments;
 use App\Jobs\SendDocumentsToCrm;
+use App\Services\Bpm\BpmEvents;
 use App\Models\Company;
 use App\Models\Conversation;
 use App\Models\Fornitore;
@@ -1026,6 +1027,7 @@ class ConversationEngine
         $this->mailer->notifyProducer($loan);
         $this->archiveDocuments($loan);
         $this->sendDocumentsToCrm($loan);
+        BpmEvents::dispatchPerfected($loan);
         $this->close($conv, 'completata');
 
         return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
