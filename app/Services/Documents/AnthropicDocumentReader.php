@@ -3,6 +3,7 @@
 namespace App\Services\Documents;
 
 use Anthropic\Client;
+use App\Services\Bpm\ApiTrace;
 
 /** Estrae i dati dai documenti con l'API Claude (visione): foto e PDF, risposta in JSON validato da uno schema. */
 class AnthropicDocumentReader implements DocumentReader, ReportsUsage
@@ -59,6 +60,7 @@ TXT;
             ? ['type' => 'document', 'source' => $source]
             : ['type' => 'image', 'source' => $source];
 
+        $startedAt = microtime(true);
         $message = $this->client->messages->create(
             model: $this->model,
             maxTokens: 4000,
@@ -76,6 +78,11 @@ TXT;
         // Il consumo c'è anche se la risposta poi non è utilizzabile.
         if ($message->usage ?? null) {
             $this->usage = ['model' => $this->model, 'input_tokens' => (int) $message->usage->inputTokens, 'output_tokens' => (int) $message->usage->outputTokens];
+            ApiTrace::record([
+                'method' => 'POST', 'url' => 'https://api.anthropic.com/v1/messages', 'status_code' => 200,
+                'duration_ms' => (int) round((microtime(true) - $startedAt) * 1000),
+                'ai' => $this->usage + ['cost' => AiCost::usd($this->usage['input_tokens'], $this->usage['output_tokens'])],
+            ]);
         }
 
         if ($message->stopReason === 'refusal') {

@@ -26,7 +26,7 @@ class MultitenantPreparationTest extends TestCase
     private function tenantModels(): array
     {
         return [
-            User::class => 'company_id', Fornitore::class => 'tenant_company_id', LoanRequest::class => 'company_id',
+            User::class => 'company_id', Fornitore::class => 'company_id', LoanRequest::class => 'company_id',
             Attachment::class => 'company_id', Conversation::class => 'company_id', Flow::class => 'company_id',
             FlowNode::class => 'company_id', FlowNodeOption::class => 'company_id', FlowNodeJump::class => 'company_id',
         ];
@@ -46,13 +46,13 @@ class MultitenantPreparationTest extends TestCase
         $this->assertFalse(Schema::hasColumn('flow_checks', 'company_id'));
     }
 
-    public function test_fornitori_conserva_il_company_id_dell_anagrafica_madre(): void
+    public function test_fornitori_usa_company_id_come_tenant(): void
     {
-        $uuid = '5c044917-15b3-4471-90c9-38061fcca754';
-        $f = Fornitore::create(['name' => 'X', 'company_id' => $uuid]);
+        $company = Company::create(['name' => 'Tenant']);
+        $f = Fornitore::create(['name' => 'X', 'company_id' => $company->id]);
 
-        $this->assertSame($uuid, $f->fresh()->company_id);
-        $this->assertNull($f->fresh()->tenant_company_id);
+        $this->assertSame($company->id, $f->fresh()->company_id);
+        $this->assertTrue($company->is($f->fresh()->company));
     }
 
     public function test_il_tenant_non_e_attivo_i_record_nascono_senza_company_e_si_vedono_tutti(): void

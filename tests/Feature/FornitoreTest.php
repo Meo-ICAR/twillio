@@ -12,14 +12,15 @@ class FornitoreTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_usa_la_tabella_fornitoris_con_id_uuid(): void
+    public function test_usa_la_tabella_fornitoris_di_unico_core(): void
     {
         $f = Fornitore::create(['name' => 'Mario Rossi']);
 
         $this->assertSame('fornitoris', $f->getTable());
-        $this->assertMatchesRegularExpression('/^[0-9a-f-]{36}$/', $f->id);
-        $this->assertFalse($f->getIncrementing());
+        $this->assertTrue($f->getIncrementing());
+        $this->assertSame('int', $f->getKeyType());
         $this->assertSame($f->id, Fornitore::find($f->id)->id);
+        $this->assertSame(config('unico-core.connection'), $f->getConnectionName());
     }
 
     public function test_i_campi_sono_convertiti_nei_tipi_giusti(): void

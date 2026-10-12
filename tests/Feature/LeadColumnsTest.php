@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\LoanRequest;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -27,6 +28,6 @@ class LeadColumnsTest extends TestCase
 
         $this->assertSame('ABC-1', $loan->fresh()->crm_lead_id);
         $this->assertNotNull($loan->fresh()->documents_archived_at);
-        $this->assertInstanceOf(\Carbon\CarbonInterface::class, $loan->fresh()->documents_archived_at);
+        $this->assertInstanceOf(CarbonInterface::class, $loan->fresh()->documents_archived_at);
     }
 }

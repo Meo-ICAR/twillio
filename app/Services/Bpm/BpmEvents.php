@@ -34,7 +34,26 @@ class BpmEvents
                 'prodotto_etichetta' => LoanRequest::productLabels()[$loan->product] ?? $loan->product,
                 'codice_pratica_crm' => $loan->crm_lead_id,
                 'agente' => ['nome' => $agent?->name, 'partita_iva' => $agent?->piva],
+                'ai_usage' => self::aiUsage($loan),
             ],
+        ];
+    }
+
+    /**
+     * Consumo dell'AI per leggere i documenti della pratica (solo totali, mai contenuti): UnicoBPM lo registra nel trace della chiamata.
+     *
+     * @return array{model: ?string, input_tokens: int, output_tokens: int, cost: float, readings: int}
+     */
+    public static function aiUsage(LoanRequest $loan): array
+    {
+        $read = $loan->attachments()->whereNotNull('ai_input_tokens')->get(['ai_model', 'ai_input_tokens', 'ai_output_tokens', 'ai_cost']);
+
+        return [
+            'model' => $read->pluck('ai_model')->filter()->last(),
+            'input_tokens' => (int) $read->sum('ai_input_tokens'),
+            'output_tokens' => (int) $read->sum('ai_output_tokens'),
+            'cost' => round((float) $read->sum('ai_cost'), 6),
+            'readings' => $read->count(),
         ];
     }
 

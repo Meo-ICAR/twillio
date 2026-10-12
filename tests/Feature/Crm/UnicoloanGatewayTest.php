@@ -51,7 +51,7 @@ class UnicoloanGatewayTest extends TestCase
 
     private function agent(): void
     {
-        \App\Models\Fornitore::create(['id' => (string) \Illuminate\Support\Str::uuid(), 'name' => 'Agente', 'piva' => '12345678901', 'tel' => '+39 333 111 2222', 'is_active' => true, 'company_id' => (Company::first() ?? $this->company())->id]);
+        \App\Models\Fornitore::create(['name' => 'Agente', 'piva' => '12345678901', 'tel' => '+39 333 111 2222', 'is_active' => true, 'company_id' => (Company::first() ?? $this->company())->id]);
     }
 
     private function attach(LoanRequest $loan, string $kind, string $body = '%PDF-1.4 contenuto', ?string $slotStatus = null): Attachment

@@ -9,12 +9,11 @@ return new class extends Migration
 {
     /**
      * Predisposizione al multitenant, senza attivarlo: ogni tabella indicata riceve la company a cui appartiene.
-     * Fornitori ha già un `company_id` (UUID dell'anagrafica madre): lì la colonna si chiama `tenant_company_id`.
      * I check (flow_checks) sono condivisi e non hanno la company. I dati esistenti vanno alla company attuale.
+     * `fornitoris.company_id` è già l'azienda tenant (unico-core).
      */
     private const TABLES = [
         'users' => 'company_id',
-        'fornitoris' => 'tenant_company_id',
         'loan_requests' => 'company_id',
         'attachments' => 'company_id',
         'conversations' => 'company_id',

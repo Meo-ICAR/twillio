@@ -3,20 +3,22 @@
 namespace App\Providers;
 
 use Anthropic\Client;
+use App\Services\Bpm\ApiTrace;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Crm\CompanyCrmGateway;
 use App\Services\Crm\CrmGateway;
 use App\Services\Crm\CrmRegistry;
 use App\Services\Documents\AnthropicDocumentReader;
 use App\Services\Documents\DocumentReader;
-use App\Services\Documents\NullDocumentReader;
-use App\Services\Flows\FlowRepository;
 use App\Services\Documents\LoggingSharePointUploader;
+use App\Services\Documents\NullDocumentReader;
 use App\Services\Documents\SharePointUploader;
+use App\Services\Flows\FlowRepository;
 use App\Services\Loans\LoanEstimator;
 use App\Services\Loans\MediafacileLoanEstimator;
 use App\Services\Loans\RandomLoanEstimator;
 use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -61,6 +63,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Ogni chiamata API in uscita (Meta, CRM...) viene comunicata a UnicoBPM per il suo trace «Log API».
+        Http::globalMiddleware(ApiTrace::middleware());
     }
 }

@@ -40,6 +40,11 @@ return [
         // Dollari per milione di token del modello in uso (Claude Opus 5.5: 4 in ingresso, 20 in uscita): servono a stimare il costo di ogni lettura.
         'price_input' => env('ANTHROPIC_PRICE_INPUT', 4.0),
         'price_output' => env('ANTHROPIC_PRICE_OUTPUT', 20.0),
+        // Credito residuo stimato: l'API non lo espone. Si indica il saldo (in dollari) letto in console a una data (AAAA-MM-GG) e si toglie
+        // la spesa del cost report, che richiede una chiave amministrativa (sk-ant-admin...). Da riallineare a ogni ricarica.
+        'admin_key' => env('ANTHROPIC_ADMIN_API_KEY'),
+        'credit_balance' => env('ANTHROPIC_CREDIT_BALANCE'),
+        'credit_as_of' => env('ANTHROPIC_CREDIT_AS_OF'),
     ],
 
     'whatsapp' => [
@@ -51,11 +56,12 @@ return [
         'app_secret' => env('META_APP_SECRET'),
     ],
 
-
     // UnicoBPM: gli eventi (es. pratica.perfezionata) avviano i processi di presa in carico. Senza indirizzo o chiave non si invia nulla.
     'bpm' => [
         'url' => env('BPM_API_URL'),
         'key' => env('BPM_BRIDGE_API_KEY'),
+        // Comunica a UnicoBPM l'esito delle chiamate API (solo metadati) per il suo trace «Log API».
+        'trace' => env('BPM_TRACE_API', true),
     ],
 
 ];

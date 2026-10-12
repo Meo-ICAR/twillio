@@ -6,6 +6,7 @@ use App\Jobs\SendBpmEvent;
 use App\Models\LoanRequest;
 use App\Services\Bpm\BpmEvents;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -40,6 +41,19 @@ class BpmEventsTest extends TestCase
                 && $job->event['subject_ref'] === 'FIN-2026-0300'
                 && $job->event['data']['codice_pratica_crm'] === 'WA-FIN-2026-0300' && $job->event['data']['prodotto'] === 'personale';
         });
+    }
+
+    public function test_the_event_carries_the_total_ai_usage_of_the_documents(): void
+    {
+        $loan = $this->loan();
+        $loan->attachments()->create(['kind' => 'documento', 'path' => 'a', 'mime' => 'image/jpeg', 'received_at' => now(), 'ai_model' => 'claude-opus-5-5', 'ai_input_tokens' => 1000, 'ai_output_tokens' => 200, 'ai_cost' => 0.008]);
+        $loan->attachments()->create(['kind' => 'documento', 'path' => 'b', 'mime' => 'image/jpeg', 'received_at' => now(), 'ai_model' => 'claude-opus-5-5', 'ai_input_tokens' => 500, 'ai_output_tokens' => 100, 'ai_cost' => 0.004]);
+        $loan->attachments()->create(['kind' => 'documento', 'path' => 'c', 'mime' => 'image/jpeg', 'received_at' => now()]);
+
+        $this->assertSame(
+            ['model' => 'claude-opus-5-5', 'input_tokens' => 1500, 'output_tokens' => 300, 'cost' => 0.012, 'readings' => 2],
+            BpmEvents::perfected($loan)['data']['ai_usage'],
+        );
     }
 
     public function test_nothing_is_sent_without_configuration_or_for_test_practices(): void
@@ -77,7 +91,7 @@ class BpmEventsTest extends TestCase
             $this->assertStringContainsString('503', $e->getMessage());
         }
 
-        Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('timeout'));
+        Http::fake(fn () => throw new ConnectionException('timeout'));
         $this->expectException(\RuntimeException::class);
         $job->handle();
     }

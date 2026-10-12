@@ -7,9 +7,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Anagrafica agenti / collaboratori (Fornitori).
  *
- * In produzione la tabella esiste già (creata a mano, con chiavi esterne verso `companies` con id UUID e
- * `fornitoriroles` che in questo database non ci sono): la migrazione non fa nulla se la trova.
- * Serve a creare la stessa struttura, senza chiavi esterne, in sviluppo e nei test.
+ * Schema allineato a unico-core (id bigint). In produzione il modello usa la connessione `core`
+ * (unico_core_test); questa migrazione serve ai test e agli ambienti senza la tabella già presente.
  */
 return new class extends Migration
 {
@@ -20,7 +19,7 @@ return new class extends Migration
         }
 
         Schema::create('fornitoris', function (Blueprint $table) {
-            $table->char('id', 36)->primary();
+            $table->id();
             $table->string('name')->nullable();
             $table->string('nome')->nullable()->comment('Nome del referente');
             $table->date('stipulated_at')->nullable();
@@ -78,7 +77,7 @@ return new class extends Migration
             $table->timestamp('deleted_at')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
-            $table->char('company_id', 36)->nullable()->default('5c044917-15b3-4471-90c9-38061fcca754')->index();
+            $table->unsignedBigInteger('company_id')->nullable()->index();
             $table->smallInteger('contributoperiodicita')->nullable();
             $table->date('contributodalmese')->nullable();
             $table->integer('fornitorirole_id')->nullable()->index();

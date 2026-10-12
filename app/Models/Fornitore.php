@@ -5,49 +5,24 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToCompany;
 use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Unico\Core\Models\Fornitore as CoreFornitore;
 
 /**
- * Anagrafica degli agenti / collaboratori (tabella `fornitoris`).
- *
- * `company_id` (UUID) e `fornitorirole_id` puntano a tabelle dell'anagrafica madre che qui non ci sono:
- * non si definisce quindi la relazione con {@see Company}, che è il Titolare del trattamento (id numerico).
+ * Anagrafica degli agenti / collaboratori (tabella `fornitoris` su unico-core).
  */
-class Fornitore extends Model
+class Fornitore extends CoreFornitore
 {
-    use BelongsToCompany, HasUuids, SoftDeletes;
-
-    protected $table = 'fornitoris';
+    use BelongsToCompany;
 
     protected $guarded = [];
 
     protected function casts(): array
     {
-        return [
-            'stipulated_at' => 'date',
-            'oam_at' => 'date',
-            'oam_dismissed_at' => 'date',
-            'ivass_at' => 'date',
-            'dismissed_at' => 'date',
-            'available_at' => 'date',
-            'natoil' => 'date',
-            'contributodalmese' => 'date',
-            'is_active' => 'boolean',
-            'is_art108' => 'boolean',
-            'iscollaboratore' => 'boolean',
-            'isdipendente' => 'boolean',
+        return array_merge(parent::casts(), [
             'issubfornitore' => 'boolean',
-            'welcome_bonus' => 'decimal:2',
-            'budget' => 'decimal:2',
-            'anticipo' => 'decimal:2',
-            'anticipo_residuo' => 'decimal:2',
-            'contributo' => 'decimal:2',
-            'employee_roles' => 'array',
-        ];
+        ]);
     }
 
     /**
@@ -78,6 +53,11 @@ class Fornitore extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, static::companyColumn());
+    }
+
     /** Agenti attualmente convenzionati (esclude cessati e cancellati). */
     public function scopeActive(Builder $query): Builder
     {
@@ -100,11 +80,6 @@ class Fornitore extends Model
 
         return static::active()->whereNotNull('tel')->get()
             ->first(fn (self $f) => self::nationalNumber($f->tel) === $wanted);
-    }
-
-    public static function companyColumn(): string
-    {
-        return 'tenant_company_id';
     }
 
     public const OCCASIONAL_TYPE = 'Segnalatore occasionale';

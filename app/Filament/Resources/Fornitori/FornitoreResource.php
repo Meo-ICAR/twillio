@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Fornitori;
 
 use App\Filament\Resources\Fornitori\Pages\EditFornitore;
 use App\Filament\Resources\Fornitori\Pages\ListFornitori;
+use App\Filament\Resources\Fornitori\Pages\ViewFornitore;
 
 use App\Models\Fornitore;
 use BackedEnum;
@@ -57,6 +58,8 @@ class FornitoreResource extends Resource
             Section::make('Dati anagrafici')->columnSpanFull()->columns(4)->schema([
          
                 TextInput::make('name')->label('Denominazione')->maxLength(255),
+                TextInput::make('nome')->label('Referente')->maxLength(255),
+                TextInput::make('cf')->label('Codice fiscale')->maxLength(16),
                  TextInput::make('tel')->label('Cellulare')->tel()->maxLength(255)
                     ->helperText('Serve a riconoscere chi scrive su WhatsApp: con il prefisso (+39) o senza, ma solo cifre.'),
                 TextInput::make('email')->label('Email')->email()->maxLength(255),
@@ -76,6 +79,7 @@ class FornitoreResource extends Resource
         return $schema->components([
             Section::make('Produttore')->columnSpanFull()->columns(4)->schema([
                 TextEntry::make('name')->label('Denominazione')->placeholder('-'),
+                TextEntry::make('nome')->label('Referente')->placeholder('-'),
                TextEntry::make('tel')->label('Cellulare')->placeholder('-'),
                 TextEntry::make('email')->label('Email')->placeholder('-'),
               
@@ -109,7 +113,7 @@ class FornitoreResource extends Resource
     {
         return [
             'index' => ListFornitori::route('/'),
-     
+            'view' => ViewFornitore::route('/{record}'),
             'edit' => EditFornitore::route('/{record}/edit'),
         ];
     }

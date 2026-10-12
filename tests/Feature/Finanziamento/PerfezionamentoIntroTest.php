@@ -33,7 +33,7 @@ class PerfezionamentoIntroTest extends ConversationTestCase
     {
         $prima = Company::create(['name' => 'Prima Spa']);
         $seconda = Company::create(['name' => 'Seconda Srl', 'address' => 'Via Verdi 2, Torino']);
-        Fornitore::create(['name' => 'Mario Rossi', 'tel' => $this->agent, 'is_active' => true, 'tenant_company_id' => $seconda->id]);
+        Fornitore::create(['name' => 'Mario Rossi', 'tel' => $this->agent, 'is_active' => true, 'company_id' => $seconda->id]);
         $this->loan();
 
         $body = $this->bodies($this->say('#menu_perfeziona', 'FIN-2026-0007', '#si'));

@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Schema;
 class QuoteCatalogSeeder extends Seeder
 {
     private const LEAD = [
-            'Pubblico' => 'Pubblico', 'Privato Altra forma' => 'Privato altra forma', 'Privato SPA' => 'Privato',
-            'Privato Small Business' => 'Privato small business', 'Pensionato INPS' => 'Pensionato INPS',
-            'Pensionato INPDAP' => 'Pensionato altri enti', 'Pensionato altri enti' => 'Pensionato altri enti',
-        ];
+        'Pubblico' => 'Pubblico', 'Privato Altra forma' => 'Privato altra forma', 'Privato SPA' => 'Privato',
+        'Privato Small Business' => 'Privato small business', 'Pensionato INPS' => 'Pensionato INPS',
+        'Pensionato INPDAP' => 'Pensionato altri enti', 'Pensionato altri enti' => 'Pensionato altri enti',
+    ];
 
     public function run(): void
     {

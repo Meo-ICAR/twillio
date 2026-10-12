@@ -8,6 +8,7 @@ use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Services\Crm\CrmGateway;
 use Database\Seeders\DocumentCatalogSeeder;
+use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Facades\Queue;
 
 class ArchiviazioneDopoPerfezionamentoTest extends ConversationTestCase
@@ -64,7 +65,7 @@ class ArchiviazioneDopoPerfezionamentoTest extends ConversationTestCase
     {
         $loan = $this->atSummary();
         $this->gateway(200);
-        $this->mock(\Illuminate\Contracts\Bus\Dispatcher::class, fn ($mock) => $mock->shouldReceive('dispatch')->andThrow(new \RuntimeException('coda giù'))->getMock()->shouldIgnoreMissing());
+        $this->mock(Dispatcher::class, fn ($mock) => $mock->shouldReceive('dispatch')->andThrow(new \RuntimeException('coda giù'))->getMock()->shouldIgnoreMissing());
 
         $body = $this->bodies($this->say('#conferma'));
 

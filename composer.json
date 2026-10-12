@@ -11,6 +11,7 @@
         "filament/filament": "^5.10",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
+        "meo-icar/unico-core": "dev-main",
         "twilio/sdk": "^8.12"
     },
     "require-dev": {
@@ -86,5 +87,19 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../unico-core",
+            "options": {
+                "symlink": true
+            }
+        },
+        {
+            "name": "unico-core",
+            "type": "vcs",
+            "url": "https://github.com/Meo-ICAR/unico-core"
+        }
+    ]
 }
