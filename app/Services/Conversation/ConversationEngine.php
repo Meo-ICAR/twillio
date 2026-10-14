@@ -21,6 +21,7 @@ use App\Services\Crm\QuoteEmailSender;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Flows\FlowValidator;
+use App\Services\Loans\EnergyQuoteEstimator;
 use App\Services\Loans\LoanEstimator;
 use App\Services\Loans\QuoteUnavailable;
 use App\Services\Whatsapp\WhatsAppClient;
@@ -52,6 +53,7 @@ class ConversationEngine
         private FlowRepository $flows,
         private CheckRegistry $checks,
         private LoanEstimator $estimator,
+        private EnergyQuoteEstimator $energy,
         private CrmGateway $crm,
         private LoanEmailSender $mailer,
         private QuoteEmailSender $quoteMailer,
@@ -1006,6 +1008,10 @@ class ConversationEngine
         $company = Company::forWhatsApp($waNumber);
 
         if (Fornitore::isProducer($waNumber)) {
+            if ($company?->type === 'ENERGY') {
+                return $this->energyText($loan, $company);
+            }
+
             // Senza preventivatore (CRM) i dati vanno per email all'istruttoria, che risponderà.
             if (! $company?->hasQuoteCrm()) {
                 return $this->forwardQuote($loan);
@@ -1030,6 +1036,26 @@ class ConversationEngine
 
         return "Per conoscere l'importo ottenibile e proseguire, contatta telefonicamente il customer care".($company?->name ? " di {$company->name}" : '')
             .($contacts ? ":\n".implode("\n", $contacts) : '.');
+    }
+
+    /** Offerta consigliata per le società di energia; senza prodotti adatti rimanda al customer care. */
+    private function energyText(LoanRequest $loan, Company $company): string
+    {
+        $quote = $this->energy->quote($loan, $company);
+        if ($quote === null) {
+            $phone = $company->customer_care_phone ? "\n📞 {$company->customer_care_phone}" : '';
+
+            return "Non riesco a calcolare un'offerta con questi dati: contatta il customer care di {$company->name}.{$phone}";
+        }
+
+        $p = $quote['product'];
+        $text = "💡 Offerta consigliata: *{$p->name}*".(($p->params['provider'] ?? null) ? " ({$p->params['provider']})" : '')
+            ."\nCosto stimato: *".number_format($quote['annual_cost'], 2, ',', '.').' €/anno*.';
+        if ($quote['saving'] !== null && $quote['saving'] > 0) {
+            $text .= "\nRisparmio stimato: *".number_format($quote['saving'], 2, ',', '.').' €/anno*.';
+        }
+
+        return $text."\n_Stima indicativa sui consumi dichiarati._";
     }
 
     private function completePerfezionamento(Conversation $conv): array
