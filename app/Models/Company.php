@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Company extends Model
 {
     /** Settori in cui opera il servizio. */
-    public const TYPES = ['FINANCE' => 'Finance', 'CALL CENTER' => 'Call center', 'HOTEL' => 'Hotel'];
+    public const TYPES = ['FINANCE' => 'Finance', 'CALL CENTER' => 'Call center', 'HOTEL' => 'Hotel', 'ENERGY' => 'Energia'];
 
     protected $guarded = [];
 

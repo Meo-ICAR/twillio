@@ -10,11 +10,15 @@ use App\Models\Product;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -42,6 +46,11 @@ class ProductResource extends Resource
         return $schema->components([
             Select::make('type')->label('Settore')->options(Company::TYPES)->required(),
             TextInput::make('name')->label('Nome')->required()->maxLength(255),
+            TextInput::make('code')->label('Codice')->maxLength(40),
+            Textarea::make('description')->label('Descrizione'),
+            Toggle::make('is_active')->label('Attivo')->default(true),
+            KeyValue::make('params')->label('Parametri (fornitura, prezzo, quota fissa, durata, bonus…)')
+                ->helperText('Energia: fornitura (luce/gas), price (€/kWh o €/Smc), fixed_monthly, bonus, duration_months, provider.'),
         ]);
     }
 
@@ -52,6 +61,8 @@ class ProductResource extends Resource
             ->columns([
                 TextColumn::make('type')->label('Settore')->badge()->formatStateUsing(fn (string $state) => Company::TYPES[$state] ?? $state)->sortable(),
                 TextColumn::make('name')->label('Nome')->searchable(),
+                TextColumn::make('code')->label('Codice')->toggleable(),
+                IconColumn::make('is_active')->label('Attivo')->boolean(),
                 TextColumn::make('companies_count')->label('Aziende')->counts('companies'),
             ])
             ->filters([SelectFilter::make('type')->label('Settore')->options(Company::TYPES)])
