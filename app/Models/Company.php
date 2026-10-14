@@ -78,7 +78,9 @@ class Company extends Model
 
     public static function forWhatsApp(?string $waNumber): ?self
     {
-        $company = filled($waNumber) ? Fornitore::findByWhatsApp($waNumber)?->company : null;
+        $id = filled($waNumber) ? Fornitore::findByWhatsApp($waNumber)?->company_id : null;
+        // Il company_id dell'agente è un id locale: la relazione `company()` leggerebbe `companies` dalla connessione core.
+        $company = $id ? static::find($id) : null;
 
         return $company ?? static::current();
     }
