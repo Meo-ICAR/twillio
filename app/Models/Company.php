@@ -20,9 +20,23 @@ class Company extends Model
             'preventivatore_passkey' => 'encrypted',
             'istruttoria_passkey' => 'encrypted',
             'crm_config' => 'encrypted:array',
+            'menu' => 'array',
             'trialend_at' => 'date',
             'trial_activated_at' => 'date',
             'activated_at' => 'date',
+        ];
+    }
+
+    /** @return array{body: string, body_named: string, options: array<string,string>} */
+    public function menuConfig(): array
+    {
+        $default = config('finanziamento.menu');
+        $own = $this->menu ?? [];
+
+        return [
+            'body' => $own['body'] ?? $default['body'],
+            'body_named' => $own['body_named'] ?? $default['body_named'],
+            'options' => ! empty($own['options']) ? $own['options'] : $default['options'],
         ];
     }
 

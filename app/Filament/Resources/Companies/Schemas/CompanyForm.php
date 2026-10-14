@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Services\Crm\CrmRegistry;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -114,6 +115,9 @@ class CompanyForm
                     TextInput::make('whatsapp_number')->label('Cellulare WhatsApp')->tel()->maxLength(30)
                         ->helperText('Il numero WhatsApp Business dell\'azienda.'),
                     FileUpload::make('logo')->label('Logo')->image()->disk('public')->directory('company-logos')->visibility('public'),
+                    KeyValue::make('menu.options')->label('Voci del menu WhatsApp (id → titolo)')->columnSpanFull()
+                        ->keyLabel('Id')->valueLabel('Titolo (max 24 caratteri)')
+                        ->helperText('Vuoto = menu predefinito. Id validi: menu_richiedi, menu_modifica, menu_perfeziona, menu_stato.'),
                 ]),
         ]);
     }

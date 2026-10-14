@@ -188,7 +188,8 @@ class ConversationEngine
     /** Il menu; chi ha il numero associato a un utente vede anche le voci di prova dei percorsi che hanno una copia. */
     private function menu(?string $waNumber = null): Reply
     {
-        $options = config('finanziamento.menu.options');
+        $config = Company::forWhatsApp($waNumber)?->menuConfig() ?? config('finanziamento.menu');
+        $options = $config['options'];
 
         if ($waNumber !== null && User::hasTesterNumber($waNumber)) {
             $hasCopy = $this->flows->testFlowCodes();
@@ -201,14 +202,17 @@ class ConversationEngine
 
         // Un produttore riconosciuto dal numero è salutato per nome.
         $name = $waNumber !== null ? trim((string) (Fornitore::findByWhatsApp($waNumber)?->nome ?: Fornitore::findByWhatsApp($waNumber)?->display_name)) : '';
-        $body = $name !== '' ? str_replace('{nome}', $name, config('finanziamento.menu.body_named')) : config('finanziamento.menu.body');
+        $body = $name !== '' ? str_replace('{nome}', $name, $config['body_named']) : $config['body'];
 
         return Reply::choice($body, $options);
     }
 
     private function fromMenu(IncomingMessage $m): array
     {
-        $choice = $m->replyId ?? match ($this->normalize((string) $m->text)) {
+        // I titoli del menu della company valgono come scelte scritte a mano.
+        $byTitle = collect(Company::forWhatsApp($m->from)?->menuConfig()['options'] ?? [])
+            ->mapWithKeys(fn ($title, $id) => [$this->normalize((string) $title) => $id])->all();
+        $choice = $m->replyId ?? $byTitle[$this->normalize((string) $m->text)] ?? match ($this->normalize((string) $m->text)) {
             '1', 'richiedi', 'richiedi finanziamento' => 'menu_richiedi',
             '2', 'modifica', 'modifica preventivo' => 'menu_modifica',
             '3', 'perfeziona', 'perfeziona finanziamento' => 'menu_perfeziona',
