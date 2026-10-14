@@ -626,6 +626,8 @@ class ConversationEngine
         $condition = $def['skip_if'] ?? null;
 
         return match (true) {
+            // La fornitura della pratica (luce/gas) non è quella indicata: la domanda non serve.
+            is_string($condition) && str_starts_with($condition, 'product_not:') => $conv->loanRequest?->product !== substr($condition, 12),
             $condition === 'privacy_received' => (bool) $conv->loanRequest?->hasInformativa(),
             is_string($condition) && str_starts_with($condition, 'filled:') => filled($data[substr($condition, 7)] ?? null),
             // Documento già inviato (e non respinto): non si richiede.

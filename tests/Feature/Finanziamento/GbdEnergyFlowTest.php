@@ -114,7 +114,41 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
         $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
 
-        $this->assertSame('pod_pdr', $this->node());
+        $this->assertSame('pod', $this->node());
+    }
+
+    private function toSupplyPoint(string $fornitura): string
+    {
+        $this->say('ciao', '#menu_richiedi', '#'.$fornitura, '1000', '300', '#conferma');
+        $code = LoanRequest::latest('id')->value('code');
+        $this->say('ciao', '#menu_perfeziona');
+        $this->say($code, '#si', '#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
+
+        return $code;
+    }
+
+    public function test_per_la_luce_chiede_solo_il_pod(): void
+    {
+        $this->toSupplyPoint('luce');
+        $this->assertSame('pod', $this->node());
+
+        $text = $this->bodies($this->say('12345678901234'));
+        $this->assertStringContainsString('POD non valido', $text);
+
+        $this->say('IT001E12345678');
+        $this->assertSame('fornitore_attuale', $this->node());
+    }
+
+    public function test_per_il_gas_chiede_solo_il_pdr(): void
+    {
+        $this->toSupplyPoint('gas');
+        $this->assertSame('pdr', $this->node());
+
+        $text = $this->bodies($this->say('IT001E12345678'));
+        $this->assertStringContainsString('PDR non valido', $text);
+
+        $this->say('12345678901234');
+        $this->assertSame('fornitore_attuale', $this->node());
     }
 
     public function test_il_perfezionamento_di_un_azienda_chiede_ragione_sociale_e_partita_iva(): void
