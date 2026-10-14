@@ -38,6 +38,7 @@ class LoanRequestsTable
                 TextColumn::make('created_at')->label('Creata')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                \App\Support\CurrentCompany::filter(),
                 SelectFilter::make('status')->label('Stato')->options(LoanRequest::STATUSES),
                 TernaryFilter::make('is_test')->label('Origine')->trueLabel('Prova')->falseLabel('Reali'),
                 SelectFilter::make('product')->label('Prodotto')->options(fn () => LoanRequest::productLabels()),

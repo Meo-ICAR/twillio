@@ -105,7 +105,7 @@ class FornitoreResource extends Resource
        
                 IconColumn::make('is_active')->label('Attivo')->boolean()->sortable(),
             ])
-            ->filters([TernaryFilter::make('is_active')->label('Attivo')])
+            ->filters([\App\Support\CurrentCompany::filter(), TernaryFilter::make('is_active')->label('Attivo')])
             ->recordActions([ViewAction::make(), EditAction::make()]);
     }
 

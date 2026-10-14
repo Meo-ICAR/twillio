@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Flows\Tables;
 
 use App\Models\Flow;
 use App\Services\Flows\FlowCloner;
+use App\Support\CurrentCompany;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
@@ -28,7 +29,10 @@ class FlowsTable
                 IconColumn::make('is_active')->label('Attivo')->boolean(),
                 TextColumn::make('code')->label('Codice')->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([TernaryFilter::make('is_test')->label('Versione')->trueLabel('Prova')->falseLabel('Produzione')])
+            ->filters([
+                CurrentCompany::filter(),
+                TernaryFilter::make('is_test')->label('Versione')->trueLabel('Prova')->falseLabel('Produzione'),
+            ])
             ->recordActions([
                 EditAction::make(),
                 Action::make('creaCopiaProva')->label('Crea copia di prova')->icon('heroicon-o-beaker')->color('warning')

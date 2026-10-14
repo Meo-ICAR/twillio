@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/api/whatsapp/webhook', [WhatsAppController::class, 'verifyWebhook']);
 Route::post('/api/whatsapp/webhook', [WhatsAppController::class, 'handleWebhook']);
 
+Route::post('/admin/company-switch', \App\Http\Controllers\CompanySwitchController::class)->middleware('web')->name('company.switch');
+
 Route::get('/', function () {
     return view('welcome');
 });

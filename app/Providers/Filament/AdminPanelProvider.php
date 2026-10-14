@@ -30,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->renderHook(\Filament\View\PanelsRenderHook::USER_MENU_BEFORE, fn () => view('filament.company-switcher'))
             ->brandLogo(asset('unicoagent_banner.png'))
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('unicoagent_logo.png'))

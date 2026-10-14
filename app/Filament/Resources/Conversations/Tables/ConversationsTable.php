@@ -27,6 +27,7 @@ class ConversationsTable
                 TextColumn::make('updated_at')->label('Ultimo messaggio')->dateTime()->sortable(),
             ])
             ->filters([
+                \App\Support\CurrentCompany::filter(),
                 SelectFilter::make('status')->label('Stato')->options(self::STATUSES),
                 SelectFilter::make('flow')->label('Percorso')->options(self::FLOWS),
             ])
