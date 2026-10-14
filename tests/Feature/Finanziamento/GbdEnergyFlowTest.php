@@ -58,17 +58,113 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertNotContains('Modifica Preventivo', $options);
     }
 
-    public function test_il_perfezionamento_chiude_con_la_mail_all_istruttoria(): void
+    private function startPerfection(): string
     {
         $this->say('ciao', '#menu_richiedi', '#luce', '3000', '600', '#conferma');
         $code = LoanRequest::latest('id')->value('code');
-
         $this->say('ciao', '#menu_perfeziona');
         $this->say($code, '#si');
-        $this->say('RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', 'Via Verdi 2, 00100 Roma', 'IT001E12345678', 'Enel', '3331234567', 'mario@example.com', '#si');
+
+        return $code;
+    }
+
+    private function node(): ?string
+    {
+        return \App\Models\Conversation::where('status', 'attiva')->latest('id')->value('node');
+    }
+
+    private function cfBorn(\Illuminate\Support\Carbon $date): string
+    {
+        return 'RSSMRA'.$date->format('y').'ABCDEHLMPRST'[$date->month - 1].$date->format('d').'H501U';
+    }
+
+    public function test_dopo_la_conferma_della_pratica_chiede_se_privato_o_azienda(): void
+    {
+        $this->startPerfection();
+
+        $this->assertSame('tipo_cliente', $this->node());
+    }
+
+    public function test_il_perfezionamento_di_un_privato_chiude_con_la_mail_all_istruttoria(): void
+    {
+        $code = $this->startPerfection();
+
+        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel', '3331234567', 'mario@example.com', '#si');
         $replies = $this->say('#conferma');
 
         $this->assertSame('perfezionata', LoanRequest::where('code', $code)->value('status'), $this->bodies($replies));
         Mail::assertSent(LoanSubmissionMail::class, fn ($mail) => $mail->hasTo('contratti@gbdenergy.example'));
+    }
+
+    public function test_se_l_indirizzo_di_fornitura_e_diverso_lo_chiede(): void
+    {
+        $code = $this->startPerfection();
+
+        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#no');
+        $this->assertSame('indirizzo_fornitura', $this->node());
+        $this->say('Via Verdi 2, 00100 Roma', 'IT001E12345678', 'Enel', '3331234567', 'mario@example.com', '#si');
+        $this->say('#conferma');
+
+        $this->assertSame('Via Verdi 2, 00100 Roma', LoanRequest::where('code', $code)->first()->personal['indirizzo_fornitura']);
+    }
+
+    public function test_se_l_indirizzo_di_fornitura_e_lo_stesso_non_lo_chiede(): void
+    {
+        $code = $this->startPerfection();
+
+        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
+
+        $this->assertSame('pod_pdr', $this->node());
+    }
+
+    public function test_il_perfezionamento_di_un_azienda_chiede_ragione_sociale_e_partita_iva(): void
+    {
+        $code = $this->startPerfection();
+
+        $this->say('#azienda', 'ACME Srl', '12345678903', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel', '3331234567', 'info@acme.example', '#si');
+        $replies = $this->say('#conferma');
+
+        $this->assertSame('perfezionata', LoanRequest::where('code', $code)->value('status'), $this->bodies($replies));
+        $this->assertSame('ACME Srl', LoanRequest::where('code', $code)->first()->personal['ragione_sociale']);
+    }
+
+    public function test_una_partita_iva_non_valida_si_richiede(): void
+    {
+        $this->startPerfection();
+
+        $text = $this->bodies($this->say('#azienda', 'ACME Srl', '12345678904'));
+
+        $this->assertStringContainsString('Partita IVA non valida', $text);
+        $this->assertSame('partita_iva', $this->node());
+    }
+
+    public function test_un_codice_fiscale_non_valido_si_richiede(): void
+    {
+        $this->startPerfection();
+
+        $text = $this->bodies($this->say('#privato', 'ABCDEF'));
+
+        $this->assertStringContainsString('Codice fiscale non valido', $text);
+        $this->assertSame('codice_fiscale', $this->node());
+    }
+
+    public function test_un_minorenne_viene_rifiutato(): void
+    {
+        $this->startPerfection();
+
+        $text = $this->bodies($this->say('#privato', $this->cfBorn(now()->subYears(18)->addDay())));
+
+        $this->assertStringContainsString('minorenne', $text);
+        $this->assertSame('codice_fiscale', $this->node());
+    }
+
+    public function test_cognome_e_nome_non_coerenti_col_codice_fiscale_chiedono_conferma(): void
+    {
+        $this->startPerfection();
+
+        $text = $this->bodies($this->say('#privato', 'RSSMRA80A01H501U', 'Bianchi', 'Luigi'));
+
+        $this->assertStringContainsString('Confermi il codice fiscale', $text);
+        $this->assertSame('conferma_cf', $this->node());
     }
 }

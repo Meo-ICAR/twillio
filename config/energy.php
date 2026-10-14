@@ -31,20 +31,36 @@ return [
             ],
         ],
 
-        // Sottoscrizione: dati del cliente e della fornitura; chiude con la mail all'istruttoria di GBD.
+        // Sottoscrizione: privato o azienda, dati del cliente e della fornitura; chiude con la mail all'istruttoria di GBD.
+        // Per un'azienda il codice fiscale e il nome sono quelli del legale rappresentante che firma.
         'perfezionamento' => [
             'start' => 'codice',
-            'restart' => 'codice_fiscale',
+            'restart' => 'tipo_cliente',
+            'labels' => ['data_nascita' => 'Data di nascita', 'sesso' => 'Sesso'],
             'nodes' => [
                 'codice' => ['type' => 'code', 'prompt' => 'Inserisci il codice della pratica:', 'save' => false, 'next' => 'conferma_pratica'],
-                'conferma_pratica' => $choice('Conferma', 'È la pratica giusta?', $yn, ['si' => 'codice_fiscale', 'no' => 'codice'], ['save' => false, 'prompt_summary' => true]),
-                'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale del cliente:', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'cognome', [
-                    'upper' => true, 'strip_spaces' => true, 'error' => 'Codice fiscale non valido (16 caratteri), riprova.', 'checks' => ['codice_fiscale'],
+                'conferma_pratica' => $choice('Conferma', 'È la pratica giusta?', $yn, ['si' => 'tipo_cliente', 'no' => 'codice'], ['save' => false, 'prompt_summary' => true]),
+                'tipo_cliente' => $choice('Tipo di cliente', 'Il cliente è un privato o un\'azienda?', ['privato' => 'Privato', 'azienda' => 'Azienda'], ['privato' => 'codice_fiscale', 'azienda' => 'ragione_sociale']),
+                'ragione_sociale' => $text('Ragione sociale', 'Ragione sociale dell\'azienda:', ['required', 'string', 'max:120'], 'partita_iva'),
+                'partita_iva' => $text('Partita IVA', 'Partita IVA dell\'azienda (11 cifre):', ['required', 'regex:/^(IT)?\d{11}$/'], 'codice_fiscale', [
+                    'upper' => true, 'strip_spaces' => true, 'error' => 'Partita IVA non valida (11 cifre), riprova.', 'checks' => ['partita_iva'],
                 ]),
-                'cognome' => $text('Cognome', 'Cognome del cliente:', ['required', 'string', 'max:60'], 'nome'),
-                'nome' => $text('Nome', 'Nome del cliente:', ['required', 'string', 'max:60'], 'residenza'),
-                'residenza' => $text('Residenza', 'Indirizzo di residenza (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'indirizzo_fornitura'),
-                'indirizzo_fornitura' => $text('Indirizzo di fornitura', 'Indirizzo di fornitura (se è uguale alla residenza, ripetilo):', ['required', 'string', 'max:160'], 'pod_pdr'),
+                'codice_fiscale' => $text('Codice fiscale', 'Codice fiscale del cliente (per un\'azienda, del legale rappresentante):', ['required', 'regex:/^[A-Z]{6}[0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]$/'], 'cognome', [
+                    'upper' => true, 'strip_spaces' => true, 'error' => 'Codice fiscale non valido (16 caratteri), riprova.',
+                    // Ricava data, sesso e luogo di nascita; poi controlla l'età sulla data ricavata.
+                    'checks' => ['codice_fiscale', ['name' => 'maggiorenne', 'campo' => 'data_nascita', 'anni' => 18, 'messaggio' => 'Dal codice fiscale la persona risulta minorenne: controlla il codice.']],
+                ]),
+                'cognome' => $text('Cognome', 'Cognome (del cliente o del legale rappresentante):', ['required', 'string', 'max:60'], 'nome', ['show_derived' => true]),
+                'nome' => $text('Nome', 'Nome (del cliente o del legale rappresentante):', ['required', 'string', 'max:60'], 'verifica_cf'),
+                'verifica_cf' => [
+                    'type' => 'check', 'check' => 'cf_names', 'prompt' => 'Cognome e nome coerenti con il codice fiscale?', 'save' => false,
+                    'next' => ['ok' => 'luogo_nascita', 'mismatch' => 'conferma_cf'], 'outcomes' => ['ok' => 'Coerenti', 'mismatch' => 'Non coerenti'],
+                ],
+                'conferma_cf' => $choice('Conferma codice fiscale', 'Confermi il codice fiscale inserito?', ['cf_ok' => 'Confermo il codice', 'cf_no' => 'Lo reinserisco'], ['cf_ok' => 'luogo_nascita', 'cf_no' => 'codice_fiscale'], ['save' => false, 'show_difformita' => true, 'reask' => ['cf_no' => 'codice_fiscale']]),
+                'luogo_nascita' => $text('Luogo di nascita', 'Luogo di nascita (non ricavabile dal codice fiscale):', ['required', 'string', 'max:80'], 'residenza', ['skip_if' => 'filled:luogo_nascita']),
+                'residenza' => $text('Residenza o sede', 'Indirizzo di residenza o sede legale (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'fornitura_uguale'),
+                'fornitura_uguale' => $choice('Fornitura nella stessa sede', 'L\'indirizzo di fornitura è lo stesso di residenza o sede?', ['si' => 'Sì, stesso indirizzo', 'no' => 'No, ne indico un altro'], ['si' => 'pod_pdr', 'no' => 'indirizzo_fornitura']),
+                'indirizzo_fornitura' => $text('Indirizzo di fornitura', 'Indirizzo di fornitura (via, numero, CAP, città):', ['required', 'string', 'max:160'], 'pod_pdr'),
                 'pod_pdr' => $text('POD / PDR', 'Codice POD (luce, inizia con IT) o PDR (gas, 14 cifre) dalla bolletta:', ['required', 'string', 'max:20'], 'fornitore_attuale', ['upper' => true, 'strip_spaces' => true]),
                 'fornitore_attuale' => $text('Fornitore attuale', 'Chi è il fornitore attuale?', ['required', 'string', 'max:60'], 'telefono'),
                 'telefono' => $text('Telefono', 'Cellulare del cliente:', ['required', 'regex:/^\+?\d{8,15}$/'], 'email', ['strip_spaces' => true, 'error' => 'Numero non valido, riprova.']),

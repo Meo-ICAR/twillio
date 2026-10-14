@@ -6,6 +6,7 @@ use App\Services\Checks\EstraiDatiCheck;
 use App\Services\Checks\IbanCheck;
 use App\Services\Checks\InformativaFirmataCheck;
 use App\Services\Checks\MaggiorenneCheck;
+use App\Services\Checks\PartitaIvaCheck;
 use App\Services\Checks\TipoDocumentoCheck;
 
 // Alberi delle conversazioni WhatsApp. Solo dati: nessuna closure salvata (compatibile con config:cache).
@@ -43,6 +44,7 @@ return [
     'checks' => [
         'codice_fiscale' => CodiceFiscaleCheck::class,
         'iban' => IbanCheck::class,
+        'partita_iva' => PartitaIvaCheck::class,
         'maggiorenne' => MaggiorenneCheck::class,
         // Controlli sui documenti caricati (non istantanei: girano dopo la risposta al webhook).
         'tipo_documento' => TipoDocumentoCheck::class,
