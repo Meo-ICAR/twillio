@@ -51,7 +51,7 @@ class FlowsTable
 
     private static function hasCopy(Flow $flow): bool
     {
-        return Flow::where('code', $flow->code)->where('is_test', true)->exists();
+        return Flow::where('code', $flow->code)->where('company_id', $flow->company_id)->where('is_test', true)->exists();
     }
 
     private static function run(\Closure $operation, string $done): void

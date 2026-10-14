@@ -13,15 +13,15 @@ use Illuminate\Support\Facades\Mail;
 /** Invia per email all'istruttoria i dati della pratica e i suoi allegati. */
 class LoanEmailSender
 {
-    public function recipient(): ?string
+    public function recipient(?Company $company = null): ?string
     {
-        return Company::current()?->istruttoria_email ?: config('finanziamento.mail.to');
+        return ($company ?? Company::current())?->istruttoria_email ?: config('finanziamento.mail.to');
     }
 
     /** @return bool true se la mail è partita */
     public function send(LoanRequest $loan): bool
     {
-        $to = $this->recipient();
+        $to = $this->recipient(Company::forWhatsApp($loan->agent_wa_number));
         if (! $to) {
             Log::warning('Invio pratica via email: manca la casella dell\'istruttoria', ['loan' => $loan->code]);
 
@@ -54,7 +54,7 @@ class LoanEmailSender
 
         try {
             $mail = Mail::to($producer->email);
-            if ($cc = $this->recipient()) {
+            if ($cc = $this->recipient(Company::forWhatsApp($loan->agent_wa_number))) {
                 $mail->cc($cc);
             }
             $mail->send(new PerfezionamentoMail($loan));

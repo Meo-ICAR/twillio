@@ -2,6 +2,7 @@
 
 namespace App\Services\Flows;
 
+use App\Models\Company;
 use App\Models\Flow;
 use App\Models\FlowNode;
 use Illuminate\Support\Facades\Schema;
@@ -16,10 +17,31 @@ use Illuminate\Support\Facades\Schema;
  */
 class FlowRepository
 {
-    /** @var array<int,array<string,array<string,mixed>>> memoria per variante: 0 = produzione, 1 = prova */
+    /** @var array<int,array<int,array<string,array<string,mixed>>>> memoria per company e variante: 0 = produzione, 1 = prova */
     private array $memo = [];
 
     private bool $test = false;
+
+    private ?int $company = null;
+
+    /** @var array{0: ?int}|null la company più vecchia, letta una volta sola */
+    private ?array $oldest = null;
+
+    public function setCompany(?int $companyId): void
+    {
+        $this->company = $companyId;
+    }
+
+    /** La company di cui si leggono i percorsi: quella impostata, altrimenti la più vecchia (installazione a una sola azienda). */
+    private function effectiveCompany(): ?int
+    {
+        if ($this->company !== null) {
+            return $this->company;
+        }
+        $this->oldest ??= [Schema::hasTable('companies') ? Company::current()?->id : null];
+
+        return $this->oldest[0];
+    }
 
     public function setTest(bool $test): void
     {
@@ -66,12 +88,15 @@ class FlowRepository
     public function forget(): void
     {
         $this->memo = [];
+        $this->oldest = null;
     }
 
     /** @return array<string,array<string,mixed>> */
     private function variant(bool $test): array
     {
-        return $this->memo[(int) $test] ??= $this->load($test);
+        $company = $this->effectiveCompany() ?? 0;
+
+        return $this->memo[$company][(int) $test] ??= $this->load($test);
     }
 
     /** @return array<string,array<string,mixed>> */
@@ -86,8 +111,11 @@ class FlowRepository
         }
 
         $result = [];
+        $company = $this->effectiveCompany();
         $flows = Flow::where('is_test', $test)->where('is_active', true)
-            ->with(['nodes.options', 'nodes.jumps'])->orderBy('id')->get();
+            // I percorsi senza company sono comuni a tutte; quello della company, se c'è, prevale (viene dopo).
+            ->when($company, fn ($q) => $q->where(fn ($q) => $q->where('company_id', $company)->orWhereNull('company_id')))
+            ->with(['nodes.options', 'nodes.jumps'])->orderByRaw('company_id is not null')->orderBy('id')->get();
 
         foreach ($flows as $flow) {
             $def = ['start' => $flow->start, 'restart' => $flow->restart];

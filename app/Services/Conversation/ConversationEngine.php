@@ -81,6 +81,7 @@ class ConversationEngine
 
             $conv->setRelation('loanRequest', $loan->fresh());
             $this->flows->setTest((bool) $conv->is_test);
+            $this->flows->setCompany($this->companyId($loan->agent_wa_number));
             $this->notices = [];
 
             try {
@@ -89,6 +90,7 @@ class ConversationEngine
                 return ($def['type'] ?? null) === 'wait' && ! $this->hasPending($conv) ? $this->advance($conv, $def) : [];
             } finally {
                 $this->flows->setTest(false);
+                $this->flows->setCompany(null);
             }
         });
     }
@@ -101,12 +103,14 @@ class ConversationEngine
 
         // Una conversazione di prova prosegue sempre sulla copia di prova del percorso; le altre sulla produzione.
         $this->flows->setTest((bool) $conv?->is_test);
+        $this->flows->setCompany($this->companyId($m->from));
         $this->notices = [];
 
         try {
             return $this->dispatch($m, $conv);
         } finally {
             $this->flows->setTest(false);
+            $this->flows->setCompany(null);
         }
     }
 
@@ -246,12 +250,21 @@ class ConversationEngine
         return [$this->menu($waNumber), Reply::text("ℹ️ Sintesi dei comandi: {$this->appUrl('/comandi')}")];
     }
 
+    /** La company di chi scrive, ricavata dal numero. */
+    private function companyId(?string $waNumber): ?int
+    {
+        return filled($waNumber) ? Company::forWhatsApp($waNumber)?->id : null;
+    }
+
     private function start(string $from, string $flow): array
     {
-        $def = $this->flows->flow($flow) ?? throw new \LogicException("Percorso {$flow} inesistente o disattivato");
+        $def = $this->flows->flow($flow);
+        if ($def === null) {
+            return [Reply::text('Questo servizio non è ancora attivo per la tua azienda. Contatta il customer care.'), $this->menu($from)];
+        }
         $conv = Conversation::create([
             'wa_number' => $from, 'flow' => $flow, 'data' => [], 'history' => [], 'node' => $def['start'],
-            'is_test' => $this->flows->isTest(),
+            'is_test' => $this->flows->isTest(), 'company_id' => $this->companyId($from),
         ]);
 
         // L'intestazione (facoltativa) si mostra una sola volta, all'inizio del dialogo.
@@ -806,6 +819,7 @@ class ConversationEngine
             'parent_id' => $parent?->id,
             'code' => LoanRequestCode::next($this->flows->isTest(), $sigla),
             'is_test' => $this->flows->isTest(),
+            'company_id' => $this->companyId($conv->wa_number),
             'agent_wa_number' => $conv->wa_number,
             'product' => $data['prodotto'],
             'status' => 'richiesta',
@@ -892,7 +906,7 @@ class ConversationEngine
 
             $conv = Conversation::create([
                 'wa_number' => $from, 'flow' => 'documenti', 'data' => [], 'history' => [], 'node' => 'dettaglio',
-                'is_test' => $this->flows->isTest(), 'loan_request_id' => $loan->id,
+                'is_test' => $this->flows->isTest(), 'loan_request_id' => $loan->id, 'company_id' => $this->companyId($from),
             ]);
             $conv->setRelation('loanRequest', $loan);
 
@@ -903,10 +917,13 @@ class ConversationEngine
             $loan->update(['status' => 'in_attesa_informativa']);
         }
 
-        $def = $this->flows->flow('perfezionamento') ?? throw new \LogicException('Percorso perfezionamento inesistente o disattivato');
+        $def = $this->flows->flow('perfezionamento');
+        if ($def === null) {
+            return [Reply::text('Questo servizio non è ancora attivo per la tua azienda. Contatta il customer care.'), $this->menu($from)];
+        }
         $conv = Conversation::create([
             'wa_number' => $from, 'flow' => 'perfezionamento', 'data' => [], 'history' => [], 'node' => 'conferma_pratica',
-            'is_test' => $this->flows->isTest(), 'loan_request_id' => $loan->id,
+            'is_test' => $this->flows->isTest(), 'loan_request_id' => $loan->id, 'company_id' => $this->companyId($from),
         ]);
         $conv->setRelation('loanRequest', $loan);
         $header = trim((string) ($def['header'] ?? ''));

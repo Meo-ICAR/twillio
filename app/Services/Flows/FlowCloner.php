@@ -23,7 +23,7 @@ class FlowCloner
             throw new \DomainException('La copia di prova si crea partendo da un percorso di produzione.');
         }
 
-        $existing = Flow::where('code', $production->code)->where('is_test', true)->first();
+        $existing = Flow::where('code', $production->code)->where('company_id', $production->company_id)->where('is_test', true)->first();
         if ($existing && ! $replace) {
             throw new \DomainException('Questo percorso ha già una copia di prova.');
         }
@@ -32,6 +32,7 @@ class FlowCloner
             $existing?->delete();
 
             $copy = Flow::create([
+                'company_id' => $production->company_id,
                 'code' => $production->code,
                 'name' => $production->name.' (prova)',
                 'header' => $production->header,
@@ -64,7 +65,7 @@ class FlowCloner
             throw new \DomainException('La copia di prova ha errori e non si può pubblicare: '.implode(' ', $errors));
         }
 
-        $production = Flow::where('code', $test->code)->where('is_test', false)->firstOrFail();
+        $production = Flow::where('code', $test->code)->where('company_id', $test->company_id)->where('is_test', false)->firstOrFail();
 
         DB::transaction(function () use ($test, $production) {
             $production->update(['header' => $test->header, 'start' => $test->start, 'restart' => $test->restart, 'labels' => $test->labels]);

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Company;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Flows\FlowImporter;
 use Illuminate\Database\Seeder;
@@ -13,6 +14,6 @@ class FlowSeeder extends Seeder
     {
         // Prima i controlli disponibili, poi i percorsi che li agganciano.
         app(CheckRegistry::class)->sync();
-        app(FlowImporter::class)->import();
+        app(FlowImporter::class)->import(company: Company::current());
     }
 }

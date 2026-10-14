@@ -2,6 +2,7 @@
 
 namespace App\Services\Flows;
 
+use App\Models\Company;
 use App\Models\Flow;
 use Illuminate\Support\Facades\DB;
 
@@ -21,17 +22,18 @@ class FlowImporter
      * @param  bool  $force  se vero ripristina i percorsi già presenti, perdendo le modifiche fatte a mano
      * @return int percorsi importati
      */
-    public function import(bool $force = false): int
+    public function import(bool $force = false, ?Company $company = null, ?array $flows = null): int
     {
         $imported = 0;
 
-        foreach (config('finanziamento.flows') as $code => $def) {
-            if (! $force && Flow::where('code', $code)->where('is_test', false)->exists()) {
+        foreach ($flows ?? config('finanziamento.flows') as $code => $def) {
+            $scope = fn ($q) => $q->when($company, fn ($q) => $q->where('company_id', $company->id));
+            if (! $force && $scope(Flow::where('code', $code)->where('is_test', false))->exists()) {
                 continue;
             }
 
-            DB::transaction(function () use ($code, $def) {
-                $flow = Flow::updateOrCreate(['code' => $code, 'is_test' => false], [
+            DB::transaction(function () use ($code, $def, $company) {
+                $flow = Flow::updateOrCreate(['code' => $code, 'is_test' => false, 'company_id' => $company?->id], [
                     'name' => self::FLOW_NAMES[$code] ?? $code,
                     'header' => $def['header'] ?? null,
                     'start' => $def['start'],
