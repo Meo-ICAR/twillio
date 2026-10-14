@@ -24,7 +24,7 @@ final class SubmissionPayload
         return [
             'riferimento' => $loan->code,
             'prodotto' => $loan->product,
-            'prodotto_etichetta' => LoanRequest::productLabels()[$loan->product] ?? $loan->product,
+            'prodotto_etichetta' => LoanRequest::productLabels($loan->company_id)[$loan->product] ?? $loan->product,
             'risposte' => $answers,
             'pratica' => [
                 'importo_richiesto' => $band ? (float) $band->high : null,

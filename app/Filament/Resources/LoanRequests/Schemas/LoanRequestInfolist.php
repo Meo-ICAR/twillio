@@ -19,7 +19,7 @@ class LoanRequestInfolist
                 TextEntry::make('code')->label('Codice'),
                 TextEntry::make('agent_wa_number')->label('Agente (WhatsApp)'),
                 TextEntry::make('product')->label('Prodotto')
-                    ->formatStateUsing(fn (string $state) => LoanRequest::productLabels()[$state] ?? $state),
+                    ->formatStateUsing(fn (string $state, LoanRequest $record) => LoanRequest::productLabels($record->company_id)[$state] ?? $state),
                 TextEntry::make('status')->label('Stato')->badge()
                     ->formatStateUsing(fn (string $state) => LoanRequest::STATUSES[$state] ?? $state),
                 TextEntry::make('privacy_received_at')->label('Informativa ricevuta il')->dateTime()->placeholder('-'),
@@ -36,7 +36,7 @@ class LoanRequestInfolist
             ]),
             Section::make('Risposte della richiesta')->schema([
                 KeyValueEntry::make('answers')->hiddenLabel()->keyLabel('Domanda')->valueLabel('Risposta')
-                    ->state(fn (LoanRequest $record) => LoanRequest::describe($record->answers, 'richiesta')),
+                    ->state(fn (LoanRequest $record) => LoanRequest::describe($record->answers, 'richiesta', $record->company_id)),
             ]),
             Section::make('Dati difformi da verificare')
                 ->description('Segnalati dal bot e confermati dall\'agente: da controllare in istruttoria.')
@@ -50,7 +50,7 @@ class LoanRequestInfolist
     ->columnSpanFull()
     ->columns(6)
     ->schema(function (LoanRequest $record) {
-        $data = LoanRequest::describe($record->personal, 'perfezionamento') ?? [];
+        $data = LoanRequest::describe($record->personal, 'perfezionamento', $record->company_id) ?? [];
 
         return collect($data)->map(function ($value, $key) {
             return TextEntry::make("personal_{$key}")

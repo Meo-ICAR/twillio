@@ -960,7 +960,7 @@ class ConversationEngine
         $def = $this->flows->flow('richiesta');
         $data = $this->cleanAnswers($loan->answers ?? []) + ['_modify' => ['loan' => $loan->id]];
 
-        $conv ??= new Conversation(['wa_number' => $from, 'flow' => 'richiesta', 'is_test' => $this->flows->isTest()]);
+        $conv ??= new Conversation(['wa_number' => $from, 'flow' => 'richiesta', 'is_test' => $this->flows->isTest(), 'company_id' => $this->companyId($from)]);
         $conv->fill(['data' => $data, 'history' => [], 'status' => 'attiva']);
         $node = $this->settle($conv, $def['start'], $data);
 

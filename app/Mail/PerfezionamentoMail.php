@@ -14,7 +14,7 @@ class PerfezionamentoMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $product = LoanRequest::productLabels()[$this->loan->product] ?? $this->loan->product;
+        $product = LoanRequest::productLabels($this->loan->company_id)[$this->loan->product] ?? $this->loan->product;
 
         return new Envelope(subject: "Pratica {$this->loan->code} perfezionata · {$product}".($this->loan->is_test ? ' (PROVA)' : ''));
     }
@@ -22,7 +22,7 @@ class PerfezionamentoMail extends Mailable
     public function content(): Content
     {
         $lines = ["La pratica {$this->loan->code} è stata perfezionata e inviata in istruttoria.", ''];
-        foreach (LoanRequest::describe($this->loan->answers, 'richiesta') as $label => $value) {
+        foreach (LoanRequest::describe($this->loan->answers, 'richiesta', $this->loan->company_id) as $label => $value) {
             $lines[] = "- {$label}: {$value}";
         }
 

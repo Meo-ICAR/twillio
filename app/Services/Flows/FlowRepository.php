@@ -32,6 +32,19 @@ class FlowRepository
         $this->company = $companyId;
     }
 
+    /** Esegue $read leggendo i percorsi di una company (per codice che non gira nel dialogo, come mail e pannello). */
+    public function withCompany(?int $companyId, \Closure $read): mixed
+    {
+        $previous = $this->company;
+        $this->company = $companyId;
+
+        try {
+            return $read($this);
+        } finally {
+            $this->company = $previous;
+        }
+    }
+
     /** La company di cui si leggono i percorsi: quella impostata, altrimenti la più vecchia (installazione a una sola azienda). */
     private function effectiveCompany(): ?int
     {

@@ -52,7 +52,7 @@ final class LeadParameters
 
         return implode(' · ', array_filter([
             "Pratica {$loan->code}",
-            LoanRequest::productLabels()[$loan->product] ?? $loan->product,
+            LoanRequest::productLabels($loan->company_id)[$loan->product] ?? $loan->product,
             preg_match('/^m(\d+)$/', (string) ($answers['durata'] ?? ''), $m) ? "{$m[1]} mesi" : null,
             $band?->label ? "importo {$band->label}" : null,
             $producer ? "produttore {$producer}" : null,

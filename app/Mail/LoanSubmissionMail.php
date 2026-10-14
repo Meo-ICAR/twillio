@@ -17,7 +17,7 @@ class LoanSubmissionMail extends Mailable
 
     public function envelope(): Envelope
     {
-        $product = LoanRequest::productLabels()[$this->loan->product] ?? $this->loan->product;
+        $product = LoanRequest::productLabels($this->loan->company_id)[$this->loan->product] ?? $this->loan->product;
 
         return new Envelope(subject: "Pratica {$this->loan->code} · {$product}".($this->loan->is_test ? ' (PROVA)' : ''));
     }
@@ -43,8 +43,8 @@ class LoanSubmissionMail extends Mailable
         $lines = ["Pratica {$loan->code}", 'Stato: '.(LoanRequest::STATUSES[$loan->status] ?? $loan->status), 'Agente (WhatsApp): '.$loan->agent_wa_number, ''];
 
         $sections = [
-            'Richiesta' => LoanRequest::describe($loan->answers, 'richiesta'),
-            'Dati del cliente' => LoanRequest::describe($loan->personal, 'perfezionamento'),
+            'Richiesta' => LoanRequest::describe($loan->answers, 'richiesta', $loan->company_id),
+            'Dati del cliente' => LoanRequest::describe($loan->personal, 'perfezionamento', $loan->company_id),
         ];
         foreach ($sections as $title => $values) {
             if ($values) {

@@ -162,9 +162,9 @@ class LoanRequest extends Model
     }
 
     /** @return array<string,string> id prodotto => nome */
-    public static function productLabels(): array
+    public static function productLabels(?int $companyId = null): array
     {
-        return app(FlowRepository::class)->node('richiesta', 'prodotto')['options'];
+        return app(FlowRepository::class)->withCompany($companyId, fn (FlowRepository $flows) => $flows->node('richiesta', 'prodotto')['options'] ?? []);
     }
 
     /**
@@ -172,10 +172,10 @@ class LoanRequest extends Model
      *
      * @return array<string,string>
      */
-    public static function describe(?array $values, string $flow): array
+    public static function describe(?array $values, string $flow, ?int $companyId = null): array
     {
         $readable = [];
-        $def = app(FlowRepository::class)->flow($flow) ?? [];
+        $def = app(FlowRepository::class)->withCompany($companyId, fn (FlowRepository $flows) => $flows->flow($flow)) ?? [];
         foreach ($values ?? [] as $key => $value) {
             if (str_starts_with((string) $key, '_') || ! is_scalar($value)) {
                 continue;

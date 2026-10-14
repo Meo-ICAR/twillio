@@ -31,7 +31,7 @@ class BpmEvents
             'occurred_at' => ($loan->perfected_at ?? now())->toIso8601String(),
             'data' => [
                 'prodotto' => $loan->product,
-                'prodotto_etichetta' => LoanRequest::productLabels()[$loan->product] ?? $loan->product,
+                'prodotto_etichetta' => LoanRequest::productLabels($loan->company_id)[$loan->product] ?? $loan->product,
                 'codice_pratica_crm' => $loan->crm_lead_id,
                 'agente' => ['nome' => $agent?->name, 'partita_iva' => $agent?->piva],
                 'ai_usage' => self::aiUsage($loan),

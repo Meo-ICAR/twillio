@@ -27,7 +27,7 @@ class LoanRequestsTable
                     ->formatStateUsing(fn (bool $state) => $state ? 'Prova' : 'Reale'),
                 TextColumn::make('agent_wa_number')->label('Agente')->searchable(),
                 TextColumn::make('product')->label('Prodotto')
-                    ->formatStateUsing(fn (string $state) => LoanRequest::productLabels()[$state] ?? $state),
+                    ->formatStateUsing(fn (string $state, LoanRequest $record) => LoanRequest::productLabels($record->company_id)[$state] ?? $state),
                 TextColumn::make('status')->label('Stato')->badge()
                     ->formatStateUsing(fn (string $state) => LoanRequest::STATUSES[$state] ?? $state),
                 TextColumn::make('privacy_received_at')->label('Informativa')->dateTime()->sortable()->placeholder('-'),
@@ -41,7 +41,7 @@ class LoanRequestsTable
                 \App\Support\CurrentCompany::filter(),
                 SelectFilter::make('status')->label('Stato')->options(LoanRequest::STATUSES),
                 TernaryFilter::make('is_test')->label('Origine')->trueLabel('Prova')->falseLabel('Reali'),
-                SelectFilter::make('product')->label('Prodotto')->options(fn () => LoanRequest::productLabels()),
+                SelectFilter::make('product')->label('Prodotto')->options(fn () => LoanRequest::productLabels(\App\Support\CurrentCompany::id())),
             ])
             ->recordActions([ViewAction::make(), EditAction::make()])
             ->toolbarActions([

@@ -19,7 +19,7 @@ class EnergyQuoteEstimator
         }
 
         $best = $company->products()->active()->where('products.type', 'ENERGY')->get()
-            ->filter(fn (Product $p) => ($p->params['fornitura'] ?? null) === $loan->product && isset($p->params['price']))
+            ->filter(fn (Product $p) => ($p->params['fornitura'] ?? null) === $loan->product && $this->parseNumber($p->params['price'] ?? null) !== null)
             ->map(fn (Product $p) => ['product' => $p, 'annual_cost' => $this->annualCost($p, $consumption)])
             ->sortBy('annual_cost')->first();
 
@@ -35,8 +35,9 @@ class EnergyQuoteEstimator
     private function annualCost(Product $product, float $consumption): float
     {
         $p = $product->params;
+        $number = fn (string $key): float => $this->parseNumber($p[$key] ?? null) ?? 0.0;
 
-        return round($consumption * (float) $p['price'] + 12 * (float) ($p['fixed_monthly'] ?? 0) - (float) ($p['bonus'] ?? 0), 2);
+        return round($consumption * $number('price') + 12 * $number('fixed_monthly') - $number('bonus'), 2);
     }
 
     /** «3.500,5», «3.500», «3500,5», «3500.5» e «3500» → float; testo non numerico → null. */

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Company;
 use App\Services\Flows\FlowImporter;
 use Illuminate\Console\Command;
 
@@ -13,7 +14,7 @@ class ImportFlows extends Command
 
     public function handle(FlowImporter $importer): int
     {
-        $count = $importer->import((bool) $this->option('force'));
+        $count = $importer->import((bool) $this->option('force'), Company::current());
 
         $this->info($count === 0 ? 'Nessun percorso importato: ci sono già (usa --force per ripristinarli).' : "Importati {$count} percorsi.");
 
