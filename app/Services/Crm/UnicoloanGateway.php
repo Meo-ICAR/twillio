@@ -10,9 +10,12 @@ use App\Services\Crm\Capabilities\ProvidesTemplates;
 use App\Services\Crm\Capabilities\RequestsSignature;
 use App\Services\Crm\Capabilities\SendsDocuments;
 use App\Services\Crm\Unicoloan\UnicoloanClient;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Unico\Core\Pdf\ModulePrinter;
+use Unico\Core\Pdf\PdfFormException;
 
 /**
  * Consegna la richiesta a unicoloan (API /api/agente/v1): prima cliente e pratica (submit, sincrono), poi i documenti
@@ -113,18 +116,18 @@ class UnicoloanGateway implements CrmGateway, SendsDocuments, ProvidesTemplates,
         return $response?->successful() ? $response->body() : null;
     }
 
-    /** Il modulo (codice = id in unicoloan) compilato con i dati della pratica, pronto da stampare. */
+    /** Il modulo (id in unicoloan) compilato da unico-core con i dati della pratica, pronto da stampare. */
     public function fillForm(LoanRequest $loan, string $template): ?string
     {
-        $id = $this->fill($loan, $template);
+        try {
+            return app(ModulePrinter::class)->printByReference($loan->crm_lead_id ?: $loan->code, $template);
+        } catch (PdfFormException $exception) {
+            Log::warning('stampa modulo non disponibile', ['loan' => $loan->code, 'errore' => $exception::class]);
 
-        if ($id === null) {
+            return null;
+        } catch (QueryException) {
             return null;
         }
-
-        $file = $this->call('GET', $this->base($loan)."/documenti/{$id}/file", $loan);
-
-        return $file?->successful() ? $file->body() : null;
     }
 
     /**

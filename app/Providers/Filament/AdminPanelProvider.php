@@ -10,6 +10,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -34,9 +35,18 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('unicoagent_banner.png'))
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('unicoagent_logo.png'))
-            ->navigationGroups(['Settings', 'Anagrafiche'])
+            ->navigationGroups([
+                NavigationGroup::make('Anagrafiche'),
+                NavigationGroup::make('Settings')->collapsed(),
+                NavigationGroup::make('Configurazioni')->collapsed(),
+                NavigationGroup::make('Manuali')->collapsed(),
+            ])
             ->navigationItems([
-                NavigationItem::make('Manuale utente')->url('/manuale', shouldOpenInNewTab: true)->icon('heroicon-o-book-open')->sort(100),
+                NavigationItem::make('Manuale utente')
+                    ->url('/manuale', shouldOpenInNewTab: true)
+                    ->icon('heroicon-o-book-open')
+                    ->group('Manuali')
+                    ->sort(100),
             ])
             ->colors([
                 'primary' => Color::Amber,

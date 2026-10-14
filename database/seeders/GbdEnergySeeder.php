@@ -24,6 +24,7 @@ class GbdEnergySeeder extends Seeder
             ]],
         ]);
 
+        $this->call(EnergySupplierSeeder::class);
         app(CheckRegistry::class)->sync();
         app(FlowImporter::class)->import(company: $company, flows: config('energy.flows'));
 

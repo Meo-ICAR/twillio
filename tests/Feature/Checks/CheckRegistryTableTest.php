@@ -9,6 +9,7 @@ use App\Services\Checks\CodiceFiscaleCheck;
 use App\Services\Checks\DatiCoerentiCheck;
 use App\Services\Checks\DocumentCheck;
 use App\Services\Checks\EstraiDatiCheck;
+use App\Services\Checks\FornitoreEnergiaCheck;
 use App\Services\Checks\IbanCheck;
 use App\Services\Checks\InformativaFirmataCheck;
 use App\Services\Checks\MaggiorenneCheck;
@@ -23,9 +24,9 @@ class CheckRegistryTableTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ALL_BY_CODE = ['codice_fiscale', 'dati_coerenti', 'estrai_dati', 'iban', 'informativa_firmata', 'maggiorenne', 'partita_iva', 'tipo_documento'];
+    private const ALL_BY_CODE = ['codice_fiscale', 'dati_coerenti', 'estrai_dati', 'fornitore_energia', 'iban', 'informativa_firmata', 'maggiorenne', 'partita_iva', 'tipo_documento'];
 
-    private const ALL_IN_CONFIG_ORDER = ['codice_fiscale', 'iban', 'partita_iva', 'maggiorenne', 'tipo_documento', 'dati_coerenti', 'estrai_dati', 'informativa_firmata'];
+    private const ALL_IN_CONFIG_ORDER = ['codice_fiscale', 'iban', 'partita_iva', 'fornitore_energia', 'maggiorenne', 'tipo_documento', 'dati_coerenti', 'estrai_dati', 'informativa_firmata'];
 
     private function registry(): CheckRegistry
     {
@@ -48,7 +49,7 @@ class CheckRegistryTableTest extends TestCase
 
     public function test_i_controlli_si_dividono_tra_risposte_e_documenti(): void
     {
-        $this->assertSame(['codice_fiscale', 'iban', 'partita_iva', 'maggiorenne'], array_keys($this->registry()->nodeChecks()));
+        $this->assertSame(['codice_fiscale', 'iban', 'partita_iva', 'fornitore_energia', 'maggiorenne'], array_keys($this->registry()->nodeChecks()));
         $this->assertSame(['tipo_documento', 'dati_coerenti', 'estrai_dati', 'informativa_firmata'], array_keys($this->registry()->documentChecks()));
         $this->assertInstanceOf(DocumentCheck::class, $this->registry()->get('informativa_firmata'));
         $this->assertNotInstanceOf(NodeCheck::class, $this->registry()->get('tipo_documento'));
@@ -88,7 +89,7 @@ class CheckRegistryTableTest extends TestCase
         $found = $this->registry()->discover();
 
         $this->assertEqualsCanonicalizing([
-            CodiceFiscaleCheck::class, IbanCheck::class, MaggiorenneCheck::class, PartitaIvaCheck::class,
+            CodiceFiscaleCheck::class, IbanCheck::class, MaggiorenneCheck::class, PartitaIvaCheck::class, FornitoreEnergiaCheck::class,
             TipoDocumentoCheck::class, DatiCoerentiCheck::class, EstraiDatiCheck::class, InformativaFirmataCheck::class,
         ], $found);
         foreach ($found as $class) {
@@ -111,7 +112,7 @@ class CheckRegistryTableTest extends TestCase
         $this->assertSame(1, $this->registry()->sync());
         $this->assertSame(IbanCheck::class, FlowCheck::where('code', 'iban')->value('class'));
         $this->assertSame(0, $this->registry()->sync(), 'ripetibile');
-        $this->assertSame(8, FlowCheck::count());
+        $this->assertSame(9, FlowCheck::count());
     }
 
     public function test_la_sincronizzazione_non_riattiva_un_controllo_disattivato_a_mano(): void

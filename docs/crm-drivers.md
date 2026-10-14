@@ -52,8 +52,7 @@ Il driver `unicoloan` le implementa tutte e quattro.
 | `FillsForms` | modulo PDF compilato con i dati della pratica, da stampare |
 | `RequestsSignature` | firma elettronica con OTP e stato della firma |
 
-Sono tutte funzioni che unico-core e unicoloan hanno già (`PdfFormFiller`, `SignatureRequestService`, tipi documento): il driver `unicoloan`
-le esporrà tramite l'API in ingresso di unicoloan (oggi: richieste e documenti; template, modulo compilato e firma OTP da scrivere).
+Sono tutte funzioni che unico-core e unicoloan hanno già (`ModulePrinter`, `SignatureRequestService`, tipi documento): la stampa passa da `Unico\Core\Pdf\ModulePrinter`; template e firma OTP dall'API di unicoloan.
 
 ## Driver `unicoloan`
 
@@ -65,10 +64,10 @@ Chiavi di `crm_config`: `url` (https; http solo in sviluppo), `token`, `secret` 
 - Il job `SendDocumentsToCrm` parte a fine perfezionamento (5 tentativi, attesa crescente); `php artisan crm:send-documents [--loan=ID]`
   riprova quelli rimasti indietro e gira ogni ora.
 
-Funzioni documentali (tutte passano da unicoloan, che resta l'unico a conoscere moduli e provider di firma):
+Funzioni documentali (template, firma e file passano da unicoloan, che resta l'unico a conoscere i provider di firma):
 `templates()` elenca i moduli della pratica (codice = id del modulo in unicoloan); `downloadTemplate()` scarica il PDF vuoto;
-`fillForm()` fa compilare il modulo con i dati della pratica e restituisce il PDF da stampare; `requestSignature($loan, $codiceModulo)`
-compila il modulo e chiede la firma OTP, `reference` = id del documento in unicoloan; `signatureStatus()` risponde `inviata | firmata | rifiutata | scaduta | errore`.
+`fillForm()` stampa il modulo con `Unico\Core\Pdf\ModulePrinter` (dati della pratica sul database core) e restituisce il PDF;
+`requestSignature($loan, $codiceModulo)` compila il modulo in unicoloan e chiede la firma OTP, `reference` = id del documento in unicoloan; `signatureStatus()` risponde `inviata | firmata | rifiutata | scaduta | errore`.
 Una volta firmato, `GET …/documenti/{id}/file` di unicoloan restituisce il PDF firmato.
 Nessuna di queste è ancora richiamata da una conversazione: sono a disposizione per le prossime funzioni dell'agente.
 

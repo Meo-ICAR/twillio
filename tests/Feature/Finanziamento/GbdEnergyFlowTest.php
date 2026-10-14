@@ -89,7 +89,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
     {
         $code = $this->startPerfection();
 
-        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel', '3331234567', 'mario@example.com', '#si');
+        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel Energia', '3331234567', 'mario@example.com', '#si');
         $replies = $this->say('#conferma');
 
         $this->assertSame('perfezionata', LoanRequest::where('code', $code)->value('status'), $this->bodies($replies));
@@ -102,7 +102,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
         $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#no');
         $this->assertSame('indirizzo_fornitura', $this->node());
-        $this->say('Via Verdi 2, 00100 Roma', 'IT001E12345678', 'Enel', '3331234567', 'mario@example.com', '#si');
+        $this->say('Via Verdi 2, 00100 Roma', 'IT001E12345678', 'Enel Energia', '3331234567', 'mario@example.com', '#si');
         $this->say('#conferma');
 
         $this->assertSame('Via Verdi 2, 00100 Roma', LoanRequest::where('code', $code)->first()->personal['indirizzo_fornitura']);
@@ -151,11 +151,59 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertSame('fornitore_attuale', $this->node());
     }
 
+    private function toCurrentSupplier(): void
+    {
+        $this->toSupplyPoint('luce');
+        $this->say('IT001E12345678');
+        $this->assertSame('fornitore_attuale', $this->node());
+    }
+
+    public function test_un_fornitore_attuale_ambiguo_chiede_di_precisare_e_propone_i_candidati(): void
+    {
+        $this->toCurrentSupplier();
+
+        $text = $this->bodies($this->say('Enel'));
+
+        $this->assertStringContainsString('ENEL ENERGIA S.P.A.', $text);
+        $this->assertSame('fornitore_attuale', $this->node());
+    }
+
+    public function test_un_fornitore_sconosciuto_si_richiede(): void
+    {
+        $this->toCurrentSupplier();
+
+        $text = $this->bodies($this->say('Zzxqwv Energie'));
+
+        $this->assertStringContainsString('altro', $text);
+        $this->assertSame('fornitore_attuale', $this->node());
+    }
+
+    public function test_un_fornitore_riconosciuto_salva_ragione_sociale_e_partita_iva_ufficiali(): void
+    {
+        $this->toCurrentSupplier();
+
+        $this->say('enel energia');
+
+        $this->assertSame('telefono', $this->node());
+        $data = \App\Models\Conversation::where('status', 'attiva')->latest('id')->first()->data;
+        $this->assertSame('ENEL ENERGIA S.P.A.', $data['fornitore_attuale_nome']);
+        $this->assertSame('06655971007', $data['fornitore_attuale_piva']);
+    }
+
+    public function test_altro_permette_di_proseguire_per_un_fornitore_non_in_elenco(): void
+    {
+        $this->toCurrentSupplier();
+
+        $this->say('altro');
+
+        $this->assertSame('telefono', $this->node());
+    }
+
     public function test_il_perfezionamento_di_un_azienda_chiede_ragione_sociale_e_partita_iva(): void
     {
         $code = $this->startPerfection();
 
-        $this->say('#azienda', 'ACME Srl', '12345678903', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel', '3331234567', 'info@acme.example', '#si');
+        $this->say('#azienda', 'ACME Srl', '12345678903', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel Energia', '3331234567', 'info@acme.example', '#si');
         $replies = $this->say('#conferma');
 
         $this->assertSame('perfezionata', LoanRequest::where('code', $code)->value('status'), $this->bodies($replies));

@@ -291,14 +291,16 @@ class UnicoloanGatewayTest extends TestCase
         $this->assertNull($gateway->downloadTemplate($loan, '9'));
     }
 
-    public function test_il_modulo_compilato_si_scarica_dopo_averlo_creato(): void
+    public function test_il_modulo_compilato_si_stampa_con_unico_core(): void
     {
-        Http::fake([
-            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/moduli/7/compilato' => Http::response(['id' => 'doc-1'], 201),
-            self::BASE.'/api/agente/v1/richieste/FIN-2026-0300/documenti/doc-1/file' => Http::response('%PDF-compilato'),
-        ]);
+        $this->mock(\Unico\Core\Pdf\ModulePrinter::class)
+            ->shouldReceive('printByReference')
+            ->once()
+            ->with('FIN-2026-0300', '7')
+            ->andReturn('%PDF-compilato');
 
         $this->assertSame('%PDF-compilato', $this->gateway()->fillForm($this->loan(), '7'));
+        Http::assertNothingSent();
     }
 
     public function test_la_firma_compila_il_modulo_la_richiede_e_se_ne_legge_lo_stato(): void

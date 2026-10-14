@@ -3,6 +3,7 @@
 use App\Services\Checks\CodiceFiscaleCheck;
 use App\Services\Checks\DatiCoerentiCheck;
 use App\Services\Checks\EstraiDatiCheck;
+use App\Services\Checks\FornitoreEnergiaCheck;
 use App\Services\Checks\IbanCheck;
 use App\Services\Checks\InformativaFirmataCheck;
 use App\Services\Checks\MaggiorenneCheck;
@@ -45,6 +46,7 @@ return [
         'codice_fiscale' => CodiceFiscaleCheck::class,
         'iban' => IbanCheck::class,
         'partita_iva' => PartitaIvaCheck::class,
+        'fornitore_energia' => FornitoreEnergiaCheck::class,
         'maggiorenne' => MaggiorenneCheck::class,
         // Controlli sui documenti caricati (non istantanei: girano dopo la risposta al webhook).
         'tipo_documento' => TipoDocumentoCheck::class,

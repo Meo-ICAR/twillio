@@ -36,7 +36,7 @@ return [
         'perfezionamento' => [
             'start' => 'codice',
             'restart' => 'tipo_cliente',
-            'labels' => ['data_nascita' => 'Data di nascita', 'sesso' => 'Sesso'],
+            'labels' => ['data_nascita' => 'Data di nascita', 'sesso' => 'Sesso', 'fornitore_attuale_nome' => 'Fornitore attuale (ragione sociale)', 'fornitore_attuale_piva' => 'Fornitore attuale (P.IVA)'],
             'nodes' => [
                 'codice' => ['type' => 'code', 'prompt' => 'Inserisci il codice della pratica:', 'save' => false, 'next' => 'conferma_pratica'],
                 'conferma_pratica' => $choice('Conferma', 'È la pratica giusta?', $yn, ['si' => 'tipo_cliente', 'no' => 'codice'], ['save' => false, 'prompt_summary' => true]),
@@ -64,7 +64,7 @@ return [
                 // Si chiede il POD per la luce o il PDR per il gas, secondo la fornitura della pratica.
                 'pod' => $text('POD', 'Codice POD della fornitura luce (IT + 3 cifre + E + 8 caratteri), dalla bolletta:', ['required', 'regex:/^IT\d{3}E[A-Z0-9]{8}$/'], 'pdr', ['upper' => true, 'strip_spaces' => true, 'skip_if' => 'product_not:luce', 'error' => 'POD non valido (esempio IT001E12345678), riprova.']),
                 'pdr' => $text('PDR', 'Codice PDR della fornitura gas (14 cifre), dalla bolletta:', ['required', 'regex:/^\d{14}$/'], 'fornitore_attuale', ['strip_spaces' => true, 'skip_if' => 'product_not:gas', 'error' => 'PDR non valido (14 cifre), riprova.']),
-                'fornitore_attuale' => $text('Fornitore attuale', 'Chi è il fornitore attuale?', ['required', 'string', 'max:60'], 'telefono'),
+                'fornitore_attuale' => $text('Fornitore attuale', 'Chi è il fornitore attuale? Scrivi il nome come in bolletta (es. Enel Energia). Se non lo trovi scrivi «altro».', ['required', 'string', 'max:80'], 'telefono', ['checks' => ['fornitore_energia']]),
                 'telefono' => $text('Telefono', 'Cellulare del cliente:', ['required', 'regex:/^\+?\d{8,15}$/'], 'email', ['strip_spaces' => true, 'error' => 'Numero non valido, riprova.']),
                 'email' => $text('Email', 'Email del cliente:', ['required', 'email'], 'contatto_diretto', ['error' => 'Email non valida, riprova.']),
                 'contatto_diretto' => $choice('Contatto diretto', 'Il cliente acconsente a essere ricontattato da GBD Energy per il contratto?', $yn, 'riepilogo'),
