@@ -14,6 +14,15 @@ class EstraiDatiCheck implements DocumentCheck
     /** Tipo di documento letto dall'AI => codice della risposta nel dialogo. */
     private const DOCUMENT_TYPES = ['carta_identita' => 'ci', 'patente' => 'patente', 'passaporto' => 'passaporto'];
 
+    /** Documenti diversi dall'identità: campo letto dall'AI => dato del dialogo (le chiavi in `UPPER` si scrivono maiuscole e senza spazi). */
+    private const SUPPLY_DOCUMENTS = [
+        'bolletta' => ['pod' => 'pod', 'pdr' => 'pdr', 'supply_address' => 'indirizzo_fornitura', 'committed_power' => 'potenza', 'previous_supplier' => 'fornitore_attuale'],
+        'visura' => ['company_name' => 'ragione_sociale', 'vat_number' => 'partita_iva', 'registered_office' => 'residenza'],
+        'estratto_conto' => ['iban' => 'iban', 'account_holder' => 'intestatario_iban'],
+    ];
+
+    private const UPPER = ['pod', 'pdr', 'iban', 'partita_iva'];
+
     public function label(): string
     {
         return 'Ricava i dati';
@@ -27,6 +36,11 @@ class EstraiDatiCheck implements DocumentCheck
     public function inspect(DocumentContext $ctx): DocumentCheckResult
     {
         $fields = $ctx->fields() ?? [];
+
+        if (isset(self::SUPPLY_DOCUMENTS[$ctx->readerKind])) {
+            return DocumentCheckResult::ok($this->supplyProposals(self::SUPPLY_DOCUMENTS[$ctx->readerKind], $fields));
+        }
+
         $map = self::COMMON + ($ctx->readerKind === 'documento_identita' ? self::IDENTITY_ONLY : []);
 
         $proposals = [];
@@ -45,5 +59,24 @@ class EstraiDatiCheck implements DocumentCheck
         }
 
         return DocumentCheckResult::ok($proposals);
+    }
+
+    /**
+     * @param  array<string,string>  $map
+     * @param  array<string,mixed>  $fields
+     * @return array<string,string>
+     */
+    private function supplyProposals(array $map, array $fields): array
+    {
+        $proposals = [];
+        foreach ($map as $from => $to) {
+            $value = trim((string) ($fields[$from] ?? ''));
+            if ($value === '') {
+                continue;
+            }
+            $proposals[$to] = in_array($to, self::UPPER, true) ? strtoupper(preg_replace('/\s+/', '', $value)) : $value;
+        }
+
+        return $proposals;
     }
 }

@@ -13,6 +13,9 @@ class DocumentChecker
         'codice_fiscale' => ['codice_fiscale', 'tessera del codice fiscale'],
         'reddito' => ['reddito', 'documento di reddito'],
         'informativa' => ['informativa', 'informativa privacy firmata'],
+        'bolletta' => ['bolletta', 'bolletta luce o gas'],
+        'visura' => ['visura', 'visura camerale'],
+        'estratto_conto' => ['estratto_conto', 'estratto conto bancario'],
     ];
 
     private const DETECTED = [
@@ -20,6 +23,9 @@ class DocumentChecker
         'codice_fiscale' => 'tessera del codice fiscale',
         'reddito' => 'documento di reddito',
         'informativa' => 'informativa privacy',
+        'bolletta' => 'bolletta luce o gas',
+        'visura' => 'visura camerale',
+        'estratto_conto' => 'estratto conto bancario',
         'altro' => 'altro tipo di documento',
     ];
 

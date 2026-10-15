@@ -18,13 +18,16 @@ use Illuminate\Support\Facades\Storage;
 class DocumentPipeline
 {
     /** Tipo di lettura => codice del documento usato da lettore e confronti. */
-    private const KIND_CODES = ['identita' => 'documento_identita', 'codice_fiscale' => 'codice_fiscale', 'reddito' => 'reddito', 'informativa' => 'informativa'];
+    private const KIND_CODES = ['identita' => 'documento_identita', 'codice_fiscale' => 'codice_fiscale', 'reddito' => 'reddito', 'informativa' => 'informativa', 'bolletta' => 'bolletta', 'visura' => 'visura', 'estratto_conto' => 'estratto_conto'];
 
     private const LABELS = [
         'documento_identita' => 'Documento d\'identità',
         'codice_fiscale' => 'Codice fiscale',
         'reddito' => 'Documento di reddito',
         'informativa' => 'Informativa privacy',
+        'bolletta' => 'Bolletta',
+        'visura' => 'Visura camerale',
+        'estratto_conto' => 'Estratto conto',
     ];
 
     public function __construct(private DocumentReader $reader, private CheckRegistry $registry) {}

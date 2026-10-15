@@ -65,6 +65,9 @@ return [
         'codice_fiscale' => ['tipo_documento', 'dati_coerenti', 'estrai_dati'],
         'reddito' => ['tipo_documento', 'dati_coerenti'],
         'informativa' => ['informativa_firmata'],
+        'bolletta' => ['tipo_documento', 'estrai_dati'],
+        'visura' => ['tipo_documento', 'estrai_dati'],
+        'estratto_conto' => ['tipo_documento', 'estrai_dati'],
     ],
 
     'menu' => [

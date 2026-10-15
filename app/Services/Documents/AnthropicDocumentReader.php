@@ -24,6 +24,10 @@ For an identity document set "document_type" to carta_identita (identity card), 
 For a privacy notice: set "matches_template" to true only if it is the form titled "Informativa sul trattamento dei dati personali"
 with a "Per presa visione" block (name line and date/signature line); set "signed" to true only if a handwritten or digital signature
 is visibly present in the signature area, false if the area is empty, and null if you cannot tell. For any other document leave both null.
+For a utility bill (bolletta) set "kind_detected" to bolletta, "pod" and "pdr" to the supply point codes, "supply_address" to the supply address,
+"committed_power" to the committed power in kW (number only) and "previous_supplier" to the supplier name. For a company registry extract (visura)
+set "kind_detected" to visura, "company_name", "vat_number" (11 digits), "ateco", "registered_office" and "legal_representative". For a bank statement
+or a screenshot showing an IBAN set "kind_detected" to estratto_conto, "iban" and "account_holder". Use null for what is not printed.
 TXT;
 
     private const LABELS = [
@@ -31,6 +35,9 @@ TXT;
         'codice_fiscale' => 'tessera del codice fiscale o tessera sanitaria',
         'reddito' => 'documento di reddito (busta paga, cedolino pensione, CUD, dichiarazione o bilancio)',
         'informativa' => 'informativa privacy da far firmare al cliente (modulo «Informativa sul trattamento dei dati personali»)',
+        'bolletta' => 'bolletta attuale della luce o del gas',
+        'visura' => 'visura camerale dell\'azienda',
+        'estratto_conto' => 'estratto conto bancario o schermata con l\'IBAN',
     ];
 
     private const MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -105,7 +112,7 @@ TXT;
     {
         $text = ['type' => ['string', 'null']];
         $properties = [
-            'kind_detected' => ['type' => 'string', 'enum' => ['identita', 'codice_fiscale', 'reddito', 'informativa', 'altro']],
+            'kind_detected' => ['type' => 'string', 'enum' => ['identita', 'codice_fiscale', 'reddito', 'informativa', 'bolletta', 'visura', 'estratto_conto', 'altro']],
             'legible' => ['type' => 'boolean'],
             'surname' => $text,
             'name' => $text,
@@ -121,6 +128,18 @@ TXT;
             'notes' => $text,
             'matches_template' => ['type' => ['boolean', 'null']],
             'signed' => ['type' => ['boolean', 'null']],
+            'pod' => $text,
+            'pdr' => $text,
+            'supply_address' => $text,
+            'committed_power' => $text,
+            'previous_supplier' => $text,
+            'company_name' => $text,
+            'vat_number' => $text,
+            'ateco' => $text,
+            'registered_office' => $text,
+            'legal_representative' => $text,
+            'iban' => $text,
+            'account_holder' => $text,
         ];
 
         return ['type' => 'object', 'properties' => $properties, 'required' => array_keys($properties), 'additionalProperties' => false];
