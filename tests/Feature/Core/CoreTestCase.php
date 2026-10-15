@@ -41,6 +41,12 @@ abstract class CoreTestCase extends TestCase
         $this->beforeApplicationDestroyed(fn () => DB::connection('core')->rollBack());
     }
 
+    /** Una company del core (le chiavi esterne di tasks e documents ne vogliono una vera). */
+    protected function coreCompany(string $name = 'GBD Energy'): \Unico\Core\Models\Company
+    {
+        return \Unico\Core\Models\Company::create(['name' => $name.' '.uniqid()]);
+    }
+
     protected function fixturePdf(): string
     {
         return file_get_contents(base_path('tests/Fixtures/pdf/modulo-prova.pdf'));
