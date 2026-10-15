@@ -20,6 +20,17 @@ class LoanRequest extends Model
         'in_attesa_informativa' => 'In attesa di informativa',
         'informativa_ricevuta' => 'Informativa ricevuta',
         'perfezionata' => 'Perfezionata',
+        'invio_istruttoria' => 'Trasmessa in istruttoria',
+        'perfezionare' => 'Da perfezionare',
+    ];
+
+    /** Stato della firma dei documenti prodotti con il core. */
+    public const SIGNATURE_STATUSES = [
+        'in_attesa' => 'In attesa firma',
+        'firmata' => 'Firmata',
+        'scaduta' => 'Scaduta',
+        'rifiutata' => 'Rifiutata',
+        'errore' => 'Errore',
     ];
 
     /** Dopo quanti minuti un documento ancora in analisi smette di far aspettare il dialogo (lavoro perso o AI lenta). */
@@ -53,6 +64,8 @@ class LoanRequest extends Model
             'is_test' => 'boolean',
             'personal' => 'encrypted:array',
             'privacy_received_at' => 'datetime',
+            'signed_at' => 'datetime',
+            'documents_sent_at' => 'datetime',
             'privacy_verified_at' => 'datetime',
             'perfected_at' => 'datetime',
             'documents_archived_at' => 'datetime',

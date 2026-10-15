@@ -21,6 +21,7 @@ class Company extends Model
             'istruttoria_passkey' => 'encrypted',
             'crm_config' => 'encrypted:array',
             'menu' => 'array',
+            'produce_documents' => 'boolean',
             'trialend_at' => 'date',
             'trial_activated_at' => 'date',
             'activated_at' => 'date',
@@ -38,6 +39,12 @@ class Company extends Model
             'body_named' => $own['body_named'] ?? $default['body_named'],
             'options' => ! empty($own['options']) ? $own['options'] : $default['options'],
         ];
+    }
+
+    /** Produce i documenti con il core solo se il flag è attivo e il core è identificato (company e tipo di pratica). */
+    public function producesDocuments(): bool
+    {
+        return $this->produce_documents && $this->core_company_id !== null && filled($this->core_tipo_prodotto);
     }
 
     public function products(): BelongsToMany
