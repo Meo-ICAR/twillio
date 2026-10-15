@@ -7,6 +7,7 @@ use App\Models\LoanRequest;
 use App\Models\QuoteBandBound;
 use App\Models\QuoteEmploymentMap;
 use Carbon\Carbon;
+use Unico\Core\Support\ResidenceResolver;
 
 /**
  * Parametri del servizio di caricamento lead (specifica 1.6) dai dati della pratica perfezionata.

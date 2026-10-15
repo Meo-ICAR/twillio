@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
-use App\Support\Phone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 use Unico\Core\Models\Fornitore as CoreFornitore;
+use Unico\Core\Signature\PhoneNumber;
 
 /**
  * Anagrafica degli agenti / collaboratori (tabella `fornitoris` su unico-core).
@@ -105,6 +105,6 @@ class Fornitore extends CoreFornitore
     /** Solo cifre, senza prefisso internazionale italiano (+39 / 0039). */
     public static function nationalNumber(string $phone): string
     {
-        return Phone::national($phone);
+        return PhoneNumber::national($phone);
     }
 }

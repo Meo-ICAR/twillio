@@ -1622,6 +1622,43 @@
             "time": "2026-10-06T18:13:10+00:00"
         },
         {
+            "name": "filament/spatie-laravel-media-library-plugin",
+            "version": "v5.10.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/filamentphp/spatie-laravel-media-library-plugin.git",
+                "reference": "062f9bfdc64cbe9ec1c65e0754a44d52514445ff"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/filamentphp/spatie-laravel-media-library-plugin/zipball/062f9bfdc64cbe9ec1c65e0754a44d52514445ff",
+                "reference": "062f9bfdc64cbe9ec1c65e0754a44d52514445ff",
+                "shasum": ""
+            },
+            "require": {
+                "filament/support": "self.version",
+                "php": "^8.2",
+                "spatie/laravel-medialibrary": "^11.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Filament\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Filament support for `spatie/laravel-medialibrary`.",
+            "homepage": "https://github.com/filamentphp/filament",
+            "support": {
+                "issues": "https://github.com/filamentphp/filament/issues",
+                "source": "https://github.com/filamentphp/filament"
+            },
+            "time": "2026-10-06T18:18:24+00:00"
+        },
+        {
             "name": "filament/support",
             "version": "v5.10.0",
             "source": {
@@ -4102,9 +4139,11 @@
             "dist": {
                 "type": "path",
                 "url": "../unico-core",
-                "reference": "d20ed8dfd234ee3111c14669e0b831aaac8074cd"
+                "reference": "8638212a984103685f27ddf8554ee94adf413097"
             },
             "require": {
+                "filament/filament": "^5.10",
+                "filament/spatie-laravel-media-library-plugin": "^5.10",
                 "filament/support": "^5.0",
                 "google/apiclient": "^2.18",
                 "illuminate/cache": "^13.0",
@@ -4138,7 +4177,10 @@
             "autoload": {
                 "psr-4": {
                     "Unico\\Core\\": "src/"
-                }
+                },
+                "files": [
+                    "src/helpers.php"
+                ]
             },
             "autoload-dev": {
                 "psr-4": {

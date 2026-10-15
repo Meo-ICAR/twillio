@@ -2,7 +2,7 @@
 
 namespace App\Services\Checks;
 
-use App\Services\Conversation\CodiceFiscale;
+use Unico\Core\Support\CodiceFiscale;
 
 class CodiceFiscaleCheck implements NodeCheck
 {

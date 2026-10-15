@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Support\Phone;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -13,6 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Unico\Core\Signature\PhoneNumber;
 
 #[Fillable(['name', 'email', 'password', 'whatsapp_number'])]
 #[Hidden(['password', 'remember_token'])]
@@ -27,7 +27,7 @@ class User extends Authenticatable implements FilamentUser
     public static function hasTesterNumber(string $waNumber): bool
     {
         return static::whereNotNull('whatsapp_number')->pluck('whatsapp_number')
-            ->contains(fn (string $number) => Phone::same($number, $waNumber));
+            ->contains(fn (string $number) => PhoneNumber::same($number, $waNumber));
     }
 
     /** Gli utenti si creano solo da un amministratore (nessuna registrazione pubblica). */

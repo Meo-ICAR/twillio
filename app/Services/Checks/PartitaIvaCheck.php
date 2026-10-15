@@ -2,8 +2,6 @@
 
 namespace App\Services\Checks;
 
-use App\Services\Conversation\PartitaIva;
-
 class PartitaIvaCheck implements NodeCheck
 {
     public function label(): string
@@ -23,6 +21,7 @@ class PartitaIvaCheck implements NodeCheck
 
     public function passes(string $value, CheckContext $ctx): bool
     {
-        return PartitaIva::isValid($value);
+        // Routine di unico-core (helpers): 11 cifre italiane con checksum o 13 caratteri UE; qui si ripulisce quanto scrive l'agente.
+        return partitaIvaValida(strtoupper(preg_replace('/\s+/', '', $value)));
     }
 }

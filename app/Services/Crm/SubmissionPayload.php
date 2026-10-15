@@ -6,6 +6,7 @@ use App\Models\Fornitore;
 use App\Models\LoanRequest;
 use App\Models\QuoteBandBound;
 use Carbon\Carbon;
+use Unico\Core\Support\ResidenceResolver;
 
 /**
  * Formato unico con cui la pratica viene consegnata a un CRM che non ha un tracciato proprio (driver generico, unicoloan...).

@@ -2,7 +2,7 @@
 
 namespace App\Services\Checks;
 
-use App\Services\Conversation\Iban;
+use Unico\Core\Support\Iban;
 
 class IbanCheck implements NodeCheck
 {

@@ -5,13 +5,13 @@ namespace App\Services\Conversation;
 use App\Jobs\AnalyzeAttachment;
 use App\Jobs\ArchiveLoanDocuments;
 use App\Jobs\SendDocumentsToCrm;
-use App\Services\Bpm\BpmEvents;
 use App\Models\Company;
 use App\Models\Conversation;
 use App\Models\Fornitore;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
 use App\Models\User;
+use App\Services\Bpm\BpmEvents;
 use App\Services\Checks\CheckContext;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Checks\NodeCheck;
@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Unico\Core\Support\CodiceFiscale;
+use Unico\Core\Support\SensitiveDataGuard;
 
 class ConversationEngine
 {
