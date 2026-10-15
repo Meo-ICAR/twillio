@@ -21,6 +21,8 @@ use App\Services\Crm\QuoteEmailSender;
 use App\Services\Documents\DocumentReader;
 use App\Services\Flows\FlowRepository;
 use App\Services\Flows\FlowValidator;
+use App\Services\Documents\DocumentProductionException;
+use App\Services\Documents\LoanDocumentProducer;
 use App\Services\Loans\EnergyQuoteEstimator;
 use App\Services\Loans\LoanEstimator;
 use App\Services\Loans\QuoteUnavailable;
@@ -36,6 +38,9 @@ use Unico\Core\Support\SensitiveDataGuard;
 
 class ConversationEngine
 {
+    /** Stato del core a cui appartiene il task dei documenti da firmare. */
+    public const SIGN_STATE = 'ALLA FIRMA';
+
     private const PRIVACY_WARNING = '⚠️ Non inserire dati identificativi del cliente (nome, codice fiscale, telefono, email, P.IVA). In questa fase servono solo dati di profilo.';
 
     private const GREETINGS = ['ciao', 'salve', 'buongiorno', 'buonasera', 'hello', 'hi', 'start', 'inizio'];
@@ -56,6 +61,7 @@ class ConversationEngine
         private CheckRegistry $checks,
         private LoanEstimator $estimator,
         private EnergyQuoteEstimator $energy,
+        private LoanDocumentProducer $documents,
         private CrmGateway $crm,
         private LoanEmailSender $mailer,
         private QuoteEmailSender $quoteMailer,
@@ -1069,25 +1075,39 @@ class ConversationEngine
 
         // Con un CRM per l'istruttoria si chiama il CRM, altrimenti si manda una email con dati e allegati.
         // Se l'invio non riesce resta tutto com'è: l'agente può riprovare dal riepilogo.
-        $viaCrm = Company::forWhatsApp($loan->agent_wa_number)?->hasSubmissionCrm() ?? false;
-        if ($viaCrm ? $this->submitToCrm($loan, $data) !== 200 : ! $this->mailLoan($loan, $data)) {
+        $company = Company::forWhatsApp($loan->agent_wa_number);
+        $viaCrm = $company?->hasSubmissionCrm() ?? false;
+        if ($viaCrm ? $this->submitToCrm($loan, $data) !== 200 : ! $this->mailLoan($loan, $data, $company)) {
             return [Reply::text('⚠️ Invio pratica fallito, riprovare o contattare Istruttoria.'), ...$this->prompt($conv)];
         }
 
-        $loan->update($this->perfectedAttributes($data));
+        $loan->update($this->perfectedAttributes($data, $company));
         $this->mailer->notifyProducer($loan);
         $this->archiveDocuments($loan);
         $this->sendDocumentsToCrm($loan);
-        BpmEvents::dispatchPerfected($loan);
+
+        // Le company che producono i documenti con il core: la pratica è «trasmessa» e l'evento di perfezionamento parte alla firma.
+        $withDocuments = $company?->producesDocuments() ?? false;
+        $note = '';
+        if ($withDocuments) {
+            try {
+                $result = $this->documents->produce($loan, $company, self::SIGN_STATE);
+                $note = $result['sent'] > 0 ? "\n✍️ Ho inviato i documenti al cliente per la firma con OTP: riceverà un SMS al cellulare indicato." : '';
+            } catch (DocumentProductionException $e) {
+                $note = "\n⚠️ {$e->getMessage()}";
+            }
+        } else {
+            BpmEvents::dispatchPerfected($loan);
+        }
         $this->close($conv, 'completata');
 
-        return [Reply::text("✅ Pratica *{$loan->code}* perfezionata e inviata in istruttoria al mediatore creditizio.")];
+        return [Reply::text("✅ Pratica *{$loan->code}* ".($withDocuments ? 'trasmessa in istruttoria.' : 'perfezionata e inviata in istruttoria al mediatore creditizio.').$note)];
     }
 
     /** La pratica viene salvata per prima: la mail legge i dati dalla pratica; se non parte si annulla il salvataggio. */
-    private function mailLoan(LoanRequest $loan, array $data): bool
+    private function mailLoan(LoanRequest $loan, array $data, ?Company $company = null): bool
     {
-        $attributes = $this->perfectedAttributes($data);
+        $attributes = $this->perfectedAttributes($data, $company);
         $before = $loan->only(array_keys($attributes));
         $loan->update($attributes);
         if ($this->mailer->send($loan)) {
@@ -1100,10 +1120,10 @@ class ConversationEngine
     }
 
     /** Ciò che si scrive sulla pratica quando è perfezionata, compresi i recapiti del cliente e il consenso al contatto diretto. */
-    private function perfectedAttributes(array $data): array
+    private function perfectedAttributes(array $data, ?Company $company = null): array
     {
         return [
-            'personal' => $data, 'status' => 'perfezionata', 'perfected_at' => now(),
+            'personal' => $data, 'status' => $company?->producesDocuments() ? 'invio_istruttoria' : 'perfezionata', 'perfected_at' => now(),
             'direct_contact' => ($data['contatto_diretto'] ?? null) === 'si',
             'customer_phone' => $data['telefono'] ?? null,
             'customer_email' => $data['email'] ?? null,
