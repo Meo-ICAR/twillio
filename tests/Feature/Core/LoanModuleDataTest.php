@@ -72,4 +72,27 @@ class LoanModuleDataTest extends TestCase
         $this->assertNull($d->get('fornitura.pod'));
         $this->assertSame('gas', $d->get('fornitura.tipo'));
     }
+
+    public function test_ci_sono_potenza_titolo_di_possesso_pagamento_e_destinazione_d_uso(): void
+    {
+        $d = (new LoanModuleData)->for($this->loan($this->privato() + [
+            'potenza' => '3', 'titolo_possesso' => 'affitto', 'iban' => 'IT60X0542811101000000123456', 'intestatario_iban' => 'Luigi Bianchi', 'destinazione_uso' => 'residenza',
+        ]));
+
+        $this->assertSame('3', $d->get('fornitura.potenza'));
+        $this->assertSame('affitto', $d->get('fornitura.titolo_possesso'));
+        $this->assertSame('IT60X0542811101000000123456', $d->get('pagamento.iban'));
+        $this->assertSame('Luigi Bianchi', $d->get('pagamento.intestatario'));
+        $this->assertSame('residenza', $d->get('client.destinazione_uso'));
+    }
+
+    public function test_senza_intestatario_letto_l_intestatario_e_il_richiedente_e_il_resto_resta_assente(): void
+    {
+        $d = (new LoanModuleData)->for($this->loan($this->privato()));
+
+        $this->assertSame('Rossi Mario', $d->get('pagamento.intestatario'));
+        $this->assertNull($d->get('pagamento.iban'));
+        $this->assertNull($d->get('fornitura.potenza'));
+        $this->assertNull($d->get('client.destinazione_uso'));
+    }
 }

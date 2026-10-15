@@ -37,6 +37,11 @@ class LoanModuleData
             'fornitura.indirizzo' => ($p['indirizzo_fornitura'] ?? null) ?: ($p['residenza'] ?? null),
             'fornitura.fornitore_attuale' => $p['fornitore_attuale_nome'] ?? ($p['fornitore_attuale'] ?? null),
             'fornitura.fornitore_attuale_piva' => $p['fornitore_attuale_piva'] ?? null,
+            'fornitura.potenza' => $p['potenza'] ?? null,
+            'fornitura.titolo_possesso' => $p['titolo_possesso'] ?? null,
+            'pagamento.iban' => $p['iban'] ?? null,
+            'pagamento.intestatario' => ($p['intestatario_iban'] ?? null) ?: trim(($p['cognome'] ?? '').' '.($p['nome'] ?? '')),
+            'client.destinazione_uso' => $p['destinazione_uso'] ?? null,
             'agent.name' => $agent?->display_name,
         ];
 
