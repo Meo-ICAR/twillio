@@ -117,7 +117,7 @@ class LoanRequest extends Model
             ->where('received_at', '>=', now()->subMinutes(self::ANALYSIS_WAIT_MINUTES))
             ->where(fn ($q) => $q
                 ->whereHas('praticaDocument.template', fn ($t) => $t->whereNotNull('ai_kind'))
-                ->orWhere(fn ($q) => $q->whereNull('pratica_document_id')->whereIn('kind', ['informativa', 'documento_identita', 'codice_fiscale', 'reddito'])))
+                ->orWhere(fn ($q) => $q->whereNull('pratica_document_id')->whereIn('kind', ['informativa', 'documento_identita', 'codice_fiscale', 'reddito', 'bolletta', 'visura', 'estratto_conto'])))
             ->exists();
     }
 

@@ -49,7 +49,7 @@ class LoanDocumentProducer
     /** @return array{sent: int, skipped: int} */
     private function run(LoanRequest $loan, Company $company, string $stato): array
     {
-        $modules = $this->tasks->modules($company, $stato);
+        $modules = $this->tasks->modules($company, $stato, $loan);
         if ($modules->isEmpty()) {
             return ['sent' => 0, 'skipped' => 0];
         }

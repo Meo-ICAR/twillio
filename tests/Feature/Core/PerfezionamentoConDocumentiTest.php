@@ -60,8 +60,10 @@ class PerfezionamentoConDocumentiTest extends CoreTestCase
     {
         $this->say('ciao', '#menu_richiedi', '#privato', '#luce', '#principale', '80', '#conferma');
         $code = LoanRequest::latest('id')->value('code');
+        LoanRequest::where('code', $code)->update(['privacy_received_at' => now(), 'privacy_verified_at' => now()]);
         $this->say('ciao', '#menu_perfeziona');
-        $this->say($code, '#si', '#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'enel energia', '3331234567', 'mario@example.com', '#si');
+        $this->say($code, '#si', 'salta', 'salta', 'salta');
+        $this->say('RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', '3', 'enel energia', '#bollettino', '#proprieta', '#residenza', '3331234567', 'mario@example.com', '#si');
 
         return $code;
     }

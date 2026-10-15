@@ -68,7 +68,7 @@ class ReviewFixesDocumentiTest extends CoreTestCase
         $loan = $this->makeLoan();
         $this->app->instance(LoanTaskResolver::class, new class extends LoanTaskResolver
         {
-            public function modules(Company $company, string $stato): \Illuminate\Support\Collection
+            public function modules(Company $company, string $stato, ?\App\Models\LoanRequest $loan = null): \Illuminate\Support\Collection
             {
                 throw new \RuntimeException('core giù');
             }

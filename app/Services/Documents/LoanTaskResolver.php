@@ -3,6 +3,7 @@
 namespace App\Services\Documents;
 
 use App\Models\Company;
+use App\Models\LoanRequest;
 use Illuminate\Support\Collection;
 use Unico\Core\Models\DocumentRequirement;
 use Unico\Core\Models\PdfModule;
@@ -12,7 +13,7 @@ use Unico\Core\Models\Task;
 class LoanTaskResolver
 {
     /** @return Collection<int,PdfModule> */
-    public function modules(Company $company, string $stato): Collection
+    public function modules(Company $company, string $stato, ?LoanRequest $loan = null): Collection
     {
         if (! $company->producesDocuments()) {
             return collect();
@@ -31,6 +32,10 @@ class LoanTaskResolver
 
         $modules = PdfModule::whereIn('document_type_id', $typeIds)->where('is_active', true)->get()->keyBy('document_type_id');
 
-        return $typeIds->map(fn ($id) => $modules->get($id))->filter()->values();
+        // Pagamento con bollettino o carta: nessun modulo di addebito in conto (SDD).
+        $skipSdd = ($loan?->personal['pagamento'] ?? null) === 'bollettino';
+
+        return $typeIds->map(fn ($id) => $modules->get($id))->filter()
+            ->reject(fn (PdfModule $m) => $skipSdd && str_contains($m->name, 'SDD'))->values();
     }
 }

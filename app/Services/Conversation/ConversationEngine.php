@@ -24,6 +24,7 @@ use App\Services\Flows\FlowRepository;
 use App\Services\Flows\FlowValidator;
 use App\Services\Documents\DocumentProductionException;
 use App\Services\Documents\LoanDocumentProducer;
+use App\Services\Documents\DocumentChecker;
 use App\Services\Loans\EnergyQuoteEstimator;
 use App\Services\Loans\LoanEstimator;
 use App\Services\Loans\QuoteUnavailable;
@@ -635,8 +636,6 @@ class ConversationEngine
         $condition = $def['skip_if'] ?? null;
 
         return match (true) {
-            // Il profilo del preventivo (privato/azienda) non è quello indicato: la domanda non serve.
-            is_string($condition) && str_starts_with($condition, 'segment_not:') => ($conv->loanRequest?->answers['profilo'] ?? 'privato') !== substr($condition, 12),
             // La fornitura indicata (luce/gas) non rientra nel prodotto della pratica (luce, gas o luce_gas): la domanda non serve.
             // Se il dato è già stato letto da un documento e confermato non si richiede.
             is_string($condition) && str_starts_with($condition, 'product_not:') => ! in_array(substr($condition, 12), explode('_', (string) $conv->loanRequest?->product), true)
@@ -1085,10 +1084,13 @@ class ConversationEngine
     {
         $loan = $conv->loanRequest;
         $data = $conv->data ?? [];
+        $company = Company::forWhatsApp($loan->agent_wa_number);
+        if ($company?->type === 'ENERGY') {
+            $data = $this->withEnergyDerived($loan, $data);
+        }
 
         // Con un CRM per l'istruttoria si chiama il CRM, altrimenti si manda una email con dati e allegati.
         // Se l'invio non riesce resta tutto com'è: l'agente può riprovare dal riepilogo.
-        $company = Company::forWhatsApp($loan->agent_wa_number);
         $viaCrm = $company?->hasSubmissionCrm() ?? false;
         if ($viaCrm ? $this->submitToCrm($loan, $data) !== 200 : ! $this->mailLoan($loan, $data, $company)) {
             return [Reply::text('⚠️ Invio pratica fallito, riprovare o contattare Istruttoria.'), ...$this->prompt($conv)];
@@ -1147,6 +1149,31 @@ class ConversationEngine
             'customer_phone' => $data['telefono'] ?? null,
             'customer_email' => $data['email'] ?? null,
         ];
+    }
+
+    /**
+     * Dati che per le società di energia si ricavano dal preventivo e dalle risposte: tipo di cliente, destinazione d'uso
+     * (dalla residenza dichiarata nel preventivo) e «terzo intestatario» se il conto non è del richiedente.
+     *
+     * @param  array<string,mixed>  $data
+     * @return array<string,mixed>
+     */
+    private function withEnergyDerived(LoanRequest $loan, array $data): array
+    {
+        $answers = $loan->answers ?? [];
+        $data['tipo_cliente'] = ($answers['profilo'] ?? 'privato') === 'azienda' ? 'azienda' : 'privato';
+
+        if (blank($data['destinazione_uso'] ?? null) && $data['tipo_cliente'] === 'privato' && filled($answers['residenza'] ?? null)) {
+            $data['destinazione_uso'] = $answers['residenza'] === 'principale' ? 'residenza' : 'seconda';
+        }
+
+        if (($data['pagamento'] ?? 'sdd') === 'sdd') {
+            $holderDiffers = filled($data['intestatario_iban'] ?? null)
+                && ! app(DocumentChecker::class)->namesMatch($data['intestatario_iban'], trim(($data['cognome'] ?? '').' '.($data['nome'] ?? '')));
+            $data['terzo_intestatario'] = ($data['intestatario_conto'] ?? null) === 'no' || $holderDiffers ? 'si' : 'no';
+        }
+
+        return $data;
     }
 
     /** Avvia l'archiviazione su SharePoint; un errore qui non annulla il perfezionamento. */

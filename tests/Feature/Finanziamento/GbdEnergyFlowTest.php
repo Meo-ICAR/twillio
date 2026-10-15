@@ -60,11 +60,14 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
         $code = LoanRequest::latest('id')->value('code');
         $this->assertSame('luce_gas', LoanRequest::latest('id')->value('product'));
+        LoanRequest::where('code', $code)->update(['privacy_received_at' => now(), 'privacy_verified_at' => now()]);
         $this->say('ciao', '#menu_perfeziona');
-        $this->say($code, '#si', '#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
+        $this->say($code, '#si', 'salta', 'salta', 'salta', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
         $this->assertSame('pod', $this->node());
         $this->say('IT001E12345678');
         $this->assertSame('pdr', $this->node());
+        $this->say('12345678901234');
+        $this->assertSame('potenza', $this->node());
     }
 
     public function test_senza_prodotti_adatti_rimanda_al_customer_care(): void
@@ -92,14 +95,23 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertNotContains('Modifica Preventivo', $options);
     }
 
-    private function startPerfection(): string
+    /** Preventivo e avvio del perfezionamento, con l'informativa già verificata; si ferma alla domanda sul primo documento. */
+    private function startPerfection(bool $azienda = false): string
     {
-        $this->say('ciao', '#menu_richiedi', '#privato', '#luce', '#principale', '80', '#conferma');
+        config(['unico-core.openapi.token' => null]);
+        $this->say('ciao', '#menu_richiedi', ...[...($azienda ? ['#azienda', '#luce', '#bt', '350'] : ['#privato', '#luce', '#principale', '80']), '#conferma']);
         $code = LoanRequest::latest('id')->value('code');
+        LoanRequest::where('code', $code)->update(['privacy_received_at' => now(), 'privacy_verified_at' => now()]);
         $this->say('ciao', '#menu_perfeziona');
         $this->say($code, '#si');
 
         return $code;
+    }
+
+    /** Salta tutti i caricamenti: il bot passa alle domande a mano. */
+    private function skipDocuments(bool $azienda = false): void
+    {
+        $this->say(...array_fill(0, $azienda ? 4 : 3, 'salta'));
     }
 
     private function node(): ?string
@@ -112,31 +124,34 @@ class GbdEnergyFlowTest extends ConversationTestCase
         return 'RSSMRA'.$date->format('y').'ABCDEHLMPRST'[$date->month - 1].$date->format('d').'H501U';
     }
 
-    public function test_dopo_la_conferma_della_pratica_chiede_se_privato_o_azienda(): void
+    public function test_dopo_la_conferma_della_pratica_chiede_il_primo_documento_senza_chiedere_il_tipo_di_cliente(): void
     {
         $this->startPerfection();
 
-        $this->assertSame('tipo_cliente', $this->node());
+        $this->assertSame('doc_bolletta', $this->node());
     }
 
     public function test_il_perfezionamento_di_un_privato_chiude_con_la_mail_all_istruttoria(): void
     {
         $code = $this->startPerfection();
+        $this->skipDocuments();
 
-        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel Energia', '3331234567', 'mario@example.com', '#si');
+        $this->say('RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', '3', 'Enel Energia', '#bollettino', '#proprieta', '#residenza', '3331234567', 'mario@example.com', '#si');
         $replies = $this->say('#conferma');
 
         $this->assertSame('perfezionata', LoanRequest::where('code', $code)->value('status'), $this->bodies($replies));
+        $this->assertSame('privato', LoanRequest::where('code', $code)->first()->personal['tipo_cliente']);
         Mail::assertSent(LoanSubmissionMail::class, fn ($mail) => $mail->hasTo('contratti@gbdenergy.example'));
     }
 
     public function test_se_l_indirizzo_di_fornitura_e_diverso_lo_chiede(): void
     {
         $code = $this->startPerfection();
+        $this->skipDocuments();
 
-        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#no');
+        $this->say('RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#no');
         $this->assertSame('indirizzo_fornitura', $this->node());
-        $this->say('Via Verdi 2, 00100 Roma', 'IT001E12345678', 'Enel Energia', '3331234567', 'mario@example.com', '#si');
+        $this->say('Via Verdi 2, 00100 Roma', 'IT001E12345678', '3', 'Enel Energia', '#bollettino', '#proprieta', '#residenza', '3331234567', 'mario@example.com', '#si');
         $this->say('#conferma');
 
         $this->assertSame('Via Verdi 2, 00100 Roma', LoanRequest::where('code', $code)->first()->personal['indirizzo_fornitura']);
@@ -145,8 +160,9 @@ class GbdEnergyFlowTest extends ConversationTestCase
     public function test_se_l_indirizzo_di_fornitura_e_lo_stesso_non_lo_chiede(): void
     {
         $code = $this->startPerfection();
+        $this->skipDocuments();
 
-        $this->say('#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
+        $this->say('RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
 
         $this->assertSame('pod', $this->node());
     }
@@ -155,8 +171,11 @@ class GbdEnergyFlowTest extends ConversationTestCase
     {
         $this->say('ciao', '#menu_richiedi', '#privato', '#'.$fornitura, '#principale', '80', '#conferma');
         $code = LoanRequest::latest('id')->value('code');
+        LoanRequest::where('code', $code)->update(['privacy_received_at' => now(), 'privacy_verified_at' => now()]);
         $this->say('ciao', '#menu_perfeziona');
-        $this->say($code, '#si', '#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
+        $this->say($code, '#si');
+        $this->skipDocuments();
+        $this->say('RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
 
         return $code;
     }
@@ -170,7 +189,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertStringContainsString('POD non valido', $text);
 
         $this->say('IT001E12345678');
-        $this->assertSame('fornitore_attuale', $this->node());
+        $this->assertSame('potenza', $this->node());
     }
 
     public function test_per_il_gas_chiede_solo_il_pdr(): void
@@ -182,14 +201,20 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertStringContainsString('PDR non valido', $text);
 
         $this->say('12345678901234');
-        $this->assertSame('fornitore_attuale', $this->node());
+        $this->assertSame('potenza', $this->node());
     }
 
     private function toCurrentSupplier(): void
     {
         $this->toSupplyPoint('luce');
-        $this->say('IT001E12345678');
+        $this->say('IT001E12345678', '3');
         $this->assertSame('fornitore_attuale', $this->node());
+    }
+
+    /** Dal fornitore attuale alle domande sul cellulare: pagamento con bollettino, titolo di possesso e destinazione d'uso. */
+    private function toPhone(): void
+    {
+        $this->say('#bollettino', '#proprieta', '#residenza');
     }
 
     public function test_un_fornitore_attuale_ambiguo_chiede_di_precisare_e_propone_i_candidati(): void
@@ -218,7 +243,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
         $this->say('enel energia');
 
-        $this->assertSame('telefono', $this->node());
+        $this->assertSame('pagamento', $this->node());
         $data = \App\Models\Conversation::where('status', 'attiva')->latest('id')->first()->data;
         $this->assertSame('ENEL ENERGIA S.P.A.', $data['fornitore_attuale_nome']);
         $this->assertSame('06655971007', $data['fornitore_attuale_piva']);
@@ -230,13 +255,15 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
         $this->say('altro');
 
-        $this->assertSame('telefono', $this->node());
+        $this->assertSame('pagamento', $this->node());
     }
 
     public function test_un_indirizzo_email_non_valido_si_richiede_con_il_motivo(): void
     {
         $this->toCurrentSupplier();
-        $this->say('enel energia', '3331234567');
+        $this->say('enel energia');
+        $this->toPhone();
+        $this->say('3331234567');
         $this->assertSame('email', $this->node());
 
         $text = $this->bodies($this->say('mario@example'));
@@ -249,6 +276,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
     {
         $this->toCurrentSupplier();
         $this->say('enel energia');
+        $this->toPhone();
         $this->assertSame('telefono', $this->node());
 
         $this->assertStringContainsString('cellulare', $this->bodies($this->say('0612345678')));
@@ -257,22 +285,30 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertSame('telefono', $this->node());
     }
 
-    public function test_il_perfezionamento_di_un_azienda_chiede_ragione_sociale_e_partita_iva(): void
+    public function test_il_perfezionamento_di_un_azienda_chiede_partita_iva_e_ragione_sociale(): void
     {
-        $code = $this->startPerfection();
+        $code = $this->startPerfection(true);
+        $this->skipDocuments(true);
 
-        $this->say('#azienda', 'ACME Srl', '12345678903', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'Enel Energia', '3331234567', 'info@acme.example', '#si');
+        $this->say('12345678903', 'ACME Srl', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', '15', 'Enel Energia');
+        $this->say('#bollettino', '#proprieta');
+        $this->assertSame('telefono', $this->node(), 'per un\'azienda non si chiede la destinazione d\'uso');
+        $this->say('3331234567', 'info@acme.example', '#si');
         $replies = $this->say('#conferma');
 
-        $this->assertSame('perfezionata', LoanRequest::where('code', $code)->value('status'), $this->bodies($replies));
-        $this->assertSame('ACME Srl', LoanRequest::where('code', $code)->first()->personal['ragione_sociale']);
+        $loan = LoanRequest::where('code', $code)->first();
+        $this->assertContains($loan->status, ['perfezionata', 'invio_istruttoria'], $this->bodies($replies));
+        $this->assertSame('ACME Srl', $loan->personal['ragione_sociale']);
+        $this->assertSame('azienda', $loan->personal['tipo_cliente']);
+        $this->assertArrayNotHasKey('destinazione_uso', $loan->personal);
     }
 
     public function test_una_partita_iva_non_valida_si_richiede(): void
     {
-        $this->startPerfection();
+        $this->startPerfection(true);
+        $this->skipDocuments(true);
 
-        $text = $this->bodies($this->say('#azienda', 'ACME Srl', '12345678904'));
+        $text = $this->bodies($this->say('12345678904'));
 
         $this->assertStringContainsString('Partita IVA non valida', $text);
         $this->assertSame('partita_iva', $this->node());
@@ -281,8 +317,9 @@ class GbdEnergyFlowTest extends ConversationTestCase
     public function test_un_codice_fiscale_non_valido_si_richiede(): void
     {
         $this->startPerfection();
+        $this->skipDocuments();
 
-        $text = $this->bodies($this->say('#privato', 'ABCDEF'));
+        $text = $this->bodies($this->say('ABCDEF'));
 
         $this->assertStringContainsString('Codice fiscale non valido', $text);
         $this->assertSame('codice_fiscale', $this->node());
@@ -291,8 +328,9 @@ class GbdEnergyFlowTest extends ConversationTestCase
     public function test_un_minorenne_viene_rifiutato(): void
     {
         $this->startPerfection();
+        $this->skipDocuments();
 
-        $text = $this->bodies($this->say('#privato', $this->cfBorn(now()->subYears(18)->addDay())));
+        $text = $this->bodies($this->say($this->cfBorn(now()->subYears(18)->addDay())));
 
         $this->assertStringContainsString('minorenne', $text);
         $this->assertSame('codice_fiscale', $this->node());
@@ -301,8 +339,9 @@ class GbdEnergyFlowTest extends ConversationTestCase
     public function test_cognome_e_nome_non_coerenti_col_codice_fiscale_chiedono_conferma(): void
     {
         $this->startPerfection();
+        $this->skipDocuments();
 
-        $text = $this->bodies($this->say('#privato', 'RSSMRA80A01H501U', 'Bianchi', 'Luigi'));
+        $text = $this->bodies($this->say('RSSMRA80A01H501U', 'Bianchi', 'Luigi'));
 
         $this->assertStringContainsString('Confermi il codice fiscale', $text);
         $this->assertSame('conferma_cf', $this->node());

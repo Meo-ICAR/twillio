@@ -95,13 +95,16 @@ class DocumentChecker
             return [];
         }
 
-        $a = $this->tokens($onDocument);
-        $b = $this->tokens($declared);
-        if (! array_diff($a, $b) || ! array_diff($b, $a)) {
-            return [];
-        }
+        return $this->namesMatch($onDocument, $declared) ? [] : [$this->mismatch($label, $onDocument, $declared)];
+    }
 
-        return [$this->mismatch($label, $onDocument, $declared)];
+    /** Due nomi coincidono se i termini dell'uno sono contenuti nell'altro (ordine e accenti ininfluenti). */
+    public function namesMatch(?string $a, ?string $b): bool
+    {
+        $a = $this->tokens((string) $a);
+        $b = $this->tokens((string) $b);
+
+        return ! array_diff($a, $b) || ! array_diff($b, $a);
     }
 
     private function compareCode(string $label, ?string $onDocument, ?string $declared): array

@@ -104,6 +104,26 @@ class GbdEnergySeeder extends Seeder
             $ids[$stato] = $core->table('tasks')->where('company_id', $coreId)->where('trigger_subvalue', $stato)->value('id');
         }
 
+        // Contratto, SDD, dichiarazione immobile e bolletta: i tipi si aggiungono al core; i moduli PDF si caricano a parte.
+        if (class_exists(\Unico\Core\Seeders\EdisonDocumentTypesSeeder::class)) {
+            (new \Unico\Core\Seeders\EdisonDocumentTypesSeeder)->run();
+        }
+        $requirements = [
+            'Alla firma' => [$ids['ALLA FIRMA'], true, ['Contratto di fornitura Edison', 'Modulo SDD Edison', 'Dichiarazione titolo di possesso immobile']],
+            'Inserita' => [$ids['Inserita'], false, ['Bolletta luce/gas', 'Visura camerale', 'Estratto Conto Bancario']],
+        ];
+        foreach ($requirements as [$taskId, $required, $names]) {
+            foreach ($names as $i => $name) {
+                $typeId = $core->table('document_types')->where('name', $name)->orderBy('id')->value('id');
+                if ($typeId !== null) {
+                    $core->table('document_requirements')->updateOrInsert(
+                        ['task_id' => $taskId, 'document_type_id' => $typeId],
+                        ['is_required' => $required, 'sort_order' => 2 + $i, 'created_at' => now(), 'updated_at' => now()],
+                    );
+                }
+            }
+        }
+
         $privacy = $core->table('document_types')->where('name', 'like', '%Infomativa privacy 2025%')->orderBy('id')->value('id');
         if ($privacy !== null) {
             $core->table('document_requirements')->updateOrInsert(

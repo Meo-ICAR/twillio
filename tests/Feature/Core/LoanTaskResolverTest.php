@@ -96,4 +96,20 @@ class LoanTaskResolverTest extends CoreTestCase
 
         $this->assertCount(1, app(LoanTaskResolver::class)->modules($this->company(), 'ALLA FIRMA'));
     }
+
+    public function test_con_pagamento_a_bollettino_il_modulo_sdd_non_compare(): void
+    {
+        $contratto = $this->coreModule(null, 'Contratto di fornitura Edison');
+        $sdd = $this->coreModule(null, 'Modulo SDD Edison');
+        $task = $this->task('ALLA FIRMA', $this->coreId);
+        $this->require($task, $contratto, 1);
+        $this->require($task, $sdd, 2);
+        $resolver = app(LoanTaskResolver::class);
+
+        $bollettino = new \App\Models\LoanRequest(['personal' => ['pagamento' => 'bollettino']]);
+        $sddLoan = new \App\Models\LoanRequest(['personal' => ['pagamento' => 'sdd']]);
+
+        $this->assertSame([$contratto->id], $resolver->modules($this->company(), 'ALLA FIRMA', $bollettino)->pluck('id')->all());
+        $this->assertSame([$contratto->id, $sdd->id], $resolver->modules($this->company(), 'ALLA FIRMA', $sddLoan)->pluck('id')->all());
+    }
 }
