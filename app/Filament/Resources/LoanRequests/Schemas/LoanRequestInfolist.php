@@ -34,6 +34,14 @@ class LoanRequestInfolist
                 TextEntry::make('perfected_at')->label('Perfezionata il')->dateTime()->placeholder('-'),
                 TextEntry::make('created_at')->label('Creata il')->dateTime(),
             ]),
+            Section::make('Firma')->columns(3)
+                ->visible(fn (LoanRequest $record) => filled($record->signature_status))
+                ->schema([
+                    TextEntry::make('signature_status')->label('Stato di firma')->badge()
+                        ->formatStateUsing(fn (?string $state) => LoanRequest::SIGNATURE_STATUSES[$state] ?? $state),
+                    TextEntry::make('documents_sent_at')->label('Inviati per la firma il')->dateTime()->placeholder('-'),
+                    TextEntry::make('signed_at')->label('Firmata il')->dateTime()->placeholder('-'),
+                ]),
             Section::make('Risposte della richiesta')->schema([
                 KeyValueEntry::make('answers')->hiddenLabel()->keyLabel('Domanda')->valueLabel('Risposta')
                     ->state(fn (LoanRequest $record) => LoanRequest::describe($record->answers, 'richiesta', $record->company_id)),

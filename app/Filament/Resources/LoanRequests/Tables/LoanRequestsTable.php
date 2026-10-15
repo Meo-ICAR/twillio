@@ -28,6 +28,8 @@ class LoanRequestsTable
                 TextColumn::make('agent_wa_number')->label('Agente')->searchable(),
                 TextColumn::make('product')->label('Prodotto')
                     ->formatStateUsing(fn (string $state, LoanRequest $record) => LoanRequest::productLabels($record->company_id)[$state] ?? $state),
+                TextColumn::make('signature_status')->label('Firma')->badge()->toggleable()
+                    ->formatStateUsing(fn (?string $state) => LoanRequest::SIGNATURE_STATUSES[$state] ?? '-'),
                 TextColumn::make('status')->label('Stato')->badge()
                     ->formatStateUsing(fn (string $state) => LoanRequest::STATUSES[$state] ?? $state),
                 TextColumn::make('privacy_received_at')->label('Informativa')->dateTime()->sortable()->placeholder('-'),

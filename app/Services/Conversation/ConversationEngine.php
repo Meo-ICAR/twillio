@@ -1356,7 +1356,8 @@ class ConversationEngine
 
     private function loanLine(LoanRequest $loan): string
     {
-        return "• {$loan->code} · ".(LoanRequest::productLabels()[$loan->product] ?? $loan->product).' · '.str_replace('_', ' ', $loan->status);
+        return "• {$loan->code} · ".(LoanRequest::productLabels()[$loan->product] ?? $loan->product).' · '.str_replace('_', ' ', $loan->status)
+            .($loan->signature_status ? ' · firma: '.mb_strtolower(LoanRequest::SIGNATURE_STATUSES[$loan->signature_status] ?? $loan->signature_status) : '');
     }
 
     /** Dettaglio della pratica con i suoi documenti, raggruppati per tipo, con stato e ultima annotazione. */
