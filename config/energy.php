@@ -18,15 +18,28 @@ $summary = fn (array $extra = []) => array_merge([
 ], $extra);
 
 return [
+    // Parametri DIMOSTRATIVI del preventivatore. Prezzo di riferimento «tutto compreso» (€/kWh, €/Smc) con cui la spesa mensile
+    // diventa un consumo annuo; `split` ripartisce la spesa unica di «Luce e Gas».
+    'quote' => [
+        'reference' => [
+            'privato' => ['luce' => 0.28, 'gas' => 1.10],
+            'bt' => ['luce' => 0.24, 'gas' => 0.95],
+            'mt' => ['luce' => 0.17, 'gas' => 0.70],
+        ],
+        'split' => ['luce' => 0.6, 'gas' => 0.4],
+    ],
+
     'flows' => [
-        // Simulazione: consumi attuali → il preventivatore consiglia l'offerta più conveniente.
+        // Simulazione sul modello dell'IVR Edison: profilo, fornitura, residenza o tensione, spesa mensile → offerta più conveniente.
         'richiesta' => [
-            'start' => 'prodotto',
-            'restart' => 'prodotto',
+            'start' => 'profilo',
+            'restart' => 'profilo',
             'nodes' => [
-                'prodotto' => $choice('Fornitura', 'Che fornitura vuoi proporre al cliente?', ['luce' => 'Luce', 'gas' => 'Gas'], 'consumo'),
-                'consumo' => $text('Consumo annuo', 'Consumo annuo del cliente (kWh per la luce, Smc per il gas), dall\'ultima bolletta:', ['required', 'regex:'.$numero], 'spesa_attuale', ['error' => 'Scrivi un numero, per esempio 2700 o 2.700,5.']),
-                'spesa_attuale' => $text('Spesa annua attuale', 'Quanto spende oggi il cliente in un anno, in euro? (se non lo sai scrivi 0)', ['required', 'regex:'.$numero], 'riepilogo', ['error' => 'Scrivi un numero, per esempio 650.']),
+                'profilo' => $choice('Profilo cliente', 'Che tipo di utenza è?', ['privato' => 'Abitazione privata', 'azienda' => 'Azienda o P.IVA'], 'prodotto'),
+                'prodotto' => $choice('Fornitura', 'Che fornitura vuoi proporre al cliente?', ['luce' => 'Luce', 'gas' => 'Gas', 'luce_gas' => 'Luce e Gas'], ['privato' => 'residenza', 'azienda' => 'tensione'], ['next_by' => 'profilo']),
+                'residenza' => $choice('Residenza', 'La fornitura è per l\'abitazione di residenza principale?', ['principale' => 'Residenza principale', 'seconda' => 'Seconda casa'], 'spesa_mensile'),
+                'tensione' => $choice('Tipo di fornitura', 'La fornitura è in bassa o media tensione? Bassa: uffici, negozi, piccoli laboratori. Media: impianti industriali.', ['bt' => 'Bassa tensione', 'mt' => 'Media tensione'], 'spesa_mensile'),
+                'spesa_mensile' => $text('Spesa mensile', 'Spesa media mensile del cliente in euro (per luce e gas insieme, il totale):', ['required', 'regex:'.$numero], 'riepilogo', ['error' => 'Scrivi un numero, per esempio 80 o 350.']),
                 'riepilogo' => $summary(),
             ],
         ],

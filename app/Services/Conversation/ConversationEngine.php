@@ -634,8 +634,8 @@ class ConversationEngine
         $condition = $def['skip_if'] ?? null;
 
         return match (true) {
-            // La fornitura della pratica (luce/gas) non è quella indicata: la domanda non serve.
-            is_string($condition) && str_starts_with($condition, 'product_not:') => $conv->loanRequest?->product !== substr($condition, 12),
+            // La fornitura indicata (luce/gas) non rientra nel prodotto della pratica (luce, gas o luce_gas): la domanda non serve.
+            is_string($condition) && str_starts_with($condition, 'product_not:') => ! in_array(substr($condition, 12), explode('_', (string) $conv->loanRequest?->product), true),
             $condition === 'privacy_received' => (bool) $conv->loanRequest?->hasInformativa(),
             is_string($condition) && str_starts_with($condition, 'filled:') => filled($data[substr($condition, 7)] ?? null),
             // Documento già inviato (e non respinto): non si richiede.
@@ -1058,14 +1058,22 @@ class ConversationEngine
             return "Non riesco a calcolare un'offerta con questi dati: contatta il customer care di {$company->name}.{$phone}";
         }
 
-        $p = $quote['product'];
-        $text = "💡 Offerta consigliata: *{$p->name}*".(($p->params['provider'] ?? null) ? " ({$p->params['provider']})" : '')
-            ."\nCosto stimato: *".number_format($quote['annual_cost'], 2, ',', '.').' €/anno*.';
-        if ($quote['saving'] !== null && $quote['saving'] > 0) {
-            $text .= "\nRisparmio stimato: *".number_format($quote['saving'], 2, ',', '.').' €/anno*.';
+        $business = ($loan->answers['profilo'] ?? 'privato') === 'azienda';
+        $text = '💡 Offerta consigliata per '.($business ? "l'attività" : "l'abitazione")." del cliente:\n";
+        foreach ($quote['lines'] as $line) {
+            $p = $line['product'];
+            $text .= '• '.ucfirst($line['fornitura']).': *'.$p->name.'*'.(($p->params['provider'] ?? null) ? " ({$p->params['provider']})" : '')
+                .' — circa '.number_format($line['annual_cost'] / 12, 0, ',', '.')." €/mese\n";
+        }
+        $text .= 'Costo stimato: *circa '.number_format($quote['monthly_cost'], 0, ',', '.').' €/mese*'.($business ? ' (IVA e imposte escluse)' : '').'.';
+        if ($quote['saving'] > 0) {
+            $text .= "\nRisparmio stimato: *".number_format($quote['saving'], 0, ',', '.').' €/anno*.';
+        }
+        if (($loan->answers['tensione'] ?? null) === 'mt') {
+            $text .= "\nPer la media tensione il prezzo finale si definisce con una consulenza energetica dedicata.";
         }
 
-        return $text."\n_Stima indicativa sui consumi dichiarati._";
+        return $text."\n_Stima indicativa sulla spesa dichiarata._";
     }
 
     private function completePerfezionamento(Conversation $conv): array

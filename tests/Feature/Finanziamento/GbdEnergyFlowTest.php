@@ -25,7 +25,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
     public function test_installatore_1_fa_la_simulazione_e_riceve_l_offerta_migliore(): void
     {
-        $text = $this->bodies($this->say('ciao', '#menu_richiedi', '#luce', '3000', '600', '#conferma'));
+        $text = $this->bodies($this->say('ciao', '#menu_richiedi', '#privato', '#luce', '#principale', '80', '#conferma'));
 
         $this->assertStringContainsString('Offerta consigliata', $text);
         $loan = LoanRequest::latest('id')->first();
@@ -33,11 +33,45 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertSame($this->gbdId(), $loan->company_id);
     }
 
+    public function test_azienda_in_bassa_tensione_ha_il_prezzo_senza_iva(): void
+    {
+        $text = $this->bodies($this->say('ciao', '#menu_richiedi', '#azienda', '#luce', '#bt', '350', '#conferma'));
+
+        $this->assertStringContainsString('IVA e imposte escluse', $text);
+        $this->assertStringContainsString('Edison Placet Business', $text);
+        $this->assertStringNotContainsString('consulenza energetica', $text);
+    }
+
+    public function test_azienda_in_media_tensione_ha_un_preventivo_indicativo(): void
+    {
+        $text = $this->bodies($this->say('ciao', '#menu_richiedi', '#azienda', '#luce', '#mt', '5000', '#conferma'));
+
+        $this->assertStringContainsString('Edison Business MT', $text);
+        $this->assertStringContainsString('consulenza energetica', $text);
+    }
+
+    public function test_luce_e_gas_danno_due_offerte_e_chiedono_pod_e_pdr(): void
+    {
+        $text = $this->bodies($this->say('ciao', '#menu_richiedi', '#privato', '#luce_gas', '#seconda', '150', '#conferma'));
+
+        $this->assertStringContainsString('Luce:', $text);
+        $this->assertStringContainsString('Gas:', $text);
+        $this->assertStringContainsString('Edison Sweet', $text);
+
+        $code = LoanRequest::latest('id')->value('code');
+        $this->assertSame('luce_gas', LoanRequest::latest('id')->value('product'));
+        $this->say('ciao', '#menu_perfeziona');
+        $this->say($code, '#si', '#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');
+        $this->assertSame('pod', $this->node());
+        $this->say('IT001E12345678');
+        $this->assertSame('pdr', $this->node());
+    }
+
     public function test_senza_prodotti_adatti_rimanda_al_customer_care(): void
     {
         Company::find($this->gbdId())->products()->detach();
 
-        $text = $this->bodies($this->say('ciao', '#menu_richiedi', '#gas', '1.200', '0', '#conferma'));
+        $text = $this->bodies($this->say('ciao', '#menu_richiedi', '#privato', '#gas', '#principale', '90', '#conferma'));
 
         $this->assertStringContainsString('customer care di GBD Energy', $text);
     }
@@ -60,7 +94,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
     private function startPerfection(): string
     {
-        $this->say('ciao', '#menu_richiedi', '#luce', '3000', '600', '#conferma');
+        $this->say('ciao', '#menu_richiedi', '#privato', '#luce', '#principale', '80', '#conferma');
         $code = LoanRequest::latest('id')->value('code');
         $this->say('ciao', '#menu_perfeziona');
         $this->say($code, '#si');
@@ -119,7 +153,7 @@ class GbdEnergyFlowTest extends ConversationTestCase
 
     private function toSupplyPoint(string $fornitura): string
     {
-        $this->say('ciao', '#menu_richiedi', '#'.$fornitura, '1000', '300', '#conferma');
+        $this->say('ciao', '#menu_richiedi', '#privato', '#'.$fornitura, '#principale', '80', '#conferma');
         $code = LoanRequest::latest('id')->value('code');
         $this->say('ciao', '#menu_perfeziona');
         $this->say($code, '#si', '#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si');

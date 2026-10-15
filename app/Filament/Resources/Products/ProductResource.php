@@ -50,7 +50,7 @@ class ProductResource extends Resource
             Textarea::make('description')->label('Descrizione'),
             Toggle::make('is_active')->label('Attivo')->default(true),
             KeyValue::make('params')->label('Parametri (fornitura, prezzo, quota fissa, durata, bonus…)')
-                ->helperText('Energia: fornitura (luce/gas), price (€/kWh o €/Smc), fixed_monthly, bonus, duration_months, provider.'),
+                ->helperText('Energia: fornitura (luce/gas), segmento (privato/azienda), price (€/kWh o €/Smc), fixed_monthly, bonus, duration_months, provider; facoltativi residenza (seconda), tensione (bt/mt), max_kwh, max_smc.'),
         ]);
     }
 

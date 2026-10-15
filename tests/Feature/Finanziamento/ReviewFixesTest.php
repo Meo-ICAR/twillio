@@ -69,10 +69,11 @@ class ReviewFixesTest extends ConversationTestCase
             $company->products()->attach(Product::create(['type' => 'ENERGY', 'name' => $code, 'code' => $code, 'params' => ['fornitura' => 'luce', 'price' => $price]])->id);
         }
 
-        $quote = app(EnergyQuoteEstimator::class)->quote(new LoanRequest(['product' => 'luce', 'answers' => ['consumo' => '1000']]), $company);
+        $quote = app(EnergyQuoteEstimator::class)->quote(new LoanRequest(['product' => 'luce', 'answers' => ['spesa_mensile' => '28']]), $company);
 
-        $this->assertSame('p1', $quote['product']->code);
-        $this->assertEqualsWithDelta(120.0, $quote['annual_cost'], 0.01);
+        // 28*12/0.28 = 1200 kWh.
+        $this->assertSame('p1', $quote['lines'][0]['product']->code);
+        $this->assertEqualsWithDelta(144.0, $quote['annual_cost'], 0.01);
     }
 
     public function test_etichette_di_una_pratica_gbd_fuori_dal_bot(): void
@@ -80,7 +81,7 @@ class ReviewFixesTest extends ConversationTestCase
         [$first, $gbd] = $this->twoCompanies();
 
         $this->assertSame('Luce', LoanRequest::productLabels($gbd->id)['luce']);
-        $this->assertArrayHasKey('Consumo annuo', LoanRequest::describe(['consumo' => '3000'], 'richiesta', $gbd->id));
+        $this->assertArrayHasKey('Spesa mensile', LoanRequest::describe(['spesa_mensile' => '80'], 'richiesta', $gbd->id));
         $this->assertArrayHasKey('personale', LoanRequest::productLabels($first->id));
     }
 

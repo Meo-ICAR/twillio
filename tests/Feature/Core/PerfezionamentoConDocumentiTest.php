@@ -58,7 +58,7 @@ class PerfezionamentoConDocumentiTest extends CoreTestCase
 
     private function toSummary(): string
     {
-        $this->say('ciao', '#menu_richiedi', '#luce', '3000', '600', '#conferma');
+        $this->say('ciao', '#menu_richiedi', '#privato', '#luce', '#principale', '80', '#conferma');
         $code = LoanRequest::latest('id')->value('code');
         $this->say('ciao', '#menu_perfeziona');
         $this->say($code, '#si', '#privato', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', 'enel energia', '3331234567', 'mario@example.com', '#si');

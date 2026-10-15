@@ -31,12 +31,32 @@ class GbdEnergySeeder extends Seeder
         app(CheckRegistry::class)->sync();
         app(FlowImporter::class)->import(company: $company, flows: config('energy.flows'));
 
-        $offers = [
-            ['code' => 'edison_luce_flex', 'name' => 'Edison Luce Flex (esempio)', 'params' => ['fornitura' => 'luce', 'price' => 0.13, 'fixed_monthly' => 8, 'bonus' => 0, 'duration_months' => 12, 'provider' => 'Edison']],
-            ['code' => 'edison_luce_fisso', 'name' => 'Edison Luce Fisso (esempio)', 'params' => ['fornitura' => 'luce', 'price' => 0.15, 'fixed_monthly' => 0, 'bonus' => 40, 'duration_months' => 24, 'provider' => 'Edison']],
-            ['code' => 'edison_gas_flex', 'name' => 'Edison Gas Flex (esempio)', 'params' => ['fornitura' => 'gas', 'price' => 0.55, 'fixed_monthly' => 7, 'bonus' => 0, 'duration_months' => 12, 'provider' => 'Edison']],
-            ['code' => 'edison_gas_fisso', 'name' => 'Edison Gas Fisso (esempio)', 'params' => ['fornitura' => 'gas', 'price' => 0.62, 'fixed_monthly' => 0, 'bonus' => 30, 'duration_months' => 24, 'provider' => 'Edison']],
-        ];
+        // Offerte Edison. Prezzi (€/kWh, €/Smc "tutto compreso"), quote e bonus sono DIMOSTRATIVI; i limiti di consumo sono quelli di listino.
+        $offers = [];
+        $add = function (string $code, string $name, string $segmento, array $luce, array $gas, array $extra = []) use (&$offers) {
+            foreach (['luce' => $luce, 'gas' => $gas] as $fornitura => $values) {
+                $offers[] = ['code' => "{$code}_{$fornitura}", 'name' => $name, 'params' => $values + $extra + ['fornitura' => $fornitura, 'segmento' => $segmento, 'provider' => 'Edison']];
+            }
+        };
+        // Privati.
+        $add('edison_dynamic', 'Edison Dynamic', 'privato', ['price' => 0.255, 'fixed_monthly' => 6], ['price' => 1.00, 'fixed_monthly' => 6], ['duration_months' => 12]);
+        $add('edison_world_plus', 'Edison World Plus', 'privato', ['price' => 0.250, 'fixed_monthly' => 9], ['price' => 0.98, 'fixed_monthly' => 9], ['duration_months' => 12]);
+        $add('edison_superflex', 'Edison SuperFlex', 'privato', ['price' => 0.262, 'fixed_monthly' => 4, 'bonus' => 20], ['price' => 1.04, 'fixed_monthly' => 4, 'bonus' => 20], ['duration_months' => 12]);
+        $add('edison_web_easyfix', 'Edison Web / EasyFix (prezzo fisso)', 'privato', ['price' => 0.265, 'bonus' => 30], ['price' => 1.05, 'bonus' => 30], ['duration_months' => 24]);
+        $add('edison_sweet', 'Edison Sweet', 'privato', ['price' => 0.258, 'bonus' => 40], ['price' => 1.02, 'bonus' => 40], ['duration_months' => 24, 'residenza' => 'seconda']);
+        // Aziende e P.IVA, bassa tensione.
+        $add('edison_dynamic_business', 'Edison Dynamic Business', 'azienda', ['price' => 0.215, 'fixed_monthly' => 10, 'max_kwh' => 5000], ['price' => 0.85, 'fixed_monthly' => 10, 'max_smc' => 2500], ['tensione' => 'bt', 'duration_months' => 12]);
+        $add('edison_world_business', 'Edison World Business', 'azienda', ['price' => 0.208, 'fixed_monthly' => 15, 'max_kwh' => 10000], ['price' => 0.83, 'fixed_monthly' => 15, 'max_smc' => 5000], ['tensione' => 'bt', 'duration_months' => 12]);
+        $add('edison_placet_business', 'Edison Placet Business', 'azienda', ['price' => 0.225], ['price' => 0.88], ['tensione' => 'bt', 'duration_months' => 12]);
+        // Media tensione (grandi imprese): piani su misura, qui indicativi.
+        $add('edison_mt_indicizzato', 'Edison Business MT Indicizzato', 'azienda', ['price' => 0.150, 'fixed_monthly' => 60], ['price' => 0.60, 'fixed_monthly' => 60], ['tensione' => 'mt', 'duration_months' => 12]);
+        $add('edison_mt_fisso', 'Edison Business MT Fisso', 'azienda', ['price' => 0.158, 'fixed_monthly' => 30], ['price' => 0.63, 'fixed_monthly' => 30], ['tensione' => 'mt', 'duration_months' => 24]);
+
+        // Gli esempi della versione precedente (preventivo da consumo) non servono più.
+        $old = Product::where('type', 'ENERGY')->whereIn('code', ['edison_luce_flex', 'edison_luce_fisso', 'edison_gas_flex', 'edison_gas_fisso'])->get();
+        $company->products()->detach($old->pluck('id')->all());
+        Product::whereIn('id', $old->pluck('id'))->update(['is_active' => false]);
+
         foreach ($offers as $offer) {
             $product = Product::updateOrCreate(['type' => 'ENERGY', 'code' => $offer['code']], ['name' => $offer['name'], 'params' => $offer['params'], 'is_active' => true]);
             $company->products()->syncWithoutDetaching([$product->id]);
