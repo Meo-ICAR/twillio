@@ -10,6 +10,7 @@ use App\Services\Checks\InformativaFirmataCheck;
 use App\Services\Checks\MaggiorenneCheck;
 use App\Services\Checks\MobileCheck;
 use App\Services\Checks\PartitaIvaCheck;
+use App\Services\Checks\RegistroImpreseCheck;
 use App\Services\Checks\TipoDocumentoCheck;
 
 // Alberi delle conversazioni WhatsApp. Solo dati: nessuna closure salvata (compatibile con config:cache).
@@ -48,6 +49,7 @@ return [
         'codice_fiscale' => CodiceFiscaleCheck::class,
         'iban' => IbanCheck::class,
         'partita_iva' => PartitaIvaCheck::class,
+        'registro_imprese' => RegistroImpreseCheck::class,
         'fornitore_energia' => FornitoreEnergiaCheck::class,
         'email' => EmailCheck::class,
         'mobile' => MobileCheck::class,

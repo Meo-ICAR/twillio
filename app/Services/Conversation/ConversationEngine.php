@@ -10,6 +10,7 @@ use App\Models\Conversation;
 use App\Models\Fornitore;
 use App\Models\LoanRequest;
 use App\Models\PraticaDocument;
+use App\Models\PraticaField;
 use App\Models\User;
 use App\Services\Bpm\BpmEvents;
 use App\Services\Checks\CheckContext;
@@ -634,8 +635,12 @@ class ConversationEngine
         $condition = $def['skip_if'] ?? null;
 
         return match (true) {
+            // Il profilo del preventivo (privato/azienda) non è quello indicato: la domanda non serve.
+            is_string($condition) && str_starts_with($condition, 'segment_not:') => ($conv->loanRequest?->answers['profilo'] ?? 'privato') !== substr($condition, 12),
             // La fornitura indicata (luce/gas) non rientra nel prodotto della pratica (luce, gas o luce_gas): la domanda non serve.
-            is_string($condition) && str_starts_with($condition, 'product_not:') => ! in_array(substr($condition, 12), explode('_', (string) $conv->loanRequest?->product), true),
+            // Se il dato è già stato letto da un documento e confermato non si richiede.
+            is_string($condition) && str_starts_with($condition, 'product_not:') => ! in_array(substr($condition, 12), explode('_', (string) $conv->loanRequest?->product), true)
+                || filled($data[['luce' => 'pod', 'gas' => 'pdr'][substr($condition, 12)] ?? ''] ?? null),
             $condition === 'privacy_received' => (bool) $conv->loanRequest?->hasInformativa(),
             is_string($condition) && str_starts_with($condition, 'filled:') => filled($data[substr($condition, 7)] ?? null),
             // Documento già inviato (e non respinto): non si richiede.
@@ -1259,7 +1264,7 @@ class ConversationEngine
 
     private function summary(Conversation $conv, array $def): string
     {
-        $text = "📋 *Riepilogo*\n\n".$this->describe($conv->data ?? [], $conv->flow);
+        $text = "📋 *Riepilogo*\n\n".(($def['provenance'] ?? false) ? $this->describeWithProvenance($conv) : $this->describe($conv->data ?? [], $conv->flow));
 
         if (! empty($def['docs'])) {
             $slots = PraticaDocument::populate($conv->loanRequest)->keyBy('code');
@@ -1280,6 +1285,20 @@ class ConversationEngine
         }
 
         return rtrim($text);
+    }
+
+    /** Come describe(), con 🟢 per i dati letti dai documenti e confermati dall'agente e 🟡 per quelli digitati. */
+    private function describeWithProvenance(Conversation $conv): string
+    {
+        $fromDocuments = array_keys(PraticaField::confirmedValues($conv->loanRequest));
+        $lines = [];
+        foreach ($conv->data ?? [] as $key => $value) {
+            foreach (LoanRequest::describe([$key => $value], $conv->flow) as $label => $text) {
+                $lines[] = (in_array($key, $fromDocuments, true) ? '🟢' : '🟡')." {$label}: {$text}";
+            }
+        }
+
+        return implode("\n", $lines)."\n\n🟢 letto dai documenti · 🟡 inserito a mano";
     }
 
     private function describe(array $answers, string $flow): string

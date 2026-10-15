@@ -1,0 +1,134 @@
+{
+    "data": [
+        {
+            "taxCode": "09006331210",
+            "vatCode": "09006331210",
+            "companyName": "HASSISTO S.R.L. *** START-UP COSTITUITA A NORMA DELL'ART. 4 COMMA 10 BIS DEL DECRETO LEGGE 24 GENNAIO N. 3 ***",
+            "address": {
+                "registeredOffice": {
+                    "toponym": "VIA",
+                    "street": "MERCATO ITTICO",
+                    "streetNumber": "16",
+                    "streetName": "VIA MERCATO ITTICO 16",
+                    "town": "MUGNANO DI NAPOLI",
+                    "hamlet": null,
+                    "province": "NA",
+                    "zipCode": "80018",
+                    "gps": {
+                        "coordinates": [
+                            14.21089,
+                            40.91102
+                        ]
+                    },
+                    "region": {
+                        "code": "15",
+                        "description": "CAMPANIA"
+                    },
+                    "townCode": "F799"
+                }
+            },
+            "activityStatus": "ATTIVA",
+            "reaCode": "1001542",
+            "cciaa": "NA",
+            "atecoClassification": {
+                "ateco": {
+                    "code": "621",
+                    "description": "Attivita' di programmazione informatica"
+                },
+                "ateco2007": {
+                    "code": "6201",
+                    "description": "Produzione di software non connesso all'edizione"
+                },
+                "ateco2022": {
+                    "code": "6201",
+                    "description": "Produzione di software non connesso all'edizione"
+                }
+            },
+            "detailedLegalForm": {
+                "code": "SR",
+                "description": "SOCIETA' A RESPONSABILITA' LIMITATA"
+            },
+            "startDate": "2018-07-10",
+            "registrationDate": "2018-09-21",
+            "endDate": null,
+            "pec": "hassisto@pec.it",
+            "taxCodeCeased": false,
+            "taxCodeCeasedTimestamp": 1624359830,
+            "vatGroup": {
+                "vatGroupParticipation": false,
+                "isVatGroupLeader": false,
+                "registryOk": true
+            },
+            "sdiCode": "KRRH6B9",
+            "sdiCodeTimestamp": 1624359830,
+            "creationTimestamp": 1624359830,
+            "lastUpdateTimestamp": 1787171339,
+            "balanceSheets": {
+                "last": {
+                    "year": 2025,
+                    "balanceSheetDate": "2025-12-31",
+                    "turnover": 324998,
+                    "netWorth": -5074,
+                    "employees": 1,
+                    "shareCapital": 10000,
+                    "totalStaffCost": 40825,
+                    "totalAssets": 213269,
+                    "avgGrossSalary": 40825
+                },
+                "all": [
+                    {
+                        "year": 2026,
+                        "balanceSheetDate": null,
+                        "turnover": null,
+                        "netWorth": null,
+                        "employees": 1,
+                        "shareCapital": 10000,
+                        "totalStaffCost": null,
+                        "totalAssets": null
+                    }
+                ]
+            },
+            "shareHolders": [
+                {
+                    "companyName": "MEO PIER GIUSEPPE",
+                    "name": "PIER GIUSEPPE",
+                    "surname": "MEO",
+                    "taxCode": "MEOPGS64D04F839I",
+                    "percentShare": 35
+                },
+                {
+                    "companyName": "PALMA GIUSEPPE",
+                    "name": "GIUSEPPE",
+                    "surname": "PALMA",
+                    "taxCode": "PLMGPP82S13D862A",
+                    "percentShare": 15
+                },
+                {
+                    "companyName": "MAGLIULO MARIO",
+                    "name": "MARIO",
+                    "surname": "MAGLIULO",
+                    "taxCode": "MGLMRA64E10F839W",
+                    "percentShare": 20
+                },
+                {
+                    "companyName": "SOSCIA ERNESTO",
+                    "name": "ERNESTO",
+                    "surname": "SOSCIA",
+                    "taxCode": "SSCRST73C26F839R",
+                    "percentShare": 15
+                },
+                {
+                    "companyName": "ORLANDO ALBINA",
+                    "name": "ALBINA",
+                    "surname": "ORLANDO",
+                    "taxCode": "RLNLBN71H61F839W",
+                    "percentShare": 15
+                }
+            ],
+            "id": "60d1c396eba32633fd2e4a7a"
+        }
+    ],
+    "success": true,
+    "message": "",
+    "error": null
+}
