@@ -72,6 +72,7 @@ class LoanRequest extends Model
             'answers' => 'array',
             'is_test' => 'boolean',
             'personal' => 'encrypted:array',
+            'cadastre' => 'encrypted:array',
             'privacy_received_at' => 'datetime',
             'signed_at' => 'datetime',
             'documents_sent_at' => 'datetime',

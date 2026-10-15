@@ -4,6 +4,7 @@ namespace App\Services\Conversation;
 
 use App\Jobs\AnalyzeAttachment;
 use App\Jobs\ArchiveLoanDocuments;
+use App\Jobs\FetchCadastreData;
 use App\Jobs\SendDocumentsToCrm;
 use App\Models\Company;
 use App\Models\Conversation;
@@ -1097,6 +1098,7 @@ class ConversationEngine
         }
 
         $loan->update($this->perfectedAttributes($data, $company));
+        $this->fetchCadastre($loan, $company);
         $this->mailer->notifyProducer($loan);
         $this->archiveDocuments($loan);
         $this->sendDocumentsToCrm($loan);
@@ -1174,6 +1176,20 @@ class ConversationEngine
         }
 
         return $data;
+    }
+
+    /** Per i privati delle società di energia i dati catastali si recuperano in background; un errore qui non annulla il perfezionamento. */
+    private function fetchCadastre(LoanRequest $loan, ?Company $company): void
+    {
+        if ($company?->type !== 'ENERGY' || ($loan->answers['profilo'] ?? 'privato') !== 'privato') {
+            return;
+        }
+
+        try {
+            FetchCadastreData::dispatch($loan->id);
+        } catch (\Throwable $e) {
+            Log::error('Recupero dati catastali non avviato', ['loan' => $loan->code, 'exception' => $e::class]);
+        }
     }
 
     /** Avvia l'archiviazione su SharePoint; un errore qui non annulla il perfezionamento. */

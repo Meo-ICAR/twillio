@@ -166,4 +166,20 @@ class GbdPerfezionamentoDocumentiTest extends ConversationTestCase
 
         $this->assertSame('si', LoanRequest::where('code', $code)->first()->personal['terzo_intestatario']);
     }
+
+    public function test_il_catasto_parte_in_background_per_i_privati_e_non_per_le_aziende(): void
+    {
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\FetchCadastreData::class]);
+        $this->start();
+        $this->say('salta', 'salta', 'salta', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', '3', 'Enel Energia', '#bollettino', '#proprieta', '#residenza', '3331234567', 'mario@example.com', '#si');
+        $this->say('#conferma');
+        \Illuminate\Support\Facades\Bus::assertDispatched(\App\Jobs\FetchCadastreData::class);
+
+        \Illuminate\Support\Facades\Bus::fake([\App\Jobs\FetchCadastreData::class]);
+        Conversation::query()->delete();
+        $this->start(['#azienda', '#luce', '#bt', '350']);
+        $this->say('salta', 'salta', 'salta', 'salta', '12345678903', 'ACME Srl', 'RSSMRA80A01H501U', 'Rossi', 'Mario', 'Via Roma 1, 00100 Roma', '#si', 'IT001E12345678', '15', 'Enel Energia', '#bollettino', '#proprieta', '3331234567', 'info@acme.example', '#si');
+        $this->say('#conferma');
+        \Illuminate\Support\Facades\Bus::assertNotDispatched(\App\Jobs\FetchCadastreData::class);
+    }
 }
