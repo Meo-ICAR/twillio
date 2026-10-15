@@ -21,7 +21,9 @@ class ViewLoanRequest extends ViewRecord
         return [
             EditAction::make(),
             Action::make('reinviaFirma')->label('Reinvia per la firma')->icon('heroicon-o-paper-airplane')->requiresConfirmation()
-                ->visible(fn () => in_array($this->record->signature_status, ['errore', 'scaduta', 'rifiutata'], true)
+                ->visible(fn () => (in_array($this->record->signature_status, ['errore', 'scaduta', 'rifiutata'], true)
+                        // In attesa da oltre la scadenza (7 giorni) senza che il core l'abbia chiusa.
+                        || ($this->record->signature_status === 'in_attesa' && $this->record->documents_sent_at?->lt(now()->subDays(8))))
                     && Company::forWhatsApp($this->record->agent_wa_number)?->producesDocuments())
                 ->action(function () {
                     try {

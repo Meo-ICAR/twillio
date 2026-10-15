@@ -15,7 +15,7 @@ class PurgeUnperfected extends Command
     public function handle(): int
     {
         $days = (int) config('privacy.retention_days');
-        $expired = LoanRequest::where('status', '!=', 'perfezionata')
+        $expired = LoanRequest::whereNotIn('status', LoanRequest::PERFECTED_STATUSES)
             ->where('created_at', '<', now()->subDays($days));
 
         $count = $expired->count();

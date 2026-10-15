@@ -144,7 +144,7 @@ class SystemHealth
             'documenti_rifiutati' => PraticaDocument::where('status', 'rejected')->where('code', '!=', 'informativa')->count(),
             'non_analizzati' => Attachment::whereIn('status', ['non_analizzato', 'non_leggibile'])->count(),
             'informative_in_attesa' => PraticaDocument::where('code', 'informativa')->whereIn('status', ['ricevuto', 'rejected'])->count(),
-            'perfezionate_7g' => LoanRequest::where('status', 'perfezionata')->where('perfected_at', '>=', now()->subDays(7))->count(),
+            'perfezionate_7g' => LoanRequest::whereIn('status', LoanRequest::PERFECTED_STATUSES)->where('perfected_at', '>=', now()->subDays(7))->count(),
         ];
     }
 
@@ -155,7 +155,7 @@ class SystemHealth
 
         return [
             'per_stato' => LoanRequest::where('created_at', '>=', now()->subDays(7))->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status')->map(fn ($n) => (int) $n)->all(),
-            'in_scadenza' => LoanRequest::where('status', '!=', 'perfezionata')->where('created_at', '<', now()->subDays(max($days - 7, 0)))->count(),
+            'in_scadenza' => LoanRequest::whereNotIn('status', LoanRequest::PERFECTED_STATUSES)->where('created_at', '<', now()->subDays(max($days - 7, 0)))->count(),
             'conversazioni_attive' => Conversation::where('status', 'attiva')->count(),
             'costo_ai_7g' => (float) Attachment::where('received_at', '>=', now()->subDays(7))->sum('ai_cost'),
             'letture_ai_7g' => Attachment::where('received_at', '>=', now()->subDays(7))->whereNotNull('ai_cost')->count(),

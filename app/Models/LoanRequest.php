@@ -24,6 +24,9 @@ class LoanRequest extends Model
         'perfezionare' => 'Da perfezionare',
     ];
 
+    /** Pratiche già perfezionate, trasmesse o firmate: non si cancellano né si ripresentano come aperte. */
+    public const PERFECTED_STATUSES = ['perfezionata', 'invio_istruttoria', 'perfezionare'];
+
     /** Stato della firma dei documenti prodotti con il core. */
     public const SIGNATURE_STATUSES = [
         'in_attesa' => 'In attesa firma',

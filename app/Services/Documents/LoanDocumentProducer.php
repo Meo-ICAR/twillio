@@ -24,8 +24,28 @@ class LoanDocumentProducer
         private SignatureRequestService $signatures,
     ) {}
 
-    /** @return array{sent: int, skipped: int} */
+    /**
+     * @return array{sent: int, skipped: int}
+     *
+     * @throws DocumentProductionException per qualunque errore (dati mancanti, core non raggiungibile, PDF non compilabile)
+     */
     public function produce(LoanRequest $loan, Company $company, string $stato): array
+    {
+        try {
+            return $this->run($loan, $company, $stato);
+        } catch (DocumentProductionException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            // Solo il tipo di errore: il messaggio può contenere dati personali.
+            Log::error('Produzione documenti non riuscita', ['loan' => $loan->code, 'exception' => $e::class]);
+            $loan->update(['signature_status' => 'errore']);
+
+            throw new DocumentProductionException('Non sono riuscito a preparare i documenti per la firma: riprova dal pannello.', 0, $e);
+        }
+    }
+
+    /** @return array{sent: int, skipped: int} */
+    private function run(LoanRequest $loan, Company $company, string $stato): array
     {
         $modules = $this->tasks->modules($company, $stato);
         if ($modules->isEmpty()) {
@@ -58,6 +78,9 @@ class LoanDocumentProducer
 
         if ($sent > 0) {
             $loan->update(['signature_status' => 'in_attesa', 'documents_sent_at' => now()]);
+        } elseif ($skipped > 0 && ! $loan->signed_at && $loan->signature_status !== 'in_attesa') {
+            // Firme già aperte (anche se un invio precedente non ha salvato lo stato): la pratica è in attesa.
+            $loan->update(['signature_status' => 'in_attesa']);
         }
 
         return ['sent' => $sent, 'skipped' => $skipped];

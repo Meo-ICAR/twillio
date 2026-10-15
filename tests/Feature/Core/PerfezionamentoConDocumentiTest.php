@@ -126,14 +126,15 @@ class PerfezionamentoConDocumentiTest extends CoreTestCase
         Queue::assertPushed(SendBpmEvent::class);
     }
 
-    public function test_senza_task_per_lo_stato_la_pratica_e_trasmessa_senza_documenti(): void
+    public function test_senza_task_per_lo_stato_la_pratica_si_comporta_come_senza_documenti(): void
     {
         $code = $this->toSummary();
 
         $this->say('#conferma');
 
         $loan = LoanRequest::where('code', $code)->first();
-        $this->assertSame('invio_istruttoria', $loan->status);
+        $this->assertSame('perfezionata', $loan->status);
         $this->assertNull($loan->signature_status);
+        Queue::assertPushed(SendBpmEvent::class);
     }
 }

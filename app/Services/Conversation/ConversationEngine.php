@@ -858,15 +858,15 @@ class ConversationEngine
     private function modifiableQuotes(string $from): Collection
     {
         return LoanRequest::where('agent_wa_number', $from)->where('is_test', $this->flows->isTest())
-            ->where('status', '!=', 'perfezionata')->latest('id')->limit(5)->get();
+            ->whereNotIn('status', LoanRequest::PERFECTED_STATUSES)->latest('id')->limit(5)->get();
     }
 
     /** @return Collection<int,LoanRequest> gli ultimi 5 preventivi da perfezionare o pratiche a cui mancano ancora documenti obbligatori */
     private function perfectibleLoans(string $from): Collection
     {
         return LoanRequest::where('agent_wa_number', $from)->where('is_test', $this->flows->isTest())
-            ->where(fn ($q) => $q->where('status', '!=', 'perfezionata')
-                ->orWhere(fn ($q) => $q->where('status', 'perfezionata')->whereHas('praticaDocuments', fn ($d) => $d->where('requirement', 'obbligatorio')->where('status', '!=', 'ok'))))
+            ->where(fn ($q) => $q->whereNotIn('status', LoanRequest::PERFECTED_STATUSES)
+                ->orWhere(fn ($q) => $q->whereIn('status', LoanRequest::PERFECTED_STATUSES)->whereHas('praticaDocuments', fn ($d) => $d->where('requirement', 'obbligatorio')->where('status', '!=', 'ok'))))
             ->latest('id')->limit(5)->get();
     }
 
@@ -914,7 +914,7 @@ class ConversationEngine
 
         $this->flows->setTest($loan->is_test && in_array('perfezionamento', $this->flows->testFlowCodes(), true));
 
-        if ($loan->status === 'perfezionata') {
+        if (in_array($loan->status, LoanRequest::PERFECTED_STATUSES, true)) {
             $missing = $loan->praticaDocuments()->where('requirement', 'obbligatorio')->where('status', '!=', 'ok')->exists();
             if (! $missing) {
                 return [Reply::text('Questa pratica è già stata perfezionata.'), $this->menu($from)];
@@ -1093,6 +1093,12 @@ class ConversationEngine
             try {
                 $result = $this->documents->produce($loan, $company, self::SIGN_STATE);
                 $note = $result['sent'] > 0 ? "\n✍️ Ho inviato i documenti al cliente per la firma con OTP: riceverà un SMS al cellulare indicato." : '';
+                if ($result['sent'] + $result['skipped'] === 0) {
+                    // Nessun documento da firmare per questo stato: la pratica si comporta come senza produzione di documenti.
+                    $withDocuments = false;
+                    $loan->update(['status' => 'perfezionata']);
+                    BpmEvents::dispatchPerfected($loan);
+                }
             } catch (DocumentProductionException $e) {
                 $note = "\n⚠️ {$e->getMessage()}";
             }
@@ -1296,7 +1302,7 @@ class ConversationEngine
         if (! $loan) {
             return [null, 'Codice non trovato. Controlla e riprova.'];
         }
-        if ($loan->status === 'perfezionata') {
+        if (in_array($loan->status, LoanRequest::PERFECTED_STATUSES, true)) {
             return [null, 'Questa pratica è già stata perfezionata.'];
         }
         if ($loan->status === 'richiesta') {

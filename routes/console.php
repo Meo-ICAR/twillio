@@ -11,3 +11,7 @@ Artisan::command('inspire', function () {
 Schedule::command('conversazioni:chiudi-abbandonate')->hourly();
 Schedule::command('finanziamento:purge')->dailyAt('03:30');
 Schedule::command('crm:send-documents')->hourly();
+
+// Firma dei documenti: il core chiude le richieste scadute e riconcilia gli stati; noi chiudiamo le pratiche con tutte le firme complete.
+Schedule::command('signature:sync')->everyTenMinutes();
+Schedule::command('signatures:finalize')->everyFiveMinutes();
