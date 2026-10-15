@@ -63,6 +63,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Documenti del core agganciati alla pratica di unicoagent.
+        \Illuminate\Database\Eloquent\Relations\Relation::morphMap(['loan_request' => \App\Models\LoanRequest::class], merge: true);
+
         // Ogni chiamata API in uscita (Meta, CRM...) viene comunicata a UnicoBPM per il suo trace «Log API».
         Http::globalMiddleware(ApiTrace::middleware());
     }

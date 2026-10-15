@@ -27,6 +27,12 @@ class LoanRequest extends Model
 
     protected $guarded = [];
 
+    /** Le relazioni morph dei Document del core non devono caricare la pratica sulla connessione del core (lì non c'è la tabella). */
+    public function getConnectionName(): ?string
+    {
+        return $this->connection ?? config('database.default');
+    }
+
     protected static function booted(): void
     {
         // Eliminare una pratica (dal pannello o per scadenza) cancella tutto ciò che la riguarda:
