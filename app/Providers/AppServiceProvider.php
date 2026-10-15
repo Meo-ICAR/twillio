@@ -66,6 +66,11 @@ class AppServiceProvider extends ServiceProvider
         // Documenti del core agganciati alla pratica di unicoagent.
         \Illuminate\Database\Eloquent\Relations\Relation::morphMap(['loan_request' => \App\Models\LoanRequest::class], merge: true);
 
+        // Eventi di firma del core: aggiornano la pratica, mandano i firmati all'istruttoria e fanno partire l'evento BPM.
+        \Illuminate\Support\Facades\Event::listen(\Unico\Core\Events\SignatureSent::class, [\App\Listeners\HandleSignatureEvents::class, 'onSent']);
+        \Illuminate\Support\Facades\Event::listen(\Unico\Core\Events\SignatureCompleted::class, [\App\Listeners\HandleSignatureEvents::class, 'onCompleted']);
+        \Illuminate\Support\Facades\Event::listen(\Unico\Core\Events\SignatureCancelled::class, [\App\Listeners\HandleSignatureEvents::class, 'onCancelled']);
+
         // Ogni chiamata API in uscita (Meta, CRM...) viene comunicata a UnicoBPM per il suo trace «Log API».
         Http::globalMiddleware(ApiTrace::middleware());
     }

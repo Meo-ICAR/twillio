@@ -5,6 +5,7 @@ namespace Tests\Feature\Core;
 use App\Models\LoanRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use Unico\Core\Models\DocumentType;
@@ -33,6 +34,10 @@ abstract class CoreTestCase extends TestCase
         } catch (\Throwable) {
             $this->markTestSkipped('DB del core per i test non raggiungibile.');
         }
+
+        // Nessuna chiamata esterna vera (WhatsApp, Yousign...): i test non devono scrivere a nessuno.
+        Http::fake();
+        config(['services.whatsapp.token' => 'TEST-TOKEN', 'services.whatsapp.phone_number_id' => '0']);
 
         Storage::fake('documents');
         Storage::fake(config('unico-core.pdf.modules_disk', 'public'));
