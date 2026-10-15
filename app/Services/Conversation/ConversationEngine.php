@@ -68,6 +68,7 @@ class ConversationEngine
         private CrmGateway $crm,
         private LoanEmailSender $mailer,
         private QuoteEmailSender $quoteMailer,
+        private DemoMode $demo,
     ) {}
 
     /** Elimina i file salvati da questa richiesta (da chiamare se la transazione è annullata). */
@@ -135,6 +136,21 @@ class ConversationEngine
         // Il pulsante «Vai al menu» che chiude il preventivo vale come il comando.
         if ($m->type === 'interactive' && $m->replyId === 'vai_menu') {
             $command = 'menu';
+        }
+
+        // Installazione demo: avviso e scelta tra finanziamento e fornitura (la company), al primo messaggio e con /demo.
+        if ($this->demo->enabled()) {
+            if ($this->demo->isChoice($m)) {
+                $conv && $this->close($conv, 'annullata');
+                $replies = $this->demo->choose($m->from, (string) $m->replyId);
+
+                return [...$replies, $this->menu($m->from)];
+            }
+            if ($command === 'demo' || ($m->type === 'interactive' && $m->replyId === DemoMode::CHANGE) || (! $conv && $this->demo->needsChoice($m->from))) {
+                $conv && $this->close($conv, 'annullata');
+
+                return $this->demo->prompt();
+            }
         }
 
         if (in_array($command, ['annulla', 'menu'], true)) {
@@ -211,6 +227,10 @@ class ConversationEngine
                     $options[$id] = $title;
                 }
             }
+        }
+
+        if ($this->demo->enabled()) {
+            $options[DemoMode::CHANGE] = 'Cambia demo';
         }
 
         // Un produttore riconosciuto dal numero è salutato per nome.

@@ -102,6 +102,24 @@ class Fornitore extends CoreFornitore
         return $existing ?? static::create(['tel' => $waNumber, 'type' => self::OCCASIONAL_TYPE, 'is_active' => false]);
     }
 
+    public const DEMO_TYPE = 'Demo';
+
+    /** Demo: il numero lavora con quella company. Un fornitore esistente (anche non attivo) cambia company; altrimenti se ne crea uno «Demo». */
+    public static function assignToCompany(string $waNumber, int $companyId): self
+    {
+        $wanted = self::nationalNumber($waNumber);
+        $existing = static::withTrashed()->whereNotNull('tel')->get()->first(fn (self $f) => self::nationalNumber($f->tel) === $wanted);
+
+        if ($existing) {
+            $existing->deleted_at = null;
+            $existing->forceFill([static::companyColumn() => $companyId, 'is_active' => true])->save();
+
+            return $existing;
+        }
+
+        return static::create(['tel' => $waNumber, 'name' => 'Demo '.$wanted, 'type' => self::DEMO_TYPE, 'is_active' => true, static::companyColumn() => $companyId]);
+    }
+
     /** Solo cifre, senza prefisso internazionale italiano (+39 / 0039). */
     public static function nationalNumber(string $phone): string
     {
