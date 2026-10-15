@@ -3,10 +3,12 @@
 use App\Services\Checks\CodiceFiscaleCheck;
 use App\Services\Checks\DatiCoerentiCheck;
 use App\Services\Checks\EstraiDatiCheck;
+use App\Services\Checks\EmailCheck;
 use App\Services\Checks\FornitoreEnergiaCheck;
 use App\Services\Checks\IbanCheck;
 use App\Services\Checks\InformativaFirmataCheck;
 use App\Services\Checks\MaggiorenneCheck;
+use App\Services\Checks\MobileCheck;
 use App\Services\Checks\PartitaIvaCheck;
 use App\Services\Checks\TipoDocumentoCheck;
 
@@ -47,6 +49,8 @@ return [
         'iban' => IbanCheck::class,
         'partita_iva' => PartitaIvaCheck::class,
         'fornitore_energia' => FornitoreEnergiaCheck::class,
+        'email' => EmailCheck::class,
+        'mobile' => MobileCheck::class,
         'maggiorenne' => MaggiorenneCheck::class,
         // Controlli sui documenti caricati (non istantanei: girano dopo la risposta al webhook).
         'tipo_documento' => TipoDocumentoCheck::class,

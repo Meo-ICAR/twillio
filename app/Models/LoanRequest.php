@@ -42,6 +42,12 @@ class LoanRequest extends Model
     protected $guarded = [];
 
     /** Le relazioni morph dei Document del core non devono caricare la pratica sulla connessione del core (lì non c'è la tabella). */
+    /** Documenti prodotti con unico-core (Document del core agganciati con l'alias `loan_request`). */
+    public function documents(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(\Unico\Core\Models\Document::class, 'documentable');
+    }
+
     public function getConnectionName(): ?string
     {
         return $this->connection ?? config('database.default');

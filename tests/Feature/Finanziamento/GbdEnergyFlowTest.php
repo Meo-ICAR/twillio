@@ -199,6 +199,30 @@ class GbdEnergyFlowTest extends ConversationTestCase
         $this->assertSame('telefono', $this->node());
     }
 
+    public function test_un_indirizzo_email_non_valido_si_richiede_con_il_motivo(): void
+    {
+        $this->toCurrentSupplier();
+        $this->say('enel energia', '3331234567');
+        $this->assertSame('email', $this->node());
+
+        $text = $this->bodies($this->say('mario@example'));
+
+        $this->assertStringContainsString('suffisso', $text);
+        $this->assertSame('email', $this->node());
+    }
+
+    public function test_un_telefono_fisso_o_con_lettere_si_richiede(): void
+    {
+        $this->toCurrentSupplier();
+        $this->say('enel energia');
+        $this->assertSame('telefono', $this->node());
+
+        $this->assertStringContainsString('cellulare', $this->bodies($this->say('0612345678')));
+        $this->assertSame('telefono', $this->node());
+        $this->assertStringContainsString('Numero non valido', $this->bodies($this->say('333abc4567')));
+        $this->assertSame('telefono', $this->node());
+    }
+
     public function test_il_perfezionamento_di_un_azienda_chiede_ragione_sociale_e_partita_iva(): void
     {
         $code = $this->startPerfection();

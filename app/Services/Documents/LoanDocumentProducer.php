@@ -9,7 +9,9 @@ use Unico\Core\Enums\SignerRole;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\PdfModule;
 use Unico\Core\Pdf\ModulePrinter;
+use Unico\Core\Signature\PhoneNumber;
 use Unico\Core\Signature\SignatureRequestService;
+use Unico\Core\Support\EmailAddress;
 use Unico\Core\Signature\SignerInput;
 
 /** Compila i moduli dei task, li registra come Document del core agganciati alla pratica e li manda in firma. */
@@ -91,12 +93,25 @@ class LoanDocumentProducer
         $s = $this->data->signer($loan);
         $missing = array_keys(array_filter(['nome' => $s['first_name'], 'cognome' => $s['last_name'], 'email' => $s['email'], 'cellulare' => $s['phone']], fn ($v) => blank($v)));
         if ($missing !== []) {
-            $loan->update(['signature_status' => 'errore']);
-
-            throw new DocumentProductionException('Mancano dati per la firma: '.implode(', ', $missing).'. Controlla dal pannello.');
+            $this->fail($loan, 'Mancano dati per la firma: '.implode(', ', $missing).'. Controlla dal pannello.');
         }
 
-        return new SignerInput(self::SIGNER_SLOT, SignerRole::Client, $s['first_name'], $s['last_name'], $s['email'], $s['phone'], $s['tax_code'], 'client', (string) $loan->id);
+        // L'OTP parte per SMS: serve un cellulare (italiano o estero in forma internazionale) e un'email scritta bene.
+        if (($error = EmailAddress::check($s['email'])) !== null) {
+            $this->fail($loan, "Email del cliente non valida: {$error} Correggila dal pannello.");
+        }
+        if (($error = PhoneNumber::check($s['phone'], mobileOnly: true, allowForeign: true)) !== null) {
+            $this->fail($loan, "Cellulare del cliente non valido: {$error} Correggilo dal pannello.");
+        }
+
+        return new SignerInput(self::SIGNER_SLOT, SignerRole::Client, $s['first_name'], $s['last_name'], EmailAddress::normalize($s['email']), PhoneNumber::toE164($s['phone']), $s['tax_code'], 'client', (string) $loan->id);
+    }
+
+    private function fail(LoanRequest $loan, string $message): never
+    {
+        $loan->update(['signature_status' => 'errore']);
+
+        throw new DocumentProductionException($message);
     }
 
     private function document(LoanRequest $loan, Company $company, PdfModule $module): Document

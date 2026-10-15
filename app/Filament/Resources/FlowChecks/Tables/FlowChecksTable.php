@@ -15,6 +15,8 @@ class FlowChecksTable
     public static function configure(Table $table): Table
     {
         return $table
+            // Il catalogo dei controlli è piccolo: si vede tutto in una pagina.
+            ->paginated(false)
             ->defaultSort('sort_order')
             ->columns([
                 TextColumn::make('code')->label('Codice')->searchable(),
