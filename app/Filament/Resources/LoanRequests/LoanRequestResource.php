@@ -6,6 +6,7 @@ use App\Filament\Resources\LoanRequests\Pages\EditLoanRequest;
 use App\Filament\Resources\LoanRequests\Pages\ListLoanRequests;
 use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
 use App\Filament\Resources\LoanRequests\RelationManagers\AttachmentsRelationManager;
+use App\Filament\Resources\LoanRequests\RelationManagers\CoreDocumentsRelationManager;
 use App\Filament\Resources\LoanRequests\RelationManagers\GeneratedDocumentsRelationManager;
 use App\Filament\Resources\LoanRequests\RelationManagers\PraticaDocumentsRelationManager;
 use App\Filament\Resources\LoanRequests\RelationManagers\PraticaFieldsRelationManager;
@@ -56,7 +57,8 @@ class LoanRequestResource extends Resource
 
     public static function getRelations(): array
     {
-        return [PraticaDocumentsRelationManager::class, GeneratedDocumentsRelationManager::class, PraticaFieldsRelationManager::class, AttachmentsRelationManager::class];
+        // I documenti sono il fulcro dell'istruttoria: la scheda del core (avanzamento del fascicolo, firma, esito) è la prima.
+        return [CoreDocumentsRelationManager::class, PraticaDocumentsRelationManager::class, GeneratedDocumentsRelationManager::class, PraticaFieldsRelationManager::class, AttachmentsRelationManager::class];
     }
 
     public static function getPages(): array
