@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use Anthropic\Client;
+use App\Listeners\HandleSignatureEvents;
+use App\Models\LoanRequest;
 use App\Services\Bpm\ApiTrace;
 use App\Services\Checks\CheckRegistry;
 use App\Services\Crm\CompanyCrmGateway;
@@ -18,8 +20,16 @@ use App\Services\Loans\LoanEstimator;
 use App\Services\Loans\MediafacileLoanEstimator;
 use App\Services\Loans\RandomLoanEstimator;
 use GuzzleHttp\Client as GuzzleClient;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Google\GoogleExtendSocialite;
+use SocialiteProviders\Manager\SocialiteWasCalled;
+use SocialiteProviders\Microsoft\MicrosoftExtendSocialite;
+use Unico\Core\Events\SignatureCancelled;
+use Unico\Core\Events\SignatureCompleted;
+use Unico\Core\Events\SignatureSent;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -64,14 +74,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Documenti del core agganciati alla pratica di unicoagent.
-        \Illuminate\Database\Eloquent\Relations\Relation::morphMap(['loan_request' => \App\Models\LoanRequest::class], merge: true);
+        Relation::morphMap(['loan_request' => LoanRequest::class], merge: true);
 
         // Eventi di firma del core: aggiornano la pratica, mandano i firmati all'istruttoria e fanno partire l'evento BPM.
-        \Illuminate\Support\Facades\Event::listen(\Unico\Core\Events\SignatureSent::class, [\App\Listeners\HandleSignatureEvents::class, 'onSent']);
-        \Illuminate\Support\Facades\Event::listen(\Unico\Core\Events\SignatureCompleted::class, [\App\Listeners\HandleSignatureEvents::class, 'onCompleted']);
-        \Illuminate\Support\Facades\Event::listen(\Unico\Core\Events\SignatureCancelled::class, [\App\Listeners\HandleSignatureEvents::class, 'onCancelled']);
+        Event::listen(SignatureSent::class, [HandleSignatureEvents::class, 'onSent']);
+        Event::listen(SignatureCompleted::class, [HandleSignatureEvents::class, 'onCompleted']);
+        Event::listen(SignatureCancelled::class, [HandleSignatureEvents::class, 'onCancelled']);
 
         // Ogni chiamata API in uscita (Meta, CRM...) viene comunicata a UnicoBPM per il suo trace «Log API».
         Http::globalMiddleware(ApiTrace::middleware());
+
+        Event::listen(SocialiteWasCalled::class, [MicrosoftExtendSocialite::class, 'handle']);
+        Event::listen(SocialiteWasCalled::class, [GoogleExtendSocialite::class, 'handle']);
     }
 }

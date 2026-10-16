@@ -6,6 +6,8 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Widgets\AttentionWidget;
 use App\Filament\Widgets\IntegrationsWidget;
 use App\Filament\Widgets\WeekWidget;
+use DutchCodingCompany\FilamentSocialite\FilamentSocialitePlugin;
+use DutchCodingCompany\FilamentSocialite\Provider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -15,12 +17,15 @@ use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -31,7 +36,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->renderHook(\Filament\View\PanelsRenderHook::USER_MENU_BEFORE, fn () => view('filament.company-switcher'))
+            ->renderHook(PanelsRenderHook::USER_MENU_BEFORE, fn () => view('filament.company-switcher'))
             ->brandLogo(asset('unicoagent_banner.png'))
             ->brandLogoHeight('2.5rem')
             ->favicon(asset('unicoagent_logo.png'))
@@ -75,6 +80,26 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->plugin(
+                FilamentSocialitePlugin::make()
+                    // Collega un account già presente (stessa email). Non crea utenti:
+                    // gli accessi al pannello li assegna un amministratore.
+                    ->registration(fn (string $provider, SocialiteUserContract $oauthUser, ?Authenticatable $user): bool => $user !== null)
+                    ->providers([
+                        Provider::make('microsoft')
+                            ->label('Microsoft')
+                            ->icon('fab-microsoft')
+                            ->color(Color::hex('#0078D4'))
+                            ->outlined(false)
+                            ->stateless(false),
+                        Provider::make('google')
+                            ->label('Google')
+                            ->icon('fab-google')
+                            ->color(Color::hex('#4285F4'))
+                            ->outlined(false)
+                            ->stateless(false),
+                    ])
+            );
     }
 }
