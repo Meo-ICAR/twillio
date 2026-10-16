@@ -3,8 +3,10 @@
 namespace Tests\Feature\Core;
 
 use App\Models\Company;
+use App\Models\User;
 use App\Services\Documents\DocumentProductionException;
 use App\Services\Documents\LoanDocumentProducer;
+use Illuminate\Support\Facades\DB;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentRequirement;
 use Unico\Core\Models\SignatureRequest;
@@ -43,11 +45,11 @@ class LoanDocumentProducerTest extends CoreTestCase
 
         $this->assertSame(['sent' => 2, 'skipped' => 0], $result);
         $this->assertSame(2, Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->count());
-        $this->assertSame(2, SignatureRequest::whereIn('document_id', Document::where('documentable_id', $loan->id)->pluck('id'))->count());
+        $this->assertSame(2, SignatureRequest::whereIn('document_id', Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->pluck('id'))->count());
         $loan->refresh();
         $this->assertSame('in_attesa', $loan->signature_status);
         $this->assertNotNull($loan->documents_sent_at);
-        $doc = Document::where('documentable_id', $loan->id)->first();
+        $doc = Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->first();
         $this->assertSame('application/pdf', $doc->getFirstMedia(Document::COLLECTION)->mime_type);
         $this->assertSame('generato', $doc->channel);
     }
@@ -62,8 +64,8 @@ class LoanDocumentProducerTest extends CoreTestCase
         $second = $producer->produce($loan->fresh(), $this->company(), 'ALLA FIRMA');
 
         $this->assertSame(['sent' => 0, 'skipped' => 1], $second);
-        $this->assertSame(1, Document::where('documentable_id', $loan->id)->count());
-        $this->assertSame(1, SignatureRequest::whereIn('document_id', Document::where('documentable_id', $loan->id)->pluck('id'))->count());
+        $this->assertSame(1, Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->count());
+        $this->assertSame(1, SignatureRequest::whereIn('document_id', Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->pluck('id'))->count());
     }
 
     public function test_senza_email_o_cellulare_non_parte_nulla_e_lo_stato_e_errore(): void
@@ -79,7 +81,7 @@ class LoanDocumentProducerTest extends CoreTestCase
         }
 
         $this->assertSame('errore', $loan->fresh()->signature_status);
-        $this->assertSame(0, Document::where('documentable_id', $loan->id)->count());
+        $this->assertSame(0, Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->count());
     }
 
     public function test_un_indirizzo_o_un_numero_non_validi_non_fanno_partire_nulla_e_dicono_perche(): void
@@ -100,7 +102,7 @@ class LoanDocumentProducerTest extends CoreTestCase
             } catch (DocumentProductionException $e) {
                 $this->assertStringContainsString($case['expect'], $e->getMessage());
             }
-            $this->assertSame(0, Document::where('documentable_id', $loan->id)->count());
+            $this->assertSame(0, Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->count());
             $this->assertSame('errore', $loan->fresh()->signature_status);
         }
     }
@@ -114,7 +116,7 @@ class LoanDocumentProducerTest extends CoreTestCase
         $result = app(LoanDocumentProducer::class)->produce($loan, $this->company(), 'ALLA FIRMA');
 
         $this->assertSame(['sent' => 1, 'skipped' => 0], $result);
-        $signer = \Illuminate\Support\Facades\DB::connection('core')->table('signature_request_signers')->latest('id')->first();
+        $signer = DB::connection('core')->table('signature_request_signers')->latest('id')->first();
         $this->assertSame('mario.rossi@example.com', $signer->email);
         $this->assertSame('+393331234567', $signer->phone);
     }
@@ -124,12 +126,12 @@ class LoanDocumentProducerTest extends CoreTestCase
         $this->withModules(1);
         $loan = $this->makeLoan();
         // Un utente di unicoagent (tabella locale): il suo id non esiste in users del core.
-        $this->actingAs(\App\Models\User::factory()->create(['id' => 424242]));
+        $this->actingAs(User::factory()->create(['id' => 424242]));
 
         $result = app(LoanDocumentProducer::class)->produce($loan, $this->company(), 'ALLA FIRMA');
 
         $this->assertSame(['sent' => 1, 'skipped' => 0], $result);
-        $doc = Document::where('documentable_id', $loan->id)->first();
+        $doc = Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->first();
         $this->assertNull($doc->created_by);
         $this->assertNull($doc->updated_by);
     }
@@ -151,6 +153,6 @@ class LoanDocumentProducerTest extends CoreTestCase
 
         app(LoanDocumentProducer::class)->produce($loan, $this->company(), 'ALLA FIRMA');
 
-        $this->assertSame($this->coreId, (int) Document::where('documentable_id', $loan->id)->value('company_id'));
+        $this->assertSame($this->coreId, (int) Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->value('company_id'));
     }
 }

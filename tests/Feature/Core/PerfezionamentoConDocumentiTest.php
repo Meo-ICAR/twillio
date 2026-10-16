@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentRequirement;
 use Unico\Core\Models\SignatureRequest;
 use Unico\Core\Models\Task;
@@ -85,7 +86,7 @@ class PerfezionamentoConDocumentiTest extends CoreTestCase
         $loan = LoanRequest::where('code', $code)->first();
         $this->assertSame('invio_istruttoria', $loan->status);
         $this->assertSame('in_attesa', $loan->signature_status);
-        $this->assertSame(1, SignatureRequest::whereIn('document_id', \Unico\Core\Models\Document::where('documentable_id', $loan->id)->pluck('id'))->count());
+        $this->assertSame(1, SignatureRequest::whereIn('document_id', Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->pluck('id'))->count());
         Mail::assertSent(LoanSubmissionMail::class, fn ($m) => $m->hasTo('contratti@gbdenergy.example'));
         $this->assertStringContainsString('firma', $this->bodies($replies));
     }

@@ -2,17 +2,22 @@
 
 namespace Tests\Feature\Core;
 
+use App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest;
+use App\Jobs\SendBpmEvent;
 use App\Mail\SignedDocumentsMail;
 use App\Models\Company;
 use App\Models\LoanRequest;
+use App\Models\User;
 use App\Services\Conversation\ConversationEngine;
 use App\Services\Conversation\IncomingMessage;
 use App\Services\Documents\DocumentProductionException;
 use App\Services\Documents\LoanDocumentProducer;
 use App\Services\Documents\LoanTaskResolver;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
+use Livewire\Livewire;
 use Unico\Core\Models\Document;
 use Unico\Core\Models\DocumentRequirement;
 use Unico\Core\Models\Task;
@@ -68,7 +73,7 @@ class ReviewFixesDocumentiTest extends CoreTestCase
         $loan = $this->makeLoan();
         $this->app->instance(LoanTaskResolver::class, new class extends LoanTaskResolver
         {
-            public function modules(Company $company, string $stato, ?\App\Models\LoanRequest $loan = null): \Illuminate\Support\Collection
+            public function modules(Company $company, string $stato, ?LoanRequest $loan = null): Collection
             {
                 throw new \RuntimeException('core giù');
             }
@@ -105,7 +110,7 @@ class ReviewFixesDocumentiTest extends CoreTestCase
         $company = $this->companyWithModules(2);
         $loan = $this->makeLoan(['status' => 'invio_istruttoria']);
         app(LoanDocumentProducer::class)->produce($loan, $company, 'ALLA FIRMA');
-        Document::where('documentable_id', $loan->id)->update(['is_signed' => true, 'signed_at' => now()]);
+        Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->update(['is_signed' => true, 'signed_at' => now()]);
 
         Artisan::call('signatures:finalize');
         Artisan::call('signatures:finalize');
@@ -114,7 +119,7 @@ class ReviewFixesDocumentiTest extends CoreTestCase
         $this->assertSame('perfezionare', $loan->status);
         $this->assertSame('firmata', $loan->signature_status);
         Mail::assertSent(SignedDocumentsMail::class, 1);
-        Queue::assertPushed(\App\Jobs\SendBpmEvent::class, 1);
+        Queue::assertPushed(SendBpmEvent::class, 1);
     }
 
     public function test_il_recupero_non_tocca_le_pratiche_con_firme_mancanti(): void
@@ -123,7 +128,7 @@ class ReviewFixesDocumentiTest extends CoreTestCase
         $company = $this->companyWithModules(2);
         $loan = $this->makeLoan(['status' => 'invio_istruttoria']);
         app(LoanDocumentProducer::class)->produce($loan, $company, 'ALLA FIRMA');
-        Document::where('documentable_id', $loan->id)->limit(1)->update(['is_signed' => true]);
+        Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->limit(1)->update(['is_signed' => true]);
 
         Artisan::call('signatures:finalize');
 
@@ -148,8 +153,8 @@ class ReviewFixesDocumentiTest extends CoreTestCase
     {
         Company::create(['name' => 'GBD', 'produce_documents' => true, 'core_company_id' => $this->coreCompany()->id, 'core_tipo_prodotto' => 'Utenza']);
         $loan = $this->makeLoan(['signature_status' => 'in_attesa', 'documents_sent_at' => now()->subDays(9)]);
-        $this->actingAs(\App\Models\User::factory()->create());
+        $this->actingAs(User::factory()->create());
 
-        \Livewire\Livewire::test(\App\Filament\Resources\LoanRequests\Pages\ViewLoanRequest::class, ['record' => $loan->getKey()])->assertActionVisible('reinviaFirma');
+        Livewire::test(ViewLoanRequest::class, ['record' => $loan->getKey()])->assertActionVisible('reinviaFirma');
     }
 }

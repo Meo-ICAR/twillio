@@ -7,6 +7,7 @@ use App\Mail\SignedDocumentsMail;
 use App\Models\Company;
 use App\Models\LoanRequest;
 use App\Services\Documents\LoanDocumentProducer;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Unico\Core\Enums\SignatureRequestStatus;
@@ -52,7 +53,7 @@ class SignatureListenerTest extends CoreTestCase
     {
         [$loan] = $this->sent(1);
 
-        $this->complete(Document::where('documentable_id', $loan->id)->first());
+        $this->complete(Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->first());
 
         $loan->refresh();
         $this->assertSame('perfezionare', $loan->status);
@@ -66,15 +67,15 @@ class SignatureListenerTest extends CoreTestCase
     {
         [$loan] = $this->sent(1);
 
-        $this->complete(Document::where('documentable_id', $loan->id)->first());
+        $this->complete(Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->first());
 
-        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r->url(), 'graph.facebook.com') && $r->hasHeader('Authorization', 'Bearer TEST-TOKEN'));
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'graph.facebook.com') && $r->hasHeader('Authorization', 'Bearer TEST-TOKEN'));
     }
 
     public function test_con_piu_documenti_si_aspetta_l_ultima_firma(): void
     {
         [$loan] = $this->sent(2);
-        $docs = Document::where('documentable_id', $loan->id)->get();
+        $docs = Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->get();
 
         $this->complete($docs[0]);
         $this->assertSame('invio_istruttoria', $loan->fresh()->status);
@@ -87,7 +88,7 @@ class SignatureListenerTest extends CoreTestCase
     public function test_un_evento_ripetuto_non_manda_due_mail_ne_due_eventi(): void
     {
         [$loan] = $this->sent(1);
-        $doc = Document::where('documentable_id', $loan->id)->first();
+        $doc = Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->first();
 
         $this->complete($doc);
         $this->complete($doc);
@@ -99,7 +100,7 @@ class SignatureListenerTest extends CoreTestCase
     public function test_una_firma_scaduta_lascia_la_pratica_trasmessa(): void
     {
         [$loan] = $this->sent(1);
-        $doc = Document::where('documentable_id', $loan->id)->first();
+        $doc = Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->first();
         $request = $this->request($doc);
         $request->update(['status' => SignatureRequestStatus::Expired]);
 
@@ -114,7 +115,7 @@ class SignatureListenerTest extends CoreTestCase
     public function test_una_firma_rifiutata_si_segna_come_tale(): void
     {
         [$loan] = $this->sent(1);
-        $doc = Document::where('documentable_id', $loan->id)->first();
+        $doc = Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->first();
         $request = $this->request($doc);
         $request->update(['status' => SignatureRequestStatus::Declined]);
 
