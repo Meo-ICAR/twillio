@@ -59,6 +59,7 @@ class BpmEventsTest extends TestCase
     public function test_nothing_is_sent_without_configuration_or_for_test_practices(): void
     {
         Queue::fake();
+        config(['services.bpm.url' => null, 'services.bpm.key' => null]);
 
         BpmEvents::dispatchPerfected($this->loan());
         $this->configure();

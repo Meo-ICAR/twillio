@@ -65,7 +65,7 @@ class ArchiviazioneDopoPerfezionamentoTest extends ConversationTestCase
     {
         $loan = $this->atSummary();
         $this->gateway(200);
-        $this->mock(Dispatcher::class, fn ($mock) => $mock->shouldReceive('dispatch')->andThrow(new \RuntimeException('coda giù'))->getMock()->shouldIgnoreMissing());
+        $this->mock(Dispatcher::class, fn ($mock) => $mock->shouldReceive('dispatch')->andReturnUsing(fn ($job) => $job instanceof ArchiveLoanDocuments ? throw new \RuntimeException('coda giù') : null)->getMock()->shouldIgnoreMissing());
 
         $body = $this->bodies($this->say('#conferma'));
 
