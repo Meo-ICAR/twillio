@@ -11,8 +11,8 @@ use Unico\Core\Models\PdfModule;
 use Unico\Core\Pdf\ModulePrinter;
 use Unico\Core\Signature\PhoneNumber;
 use Unico\Core\Signature\SignatureRequestService;
-use Unico\Core\Support\EmailAddress;
 use Unico\Core\Signature\SignerInput;
+use Unico\Core\Support\EmailAddress;
 
 /** Compila i moduli dei task, li registra come Document del core agganciati alla pratica e li manda in firma. */
 class LoanDocumentProducer
@@ -55,28 +55,37 @@ class LoanDocumentProducer
         }
 
         $signer = $this->signer($loan);
-        $sent = $skipped = 0;
+        $skipped = 0;
+        $documents = [];
+        $lastModule = null;
 
-        foreach ($modules as $module) {
-            $document = $this->document($loan, $company, $module);
-            if ($this->alreadyInSignature($document)) {
-                $skipped++;
+        try {
+            foreach ($modules as $module) {
+                $lastModule = $module;
+                $document = $this->document($loan, $company, $module);
+                if ($this->alreadyInSignature($document)) {
+                    $skipped++;
 
-                continue;
-            }
+                    continue;
+                }
 
-            try {
                 $this->attachPdf($document, $module, $loan);
-                $this->signatures->send($document, [$signer]);
-                $sent++;
-            } catch (\Throwable $e) {
-                // Solo il tipo di errore: il messaggio può contenere dati personali.
-                Log::error('Produzione documenti non riuscita', ['loan' => $loan->code, 'module' => $module->id, 'exception' => $e::class]);
-                $loan->update(['signature_status' => 'errore']);
-
-                throw new DocumentProductionException('Non sono riuscito a preparare i documenti per la firma: riprova dal pannello.', 0, $e);
+                $documents[] = $document;
             }
+
+            // Un solo plico a Yousign: il cliente riceve una richiesta e firma tutti i moduli con un solo codice OTP.
+            if ($documents !== []) {
+                $this->signatures->sendBundle($documents, [$signer]);
+            }
+        } catch (\Throwable $e) {
+            // Solo il tipo di errore: il messaggio può contenere dati personali.
+            Log::error('Produzione documenti non riuscita', ['loan' => $loan->code, 'module' => $lastModule?->id, 'exception' => $e::class]);
+            $loan->update(['signature_status' => 'errore']);
+
+            throw new DocumentProductionException('Non sono riuscito a preparare i documenti per la firma: riprova dal pannello.', 0, $e);
         }
+
+        $sent = count($documents);
 
         if ($sent > 0) {
             $loan->update(['signature_status' => 'in_attesa', 'documents_sent_at' => now()]);

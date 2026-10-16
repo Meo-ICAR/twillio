@@ -46,6 +46,7 @@ class LoanDocumentProducerTest extends CoreTestCase
         $this->assertSame(['sent' => 2, 'skipped' => 0], $result);
         $this->assertSame(2, Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->count());
         $this->assertSame(2, SignatureRequest::whereIn('document_id', Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->pluck('id'))->count());
+        $this->assertSame(1, SignatureRequest::whereIn('document_id', Document::where('documentable_type', 'loan_request')->where('documentable_id', $loan->id)->pluck('id'))->distinct()->count('provider_ref'), 'un solo plico, un solo OTP');
         $loan->refresh();
         $this->assertSame('in_attesa', $loan->signature_status);
         $this->assertNotNull($loan->documents_sent_at);
